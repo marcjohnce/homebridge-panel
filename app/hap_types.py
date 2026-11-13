@@ -33,6 +33,10 @@ SERVICE_TYPES: dict[str, str] = {
     "84": "LightSensor",
     "8A": "TemperatureSensor",
     "8C": "WindowCovering",
+    "80": "ContactSensor",
+    "83": "LeakSensor",
+    "85": "MotionSensor",
+    "86": "OccupancySensor",
     EVE_WEATHER_SERVICE: "EveWeather",
     EVE_AIR_PRESSURE_SERVICE: "AirPressureSensor",
 }
@@ -73,6 +77,10 @@ CHAR_TYPES: dict[str, str] = {
     "7C": "TargetPosition",
     "7D": "TargetVerticalTiltAngle",
     "6B": "CurrentAmbientLightLevel",
+    "6A": "ContactSensorState",
+    "70": "LeakDetected",
+    "22": "MotionDetected",
+    "71": "OccupancyDetected",
     EVE_AIR_PRESSURE: "AirPressure",
 }
 SENSOR_CHARS = {"CurrentTemperature", "CurrentRelativeHumidity", "CurrentAmbientLightLevel", "AirPressure"}
@@ -87,6 +95,18 @@ DEVICE_TYPE_BY_SERVICE: dict[str, DeviceType] = {
     "Fanv2": DeviceType.FAN,
     "Sensor": DeviceType.SENSOR,
     "WindowCovering": DeviceType.BLIND,
+    "ContactSensor": DeviceType.SECURITY,
+    "LeakSensor": DeviceType.SECURITY,
+    "MotionSensor": DeviceType.SECURITY,
+    "OccupancySensor": DeviceType.SECURITY,
+}
+
+# Security sensors: (characteristic, value meaning "triggered", default kind, selectable kinds)
+SECURITY_SERVICES = {
+    "ContactSensor": ("ContactSensorState", 1, "door", ("window", "door", "glassbreak")),   # 1 = no contact = open
+    "LeakSensor": ("LeakDetected", 1, "leak", ("leak",)),
+    "MotionSensor": ("MotionDetected", True, "motion", ("motion", "glassbreak")),
+    "OccupancySensor": ("OccupancyDetected", 1, "motion", ("motion", "glassbreak")),
 }
 
 # WindowCovering.PositionState; position 0 = closed, 100 = fully open
@@ -180,6 +200,11 @@ def snapshot_to_state(s: ServiceSnapshot) -> tuple[DeviceType, dict[str, Any], l
             caps.append("tilt")
             meta.update(min_tilt=tilt.min if tilt.min is not None else -90,
                         max_tilt=tilt.max if tilt.max is not None else 90)
+    elif s.service_type in SECURITY_SERVICES:
+        char, hit, kind, kinds = SECURITY_SERVICES[s.service_type]
+        v = s.get(char, 0)
+        state["triggered"] = bool(v) if isinstance(hit, bool) else int(v or 0) == hit
+        meta.update(security=kind, kinds=list(kinds))
     elif s.service_type == "Sensor":
         if "CurrentRelativeHumidity" in c:
             state["humidity"] = _num(s.get("CurrentRelativeHumidity"))

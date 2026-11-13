@@ -19,6 +19,7 @@ Rectangle {
     required property real minTemp
     required property real maxTemp
     required property bool modeOff
+    required property int alertLevel     // security: 2 alarm, 1 open / motion
 
     property bool showRoom: false
     property int columns: 4
@@ -27,6 +28,10 @@ Rectangle {
 
     readonly property bool thermostat: type === "thermostat"
     readonly property bool sensor: type === "sensor"
+    readonly property bool security: type === "security"
+    readonly property bool alarm: alertLevel === 2
+    readonly property color ink: isOn ? Theme.goldInk : alarm ? Theme.alarmInk : Theme.ink
+    readonly property color sub: isOn ? Theme.goldInk : alarm ? Theme.alarmInk : Theme.muted
 
     objectName: "tile:" + deviceId
     readonly property int lastRowStart: Math.floor((count - 1) / columns) * columns
@@ -36,13 +41,13 @@ Rectangle {
     topRightRadius: index === Math.min(columns, count) - 1 ? cornerRadius : 0
     bottomLeftRadius: index === lastRowStart ? cornerRadius : 0
     bottomRightRadius: (index === count - 1 || (index === lastRowStart - 1 && count % columns !== 0)) ? cornerRadius : 0
-    color: isOn ? Theme.gold : (mouse.pressed ? Theme.tilePress : Theme.tile)
+    color: isOn ? Theme.gold : alarm ? Theme.alarm : (mouse.pressed ? Theme.tilePress : Theme.tile)
     opacity: reachable ? 1 : 0.45
 
     activeFocusOnTab: true
     Accessible.role: Accessible.Button
     Accessible.name: qsTr("%1: %2").arg(shortName).arg(stateText)
-    Accessible.checkable: !thermostat && !sensor
+    Accessible.checkable: !thermostat && !sensor && !security
     Accessible.checked: isOn
     Keys.onSpacePressed: activate()
     Keys.onReturnPressed: activate()
@@ -50,6 +55,8 @@ Rectangle {
     Behavior on color { ColorAnimation { duration: 200 } }
 
     function activate() {
+        if (security)
+            return;                  // read-only
         if (thermostat || sensor)
             root.openDetail(deviceId);
         else
@@ -71,7 +78,7 @@ Rectangle {
         lineWidth: 1.15
         visible: !root.thermostat
         name: root.icon
-        color: root.isOn ? Theme.goldInk : Theme.muted
+        color: root.alertLevel === 1 ? Theme.err : root.sub
     }
 
     Item {
@@ -112,25 +119,26 @@ Rectangle {
             text: root.room
             elide: Text.ElideRight
             font.pixelSize: Theme.s(13)
-            color: root.isOn ? Theme.goldInk : Theme.muted
-            opacity: root.isOn ? 0.65 : 1
+            color: root.sub
+            opacity: root.isOn || root.alarm ? 0.72 : 1
         }
         Text {
             width: parent.width
             text: root.shortName
             elide: Text.ElideRight
-            maximumLineCount: 2
+            maximumLineCount: root.showRoom ? 1 : 2       // keep clear of the icon
             wrapMode: Text.Wrap
             font.pixelSize: Theme.s(17)
             font.weight: Font.Medium
-            color: root.isOn ? Theme.goldInk : Theme.ink
+            color: root.ink
         }
         Text {
             width: parent.width
             text: root.stateText
             elide: Text.ElideRight
             font.pixelSize: Theme.s(14)
-            color: root.isOn ? Theme.goldInk : (root.heating ? Theme.heat2 : Theme.muted)
+            font.weight: root.alertLevel > 0 ? Font.Medium : Font.Normal
+            color: root.alertLevel === 1 ? Theme.err : root.heating && !root.isOn ? Theme.heat2 : root.sub
             opacity: root.isOn ? 0.72 : 1
         }
     }

@@ -1,4 +1,5 @@
 """Tests of the Qt layer without a screen (offscreen)."""
+import gc
 import json
 import os
 import subprocess
@@ -27,6 +28,13 @@ U = lambda s: f"{int(s, 16):08X}-0000-1000-8000-0026BB765291"  # noqa: E731
 @pytest.fixture(scope="module")
 def qapp():
     return QGuiApplication.instance() or QGuiApplication([])
+
+
+@pytest.fixture(autouse=True)
+def collect_in_main_thread():
+    """Free the Qt objects of a test here, not later from a background thread (which crashes Qt)."""
+    yield
+    gc.collect()
 
 
 def pump_until(cond, timeout=6.0):
@@ -89,7 +97,7 @@ def test_controller_demo_model_and_commands(qapp, tmp_path):
     ctl = make_controller(tmp_path)
     ctl.start()
     model = ctl.devices
-    assert pump_until(lambda: model.rowCount() == 13)
+    assert pump_until(lambda: len(model.all()) == 17)
     assert ctl.statusOk and ctl.statusText == "Connected"
     assert "Kitchen" in ctl.rooms and ctl.indoorTemp != ""
 
@@ -99,7 +107,14 @@ def test_controller_demo_model_and_commands(qapp, tmp_path):
     ctl.toggle(coffee)
     assert pump_until(lambda: ctl.device(coffee)["state"]["on"] is True)
     ctl.selectRoom("")
-    assert model.rowCount() == 13
+    assert model.rowCount() == 7 and ctl.category == "light"      # lights, plugs, blinds
+    ctl.selectCategory("climate")
+    assert model.rowCount() == 6 and "Kitchen" not in ctl.rooms
+    ctl.selectCategory("security")
+    assert model.rowCount() == 4 and ctl.securityCount == 1       # the bedroom window is open
+    assert ctl.devices.get(model._rows[0])["name"] == "Bedroom Window"     # alerts first
+    ctl.selectCategory("")
+    assert model.rowCount() == 17
 
     errors = []
     ctl.toast.connect(errors.append)
@@ -111,7 +126,7 @@ def test_controller_demo_model_and_commands(qapp, tmp_path):
 def test_settings_reconnect_and_test_connection(qapp, tmp_path, hap_server):
     ctl = make_controller(tmp_path)
     ctl.start()
-    assert pump_until(lambda: ctl.devices.rowCount() == 13)
+    assert pump_until(lambda: len(ctl.devices.all()) == 17)
 
     results = []
     ctl.settings.testFinished.connect(lambda ok, msg: results.append((ok, msg)))
@@ -127,7 +142,7 @@ def test_settings_reconnect_and_test_connection(qapp, tmp_path, hap_server):
                               "hap_port": hap_server, "hap_pin": "12345678"}) == {}
     lamp = "homebridge:2.9"
     assert pump_until(lambda: ctl.device(lamp).get("name") == "Hall Light")
-    assert pump_until(lambda: ctl.devices.rowCount() == 14 and ctl.statusOk)
+    assert pump_until(lambda: len(ctl.devices.all()) == 18 and ctl.statusOk)
     ctl.toggle(lamp)
     assert pump_until(lambda: FakeHap.lamp_on is True)
     assert json.loads((tmp_path / "settings.json").read_text())["hap_pin"] == "123-45-678"
@@ -163,6 +178,7 @@ def test_restart_app_action(qapp, tmp_path):
     assert pump_until(lambda: calls)
     assert calls == [("/usr/bin/python3", ["/usr/bin/python3", "-m", "app", "--fullscreen"])]
     assert messages == ["Restarting the app …"]
+    ctl.shutdown()
 
 
 def test_reboot_action(qapp, tmp_path):
@@ -194,7 +210,7 @@ def test_indoor_and_outdoor_temperature(qapp, tmp_path):
                                     "devices": {"Weather Station": {"outdoor": True}}})
     ctl = Controller(cfg, store)
     ctl.start()
-    assert pump_until(lambda: ctl.devices.rowCount() == 13 and ctl.outdoorTemp != "")
+    assert pump_until(lambda: len(ctl.devices.all()) == 17 and ctl.outdoorTemp != "")
     devs = ctl.devices.all()
     outdoor = [d["state"]["current_temp"] for d in devs if d.get("meta", {}).get("outdoor")]
     indoor = [d["state"]["current_temp"] for d in devs
@@ -224,7 +240,7 @@ def test_blind_detail_drag_sets_position(qapp, tmp_path):
     engine.load(QML_DIR / "Main.qml")
     win = Shiboken.wrapInstance(Shiboken.getCppPointer(engine.rootObjects()[0])[0], QQuickWindow)
     ctl.start()
-    assert pump_until(lambda: ctl.devices.rowCount() == 13)
+    assert pump_until(lambda: len(ctl.devices.all()) == 17)
     blind = next(d["id"] for d in ctl.devices.all() if d["name"] == "Living Room Blinds")
     win.setProperty("openDevice", blind)
     assert pump_until(lambda: win.findChild(QObject, "blindVisual") is not None)
@@ -245,7 +261,7 @@ def test_blind_detail_drag_sets_position(qapp, tmp_path):
 def test_room_editor_changes_rooms_and_persists(qapp, tmp_path):
     ctl = make_controller(tmp_path)
     ctl.start()
-    assert pump_until(lambda: ctl.devices.rowCount() == 13)
+    assert pump_until(lambda: len(ctl.devices.all()) == 17)
     ed = ctl.roomEditor
     coffee = next(d["id"] for d in ctl.devices.all() if d["name"] == "Coffee Maker")
 
@@ -264,7 +280,7 @@ def test_room_editor_changes_rooms_and_persists(qapp, tmp_path):
     assert "Büro" not in saved["order"] and saved["devices"][coffee] == "General"
     ctl2 = Controller(AppConfig.model_validate({"demo": {"enabled": True}}), SettingsStore(tmp_path / "settings.json"))
     ctl2.start()
-    assert pump_until(lambda: ctl2.devices.rowCount() == 13)
+    assert pump_until(lambda: len(ctl2.devices.all()) == 17)
     assert ctl2.device(coffee)["room"] == "General"
     ctl2.shutdown()
 
@@ -288,7 +304,7 @@ def test_rooms_page_rename_with_keyboard(qapp, tmp_path):
     engine.load(QML_DIR / "Main.qml")
     win = Shiboken.wrapInstance(Shiboken.getCppPointer(engine.rootObjects()[0])[0], QQuickWindow)
     ctl.start()
-    assert pump_until(lambda: ctl.devices.rowCount() == 13)
+    assert pump_until(lambda: len(ctl.devices.all()) == 17)
 
     def find(name, root=None):
         # Repeater delegates are not QObject children, so walk the visual item tree
@@ -329,3 +345,47 @@ def test_rooms_page_rename_with_keyboard(qapp, tmp_path):
     qapp.removeTranslator(translator)
     engine.deleteLater()          # before the controller it refers to is collected
     pump_until(lambda: False, timeout=0.3)
+
+
+def test_security_alarm_and_open_since(qapp, tmp_path):
+    ctl = make_controller(tmp_path)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 17)
+    alarms = []
+    ctl.securityAlarm.connect(alarms.append)
+    leak = next(d for d in ctl.devices.all() if d["name"] == "Washing Machine Leak")
+    ctl._on_message({"type": "device", "device": {**leak, "state": {"triggered": True}}})
+    assert alarms == ["Water detected: General, Washing Machine Leak"] and ctl.securityCount == 2
+    ctl._on_message({"type": "device", "device": {**leak, "state": {"triggered": True}}})
+    assert len(alarms) == 1                                         # only new alarms
+    assert ctl.summary["security"] == "2 alerts" and ctl.summary["light"] != ""
+
+    window = next(d for d in ctl.devices.all() if d["name"] == "Bedroom Window")
+    ctl._since[window["id"]] -= 25 * 60
+    ctl._on_message({"type": "device", "device": {k: v for k, v in window.items() if k != "since"}})
+    assert ctl.device(window["id"])["stateText"] == "Open for 25 min"
+    ctl.shutdown()
+
+
+def test_device_editor_name_kind_room_and_hide_general(qapp, tmp_path):
+    ctl = make_controller(tmp_path)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 17)
+    ed = ctl.roomEditor
+    door = next(d for d in ed.devices if d["name"] == "Terrace Door")
+    assert [k["value"] for k in door["kinds"]] == ["window", "door", "glassbreak"]
+    assert ed.addRoom("Terrace") == ""
+    assert ed.saveDevice(door["id"], "Garden door", "window", "Terrace") == ""
+    d = ctl.device(door["id"])
+    assert d["name"] == "Garden door" and d["room"] == "Terrace" and d["icon"] == "window"
+    assert d["meta"]["security"] == "window" and d["baseName"] == "Terrace Door"
+    assert ed.saveDevice(door["id"], "x" * 41, "door", "Terrace") != ""
+    assert ed.saveDevice(door["id"], "", "door", "Terrace") == ""       # back to the original name
+    assert ctl.device(door["id"])["name"] == "Terrace Door" and ctl.device(door["id"])["icon"] == "door"
+
+    assert "General" in ctl.rooms
+    ctl.settings.save({"show_general": False})
+    assert "General" not in ctl.rooms
+    ctl.shutdown()
+    saved = json.loads((tmp_path / "settings.json").read_text())
+    assert saved["rooms"]["devices"][door["id"]] == "Terrace" and door["id"] not in saved["rooms"]["names"]

@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 
 // Settings → Rooms and devices. Rooms can be added, renamed, reordered and deleted;
-// devices are moved between rooms. Every change is saved and shown on the home screen at once.
+// devices get a display name, a room and (security sensors) a kind. Every change is saved and shown on the home screen at once.
 Rectangle {
     id: root
 
@@ -21,17 +21,14 @@ Rectangle {
     function countText(n) {
         return n === 0 ? qsTr("No devices") : n === 1 ? qsTr("1 device") : qsTr("%1 devices").arg(n);
     }
-    function addRoom(device) {
+    function addRoom() {
         keyboard.hint = "";
-        keyboard.edit(qsTr("New room"), "", text => {
-            const err = root.editor.addRoom(text);
-            if (err === "" && device)
-                return root.editor.assign(device.id, text.trim().replace(/\s+/g, " "));
-            return err;
-        });
+        keyboard.maxLength = 24;
+        keyboard.edit(qsTr("New room"), "", text => root.editor.addRoom(text));
     }
     function renameRoom(room) {
         keyboard.hint = "";
+        keyboard.maxLength = 24;
         keyboard.edit(qsTr("Rename room"), room.name, text => root.editor.renameRoom(room.name, text));
     }
 
@@ -212,7 +209,7 @@ Rectangle {
                 PillButton {
                     objectName: "addRoom"
                     text: qsTr("Add room")
-                    onClicked: root.addRoom(null)
+                    onClicked: root.addRoom()
                 }
             }
 
@@ -228,7 +225,7 @@ Rectangle {
                     Layout.fillWidth: true
                     Layout.topMargin: 10
                     Layout.leftMargin: 4
-                    text: root.editor.devices.length > 0 ? qsTr("Tap a device to move it to another room.")
+                    text: root.editor.devices.length > 0 ? qsTr("Tap a device to change its name, kind or room.")
                         : qsTr("No devices yet. Devices appear here once the panel is connected to Homebridge.")
                     color: Theme.muted
                     font.pixelSize: Theme.s(14)
@@ -282,8 +279,8 @@ Rectangle {
                                             height: Theme.s(60)
                                             activeFocusOnTab: true
                                             Accessible.role: Accessible.Button
-                                            Accessible.name: qsTr("Move %1, now in %2").arg(devItem.modelData.name).arg(devItem.modelData.room)
-                                            Keys.onReturnPressed: picker.pick(devItem.modelData)
+                                            Accessible.name: qsTr("Edit %1").arg(devItem.modelData.name)
+                                            Keys.onReturnPressed: deviceEditor.edit(devItem.modelData)
 
                                             Rectangle {
                                                 anchors.fill: parent
@@ -320,7 +317,7 @@ Rectangle {
                                             MouseArea {
                                                 id: devMouse
                                                 anchors.fill: parent
-                                                onClicked: picker.pick(devItem.modelData)
+                                                onClicked: deviceEditor.edit(devItem.modelData)
                                             }
                                         }
                                     }
@@ -338,10 +335,10 @@ Rectangle {
         objectName: "textKeyboard"
     }
 
-    RoomPicker {
-        id: picker
-        objectName: "roomPicker"
-        onNewRoomRequested: device => root.addRoom(device)
+    DeviceEditor {
+        id: deviceEditor
+        objectName: "deviceEditor"
+        keyboard: keyboard
     }
 
     ConfirmDialog {

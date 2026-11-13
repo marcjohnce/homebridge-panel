@@ -2,9 +2,49 @@
 from __future__ import annotations
 
 import re
+import time
 from typing import Any
 
 from ..i18n import fmt_number, tr
+from ..models import ALARM_KINDS
+
+# Menu areas of the home screen and the device types shown in them
+CATEGORIES = ("light", "climate", "scenes", "security")
+CATEGORY_OF_TYPE = {"light": "light", "plug": "light", "switch": "light", "blind": "light",
+                    "thermostat": "climate", "sensor": "climate", "fan": "climate",
+                    "security": "security"}
+
+
+def category(d: dict[str, Any]) -> str:
+    return CATEGORY_OF_TYPE.get(d["type"], "light")
+
+
+def alert_level(d: dict[str, Any]) -> int:
+    """Security sensors: 2 = alarm (leak, glass break), 1 = open / motion, 0 = quiet."""
+    if d["type"] != "security" or not d.get("reachable", True) or not d.get("state", {}).get("triggered"):
+        return 0
+    return 2 if d.get("meta", {}).get("security") in ALARM_KINDS else 1
+
+
+def _open_for(since: float | None) -> str:
+    minutes = int((time.time() - since) // 60) if since else 0
+    if minutes < 1:
+        return tr("Open")
+    if minutes < 60:
+        return tr("Open for {n} min").format(n=minutes)
+    return tr("Open for {n} h").format(n=minutes // 60)
+
+
+def security_text(d: dict[str, Any]) -> str:
+    kind = d.get("meta", {}).get("security", "door")
+    hit = bool(d.get("state", {}).get("triggered"))
+    if kind in ("window", "door"):
+        return _open_for(d.get("since")) if hit else tr("Closed")
+    if kind == "glassbreak":
+        return tr("Glass break detected") if hit else tr("No alarm")
+    if kind == "leak":
+        return tr("Water detected") if hit else tr("Dry")
+    return tr("Motion") if hit else tr("No motion")
 
 
 def fmt_temp(v: Any) -> str:
@@ -54,6 +94,8 @@ def state_text(d: dict[str, Any]) -> str:
     if not d.get("reachable", True):
         return tr("Not reachable")
     s = d.get("state", {})
+    if d["type"] == "security":
+        return security_text(d)
     if d["type"] == "sensor":
         return ", ".join(sensor_parts(s)) or tr("No reading")
     if d["type"] == "blind":

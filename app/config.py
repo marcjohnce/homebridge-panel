@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, Field, field_validator
@@ -57,6 +57,8 @@ class DeviceOverride(BaseModel):
     hidden: bool = False
     order: int = 100
     outdoor: bool = Field(False, description="Outdoor sensor: shown as outdoor temperature, not indoors")
+    security: Literal["window", "door", "glassbreak", "leak", "motion"] | None = Field(
+        None, description="Kind of a contact or motion sensor (e.g. glassbreak)")
 
 
 class SceneAction(BaseModel):
@@ -76,6 +78,7 @@ class Scene(BaseModel):
     id: str
     name: str
     icon: str = "power"
+    room: str | None = Field(None, description="Room the scene is offered in; none = whole house")
     actions: list[SceneAction] = []
 
 

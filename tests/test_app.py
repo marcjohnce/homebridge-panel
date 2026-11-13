@@ -112,7 +112,7 @@ def test_homebridge_ui_backend():
              {"type": "CurrentTemperature", "value": 20.1, "canWrite": False},
              {"type": "HeatingThresholdTemperature", "value": 21, "canWrite": True,
               "minValue": 5, "maxValue": 30, "minStep": 0.5}]},
-        {"uniqueId": "zzz", "type": "MotionSensor", "serviceName": "PIR", "serviceCharacteristics": []},
+        {"uniqueId": "zzz", "type": "AirPurifier", "serviceName": "Purifier", "serviceCharacteristics": []},
     ]
 
     def handler(req: httpx.Request) -> httpx.Response:
@@ -381,5 +381,38 @@ def test_fast_polling_stops_for_stuck_blind():
             assert calls <= mgr_mod.MOVING_STALL + 3      # stopped following, no endless fast polling
         finally:
             mgr_mod.MOVING_POLL = old
+        await m.stop()
+    asyncio.run(run())
+
+
+# ---------- security sensors ----------
+def test_security_sensors_from_hap():
+    data = {"accessories": [{"aid": 7, "services": [
+        {"iid": 1, "type": U("3E"), "characteristics": [{"iid": 2, "type": U("23"), "value": "Hall", "perms": ["pr"]}]},
+        {"iid": 10, "type": U("80"), "characteristics": [{"iid": 11, "type": U("6A"), "value": 1, "perms": ["pr", "ev"]}]},
+        {"iid": 20, "type": U("83"), "characteristics": [{"iid": 21, "type": U("70"), "value": 0, "perms": ["pr", "ev"]}]},
+        {"iid": 30, "type": U("85"), "characteristics": [{"iid": 31, "type": U("22"), "value": True, "perms": ["pr", "ev"]}]},
+    ]}]}
+    contact, leak, motion = HapBackend.parse_accessories(data)
+    dtype, st, _, meta = snapshot_to_state(contact)
+    assert dtype.value == "security" and st == {"triggered": True}
+    assert meta == {"security": "door", "kinds": ["window", "door", "glassbreak"]}
+    assert snapshot_to_state(leak)[1:4:2] == ({"triggered": False}, {"security": "leak", "kinds": ["leak"]})
+    assert snapshot_to_state(motion)[1] == {"triggered": True}
+    with pytest.raises(ValueError):
+        command_to_writes(contact, {"on": True})
+
+
+def test_security_kind_override_and_icon():
+    cfg = AppConfig.model_validate({"demo": {"enabled": True}, "devices": {
+        "Bedroom Window": {"security": "window"}, "Washing Machine Leak": {"security": "window"}}})
+
+    async def run():
+        m = DeviceManager(cfg, create_backends(cfg))
+        await m.start()
+        win = m.devices[m.resolve("Bedroom Window")]
+        leak = m.devices[m.resolve("Washing Machine Leak")]
+        assert win.meta["security"] == "window" and win.icon == "window" and win.state["triggered"] is True
+        assert leak.meta["security"] == "leak" and leak.icon == "leak"     # a leak sensor cannot be a window
         await m.stop()
     asyncio.run(run())

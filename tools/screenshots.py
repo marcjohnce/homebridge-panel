@@ -93,6 +93,10 @@ def main() -> int:
     for theme in themes:
         store.update({"theme": theme})
         ctl.settings_saved({"theme"})
+        for cat in ("light", "climate", "scenes", "security"):
+            ctl.selectCategory(cat)
+            shot(f"{theme}-home-{cat}")
+        ctl.selectCategory("")
         shot(f"{theme}-home")
         devs = {d["name"]: d["id"] for d in ctl.devices.all()}
         win.setProperty("openDevice", devs["Living Room Heating"])
@@ -118,10 +122,11 @@ def main() -> int:
         QMetaObject.invokeMethod(keyboard, "close")
         rooms.setProperty("tab", 1)
         shot(f"{theme}-room-devices")
-        picker = rooms.findChild(QObject, "roomPicker")
-        QMetaObject.invokeMethod(picker, "pick", Q_ARG("QVariant", ctl.roomEditor.devices[0]))
-        shot(f"{theme}-room-picker")
-        QMetaObject.invokeMethod(picker, "close")
+        editor = rooms.findChild(QObject, "deviceEditor")
+        door = next(d for d in ctl.roomEditor.devices if d["kinds"])
+        QMetaObject.invokeMethod(editor, "edit", Q_ARG("QVariant", door))
+        shot(f"{theme}-device-editor")
+        QMetaObject.invokeMethod(editor, "close")
         page.setProperty("subPage", "")
         win.setProperty("settingsOpen", False)
     win.setProperty("idle", True)

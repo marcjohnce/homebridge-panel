@@ -14,6 +14,7 @@ class DeviceType(str, Enum):
     FAN = "fan"
     SENSOR = "sensor"
     BLIND = "blind"
+    SECURITY = "security"     # contact (window, door, glass break), leak and motion sensors
 
 
 # Icon names used by the UI (see app/qml/Icons.js):
@@ -27,7 +28,14 @@ DEFAULT_ICONS = {
     DeviceType.FAN: "fan",
     DeviceType.SENSOR: "thermostat",
     DeviceType.BLIND: "blinds",
+    DeviceType.SECURITY: "door",
 }
+
+# Kinds of security sensors. A contact sensor can be a window, a door or a glass break
+# detector; HomeKit has no glass break type, so plugins expose those as contact or motion sensors.
+SECURITY_KINDS = ("window", "door", "glassbreak", "leak", "motion")
+SECURITY_ICONS = {"window": "window", "door": "door", "glassbreak": "glass", "leak": "leak", "motion": "motion"}
+ALARM_KINDS = {"glassbreak", "leak"}     # triggered = alarm; the others are only "open" / "motion"
 
 
 @dataclass

@@ -49,9 +49,15 @@ Item {
                     Layout.preferredHeight: Theme.s(44)
                 }
                 TileGrid {
+                    visible: panel.category !== "scenes"
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     onOpenDetail: id => root.openDetail(id)
+                }
+                SceneGrid {
+                    visible: panel.category === "scenes"
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
                 }
             }
         }
@@ -67,7 +73,8 @@ Item {
                 Layout.fillWidth: true
                 Layout.leftMargin: 24
                 Layout.rightMargin: 18
-                Layout.topMargin: 14
+                Layout.topMargin: 12
+                roomy: root.height > root.width * 1.2
                 onOpenSettings: root.openSettings()
             }
             RoomTabs {
@@ -77,11 +84,19 @@ Item {
                 Layout.rightMargin: 24
             }
             TileGrid {
+                visible: panel.category !== "scenes"
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 Layout.leftMargin: 24
                 Layout.rightMargin: 24
                 onOpenDetail: id => root.openDetail(id)
+            }
+            SceneGrid {
+                visible: panel.category === "scenes"
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.leftMargin: 24
+                Layout.rightMargin: 24
             }
         }
     }

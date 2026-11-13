@@ -1,12 +1,13 @@
 import QtQuick
 import QtQuick.Layouts
 
-// Header for square and portrait screens: clock, date, indoor temperature, status and
-// settings in one row, scenes as a horizontal strip below. Leaves the full width to the tiles.
-ColumnLayout {
+// Header for square and portrait screens: one slim row with the clock, the menu as icon
+// buttons, status and settings. Date and temperatures only where there is room (portrait).
+RowLayout {
     id: root
 
     property date now: new Date()
+    property bool roomy: false
     signal openSettings
 
     spacing: 12
@@ -19,132 +20,80 @@ ColumnLayout {
         onTriggered: root.now = new Date()
     }
 
-    RowLayout {
+    Text {
+        objectName: "clock"
+        text: Qt.formatTime(root.now, "hh:mm")
+        color: Theme.ink
+        font.pixelSize: root.roomy ? 52 : 40
+        font.weight: Font.ExtraLight
+    }
+
+    ColumnLayout {
+        visible: root.roomy
         Layout.fillWidth: true
-        spacing: 16
-
+        spacing: 2
         Text {
-            objectName: "clock"
-            text: Qt.formatTime(root.now, "hh:mm")
-            color: Theme.ink
-            font.pixelSize: Theme.s(52)
-            font.weight: Font.ExtraLight
-        }
-
-        ColumnLayout {
+            objectName: "date"
             Layout.fillWidth: true
-            spacing: 2
-
-            Text {
-                objectName: "date"
-                Layout.fillWidth: true
-                text: Theme.date(root.now)
-                color: Theme.muted
-                font.pixelSize: Theme.s(15)
-                elide: Text.ElideRight
-            }
-            RowLayout {
-                objectName: "climate"
-                visible: panel.indoorTemp !== "" || panel.outdoorTemp !== ""
-                spacing: 6
-                LineIcon {
-                    visible: panel.indoorTemp !== ""
-                    Layout.preferredWidth: 20
-                    Layout.preferredHeight: 20
-                    name: "thermostat"
-                    color: Theme.gold
-                }
-                Text {
-                    visible: panel.indoorTemp !== ""
-                    text: qsTr("%1 °C indoors").arg(panel.indoorTemp)
-                    color: Theme.ink
-                    font.pixelSize: Theme.s(17)
-                    font.weight: Font.Light
-                }
-                LineIcon {
-                    visible: panel.outdoorTemp !== ""
-                    Layout.leftMargin: panel.indoorTemp !== "" ? 10 : 0
-                    Layout.preferredWidth: 20
-                    Layout.preferredHeight: 20
-                    name: "weather"
-                    color: Theme.gold
-                }
-                Text {
-                    visible: panel.outdoorTemp !== ""
-                    text: qsTr("%1 °C outdoors").arg(panel.outdoorTemp)
-                    color: Theme.ink
-                    font.pixelSize: Theme.s(17)
-                    font.weight: Font.Light
-                }
-            }
-        }
-
-        Rectangle {
-            objectName: "statusDot"
-            Layout.preferredWidth: 8
-            Layout.preferredHeight: 8
-            radius: 4
-            color: panel.statusOk ? Theme.ok : Theme.err
-        }
-        Text {
-            objectName: "statusText"
-            Layout.maximumWidth: 150
-            text: panel.statusText
+            text: Theme.date(root.now)
             color: Theme.muted
-            font.pixelSize: Theme.s(14)
+            font.pixelSize: 15
             elide: Text.ElideRight
         }
-        Item {
-            objectName: "settingsButton"
-            Layout.preferredWidth: 44
-            Layout.preferredHeight: 44
-            activeFocusOnTab: true
-            Accessible.role: Accessible.Button
-            Accessible.name: qsTr("Settings")
-            Keys.onReturnPressed: root.openSettings()
-
-            LineIcon {
-                anchors.centerIn: parent
-                width: 24
-                height: 24
-                name: "sliders"
-                color: parent.activeFocus ? Theme.gold : Theme.muted
-            }
-            MouseArea {
-                anchors.fill: parent
-                onClicked: root.openSettings()
-            }
+        Text {
+            objectName: "climate"
+            Layout.fillWidth: true
+            visible: panel.indoorTemp !== ""
+            text: qsTr("%1 °C indoors").arg(panel.indoorTemp)
+            color: Theme.ink
+            font.pixelSize: 17
+            font.weight: Font.Light
+            elide: Text.ElideRight
         }
     }
 
-    ListView {
-        id: sceneList
-        objectName: "scenes"
-        layer.enabled: GraphicsInfo.api === GraphicsInfo.Software   // see TileGrid.qml
-
-        // opaque background for the layer above (transparent layers render black in software mode)
-        Rectangle {
-            parent: sceneList
-            anchors.fill: parent
-            z: -1
-            visible: sceneList.layer.enabled
-            color: Theme.page
-        }
-
-        visible: panel.scenes.length > 0
+    Item {
+        visible: !root.roomy
         Layout.fillWidth: true
+    }
+
+    CategoryBar {
+        Layout.alignment: Qt.AlignVCenter
+    }
+
+    Item {
+        visible: !root.roomy
+        Layout.fillWidth: true
+    }
+
+    Rectangle {
+        objectName: "statusDot"
+        Layout.preferredWidth: 8
+        Layout.preferredHeight: 8
+        radius: 4
+        color: panel.statusOk ? Theme.ok : Theme.err
+        Accessible.role: Accessible.StaticText
+        Accessible.name: panel.statusText
+    }
+    Item {
+        objectName: "settingsButton"
+        Layout.preferredWidth: 44
         Layout.preferredHeight: 44
-        orientation: ListView.Horizontal
-        spacing: 8
-        boundsBehavior: Flickable.StopAtBounds
-        clip: true
-        model: panel.scenes
-        delegate: SceneButton {
-            required property var modelData
-            chip: true
-            sceneId: modelData.id
-            label: modelData.name
-            iconName: modelData.icon
+        activeFocusOnTab: true
+        Accessible.role: Accessible.Button
+        Accessible.name: qsTr("Settings")
+        Keys.onReturnPressed: root.openSettings()
+
+        LineIcon {
+            anchors.centerIn: parent
+            width: 24
+            height: 24
+            name: "sliders"
+            color: parent.activeFocus ? Theme.gold : Theme.muted
+        }
+        MouseArea {
+            anchors.fill: parent
+            onClicked: root.openSettings()
         }
     }
 }

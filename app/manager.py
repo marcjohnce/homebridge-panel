@@ -9,7 +9,7 @@ from typing import Any
 from .backends import Backend
 from .config import AppConfig
 from .hap_types import ServiceSnapshot, command_to_writes, snapshot_to_state
-from .models import DEFAULT_ICONS, Device
+from .models import DEFAULT_ICONS, SECURITY_ICONS, Device, DeviceType
 
 log = logging.getLogger(__name__)
 MOVING_POLL = 1.0   # seconds between polls while a blind is moving
@@ -132,7 +132,11 @@ class DeviceManager:
         dtype, state, caps, meta = snapshot_to_state(snap)
         if ov and ov.outdoor:
             meta["outdoor"] = True
+        if ov and ov.security and ov.security in meta.get("kinds", ()):
+            meta["security"] = ov.security
         icon_hint = meta.pop("icon_hint", None)
+        if dtype == DeviceType.SECURITY:
+            icon_hint = SECURITY_ICONS[meta["security"]]
         if "modes" in meta and not self.cfg.panel.show_cooling:
             meta["modes"] = [m for m in meta["modes"] if m != "cool"]
         return Device(
@@ -218,6 +222,6 @@ class DeviceManager:
             "type": "snapshot",
             "title": self.cfg.panel.title,
             "devices": [d.to_dict() for d in self.devices.values()],
-            "scenes": [s.model_dump(include={"id", "name", "icon"}) for s in self.cfg.scenes],
+            "scenes": [s.model_dump(include={"id", "name", "icon", "room"}) for s in self.cfg.scenes],
             "backends": self.status,
         }

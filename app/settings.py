@@ -64,7 +64,9 @@ FIELDS = [
           options=((0, "Never"), (60, "1 min"), (120, "2 min"), (300, "5 min"), (900, "15 min"))),
     # Pages open a sub-page of the settings (SettingsPage.qml); their data is stored separately
     Field("rooms_page", "rooms", "Rooms and devices", "page", None,
-          help="Create rooms and choose which room each device belongs to"),
+          help="Create rooms, rename devices and choose their room"),
+    Field("show_general", "rooms", "Show the “General” room", "toggle", True,
+          help="Off: devices without a room only appear under “All”"),
     Field("hap_enabled", "homebridge", "Connect to Homebridge", "toggle", True),
     Field("hap_host", "homebridge", "Address", "host", "127.0.0.1",
           help="IP address or name of the computer running Homebridge"),

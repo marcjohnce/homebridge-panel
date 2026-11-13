@@ -38,6 +38,10 @@ _DEVICES = [
       ("PositionState", 2, False, {}), ("HoldPosition", False, True, {}),
       ("CurrentHorizontalTiltAngle", 30, False, {}),
       ("TargetHorizontalTiltAngle", 30, True, dict(min=-90, max=90, step=1))]),
+    ("terrace-door", "ContactSensor", "Terrace Door", [("ContactSensorState", 0, False, {})]),
+    ("bedroom-window", "ContactSensor", "Bedroom Window", [("ContactSensorState", 1, False, {})]),
+    ("terrace-glass", "ContactSensor", "Terrace Glass Break", [("ContactSensorState", 0, False, {})]),
+    ("washer-leak", "LeakSensor", "Washing Machine Leak", [("LeakDetected", 0, False, {})]),
     # without HoldPosition and tilt: stop sets the target to the current position
     ("bedroom-blinds", "WindowCovering", "Bedroom Blinds",
      [("CurrentPosition", 0, False, {}), ("TargetPosition", 0, True, dict(min=0, max=100, step=1)),

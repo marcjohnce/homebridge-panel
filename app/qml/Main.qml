@@ -106,6 +106,7 @@ ApplicationWindow {
             window.openDevice = "";
             window.settingsOpen = false;
             window.idle = true;
+            panel.selectCategory("light");      // after waking up the panel starts with "Light"
         }
     }
 
@@ -115,6 +116,14 @@ ApplicationWindow {
             idleTimer.restart();
         }
         function onToast(message) {
+            toast.show(message);
+        }
+        // leak or glass break: wake up, show "Security" and the message
+        function onSecurityAlarm(message) {
+            window.idle = false;
+            window.openDevice = "";
+            window.settingsOpen = false;
+            panel.selectCategory("security");
             toast.show(message);
         }
         function onRestarting(message) {

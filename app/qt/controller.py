@@ -5,6 +5,7 @@ import asyncio
 import concurrent.futures
 import logging
 import os
+import subprocess
 import sys
 import threading
 import time
@@ -24,7 +25,8 @@ from ..manager import DeviceManager, DeviceNotFound
 from ..rooms import BUILTIN_DEFAULT, RoomLayout
 from ..scheduler import Scheduler
 from ..settings import ACTIONS, SettingsStore, apply_to_config, validate
-from .format import fmt_temp, has_detail, short_name, state_text
+from ..models import SECURITY_ICONS
+from .format import alert_level, category, fmt_temp, has_detail, short_name, state_text
 
 log = logging.getLogger(__name__)
 ALL_ROOMS = ""
@@ -52,10 +54,12 @@ class AsyncRunner:
 
 
 class DeviceModel(QAbstractListModel):
-    """Devices of the selected room (or all rooms) for the tile grid."""
+    """Devices of the selected menu area and room (or all rooms) for the tile grid."""
 
     ROLES = ("deviceId", "name", "shortName", "room", "type", "icon", "isOn", "reachable", "heating",
-             "stateText", "hasDetail", "targetTemp", "minTemp", "maxTemp", "modeOff")
+             "stateText", "hasDetail", "targetTemp", "minTemp", "maxTemp", "modeOff", "alertLevel")
+    # order inside a room: per menu area
+    RANK = {"light": 0, "switch": 1, "plug": 1, "blind": 2, "thermostat": 0, "sensor": 1, "fan": 2}
 
     def __init__(self, parent: QObject | None = None, layout: RoomLayout | None = None):
         super().__init__(parent)
@@ -63,6 +67,7 @@ class DeviceModel(QAbstractListModel):
         self._all: dict[str, dict[str, Any]] = {}
         self._rows: list[str] = []
         self._room = ALL_ROOMS
+        self._category = "light"     # "" = every device (tests, tools)
         self._ids = {Qt.ItemDataRole.UserRole + 1 + i: n for i, n in enumerate(self.ROLES)}
 
     def roleNames(self) -> dict[int, QByteArray]:
@@ -96,12 +101,13 @@ class DeviceModel(QAbstractListModel):
             case "minTemp": return float(m.get("min_temp", 10))
             case "maxTemp": return float(m.get("max_temp", 30))
             case "modeOff": return s.get("mode") == "off"
+            case "alertLevel": return alert_level(d)
         return None
 
     # --- maintenance ---
-    def rooms(self) -> list[str]:
-        """Rooms with devices, in the order set in the settings."""
-        return self.layout.sort({d["room"] for d in self._all.values()})
+    def rooms(self, cat: str | None = None) -> list[str]:
+        """Rooms with devices (of a menu area), in the order set in the settings."""
+        return self.layout.sort({d["room"] for d in self._all.values() if not cat or category(d) == cat})
 
     def device_rooms(self) -> dict[str, str]:
         return {d["id"]: d["room"] for d in self._all.values()}
@@ -110,9 +116,22 @@ class DeviceModel(QAbstractListModel):
         return {d["id"]: d["baseRoom"] for d in self._all.values()}
 
     def _place(self, d: dict[str, Any]) -> dict[str, Any]:
-        """Applies the room chosen on the panel; "baseRoom" keeps the one from config.yaml."""
+        """Applies what was set on the panel: room, display name and the kind of security sensors.
+        "baseRoom", "baseName" and "baseKind" keep the values from Homebridge / config.yaml."""
         base = d.get("baseRoom", d["room"])
-        return {**d, "baseRoom": base, "room": self.layout.room_of(d["id"], base)}
+        base_name = d.get("baseName", d["name"])
+        out = {**d, "baseRoom": base, "room": self.layout.room_of(d["id"], base),
+               "baseName": base_name, "name": self.layout.names.get(d["id"]) or base_name}
+        meta = d.get("meta", {})
+        if "security" in meta:
+            base_kind = d.get("baseKind", meta["security"])
+            kind = self.layout.kinds.get(d["id"], base_kind)
+            if kind not in meta.get("kinds", ()):
+                kind = base_kind
+            base_icon = d.get("baseIcon", d["icon"])
+            icon = SECURITY_ICONS[kind] if base_icon == SECURITY_ICONS.get(base_kind) else base_icon
+            out.update(baseKind=base_kind, baseIcon=base_icon, icon=icon, meta={**meta, "security": kind})
+        return out
 
     def reassign(self) -> None:
         """Re-applies the room layout after it was edited (or the language changed)."""
@@ -126,12 +145,21 @@ class DeviceModel(QAbstractListModel):
             self.refresh_texts()
 
     def _visible(self) -> list[str]:
-        devs = [d for d in self._all.values() if self._room in (ALL_ROOMS, d["room"])]
+        devs = [d for d in self._all.values() if self._room in (ALL_ROOMS, d["room"])
+                and self._category in ("", category(d))]
         room_rank = {r: i for i, r in enumerate(self.rooms())}
-        rank = {"thermostat": 1, "sensor": 2}   # switchable devices first, then heating, then sensors
-        devs.sort(key=lambda d: (room_rank.get(d["room"], 0), rank.get(d["type"], 0), d.get("order", 100),
-                                 d["name"].casefold()))
+        # alarms first, then open windows/doors; otherwise by room, kind of device, order, name
+        devs.sort(key=lambda d: (-alert_level(d), room_rank.get(d["room"], 0), self.RANK.get(d["type"], 0),
+                                 d.get("order", 100), d["name"].casefold()))
         return [d["id"] for d in devs]
+
+    def set_category(self, cat: str, room: str) -> None:
+        self._category = cat
+        self._room = room
+        self._relayout()
+
+    def count(self, pred) -> int:
+        return sum(1 for d in self._all.values() if pred(d))
 
     def _relayout(self) -> None:
         rows = self._visible()
@@ -155,7 +183,8 @@ class DeviceModel(QAbstractListModel):
         old = self._all.get(d["id"])
         d = self._place(d)
         self._all[d["id"]] = d
-        structural = old is None or any(old.get(k) != d.get(k) for k in ("room", "name", "order"))
+        structural = (old is None or any(old.get(k) != d.get(k) for k in ("room", "name", "order"))
+                      or alert_level(old) != alert_level(d))
         if structural:
             self._relayout()
         elif d["id"] in self._rows:
@@ -273,11 +302,39 @@ class RoomsBridge(QObject):
         return [{"name": r, "count": counts.get(r, 0), "isDefault": r == default}
                 for r in self._layout.all_rooms(dev_rooms.values())]
 
+    KIND_LABELS = {"window": "Window", "door": "Door / contact", "glassbreak": "Glass break",
+                   "leak": "Leak", "motion": "Motion"}
+
     @Property("QVariantList", notify=changed)
     def devices(self) -> list[dict[str, Any]]:
         devs = sorted(self._ctl._model.all(), key=lambda d: d["name"].casefold())
-        return [{"id": d["id"], "name": d["name"], "icon": d["icon"], "room": d["room"],
-                 "reachable": d["reachable"]} for d in devs]
+        out = []
+        for d in devs:
+            kinds = d.get("meta", {}).get("kinds", [])
+            out.append({"id": d["id"], "name": d["name"], "baseName": d["baseName"], "icon": d["icon"],
+                        "room": d["room"], "reachable": d["reachable"],
+                        "kind": d.get("meta", {}).get("security", ""),
+                        "kinds": [{"value": k, "label": tr(self.KIND_LABELS[k])} for k in kinds] if len(kinds) > 1 else []})
+        return out
+
+    @Slot(str, str, str, str, result=str)
+    def saveDevice(self, dev_id: str, name: str, kind: str, room: str) -> str:
+        """Display name ("" = original), kind of a security sensor and room, saved together."""
+        m = self._ctl._model
+        d = m.get(dev_id)
+        if not d:
+            return tr("Device not found. It may have been removed from Homebridge.")
+        name, err = self._layout.check_device_name(name)
+        if err:
+            return err
+        if room not in self._layout.all_rooms(m.device_rooms().values()):
+            return tr("Room not found")
+        self._layout.set_name(dev_id, name, d["baseName"])
+        if kind and kind in d.get("meta", {}).get("kinds", []):
+            self._layout.set_kind(dev_id, kind, d.get("baseKind", kind))
+        self._layout.set_room(dev_id, room, d["baseRoom"], m.device_rooms())
+        self._commit()
+        return ""
 
     @Property(str, notify=changed)
     def summary(self) -> str:
@@ -347,6 +404,9 @@ class Controller(QObject):
     userActivity = Signal()
     roomsChanged = Signal()
     currentRoomChanged = Signal()
+    categoryChanged = Signal()
+    summaryChanged = Signal()
+    securityAlarm = Signal(str)       # new leak / glass break alarm: wake up and show "Security"
     scenesChanged = Signal()
     statusChanged = Signal()
     climateChanged = Signal()
@@ -376,7 +436,13 @@ class Controller(QObject):
         self._room_editor = RoomsBridge(store, self)
         self._rooms: list[str] = []
         self._room = ALL_ROOMS
-        self._scenes = [s.model_dump(include={"id", "name", "icon"}) for s in base_cfg.scenes]
+        self._category = "light"
+        self._scenes = [{**s.model_dump(include={"id", "name", "icon", "room"}), "count": len(s.actions)}
+                        for s in base_cfg.scenes]
+        self._alarms: set[str] = set()
+        self._since: dict[str, float] = {}           # security sensor -> time it was triggered
+        self._since_timer = QTimer(self, interval=30_000, timeout=self._model.refresh_texts)
+        self._since_timer.start()
         self._backends: dict[str, Any] = {}
         self._started = False
         i18n.set_language(i18n.resolve(store.get("language")))
@@ -396,6 +462,10 @@ class Controller(QObject):
         self.runner.submit(self._restart(self.effective_config()))
 
     def shutdown(self) -> None:
+        # stop timers first: if Python later frees this object from another thread,
+        # active Qt timers of a deleted object would crash the event loop
+        self._theme_timer.stop()
+        self._since_timer.stop()
         try:
             self.runner.submit(self._stop_manager()).result(timeout=3)
         except Exception:  # pragma: no cover
@@ -453,11 +523,13 @@ class Controller(QObject):
 
     async def _reboot(self) -> None:
         log.info("Rebooting: %s", " ".join(self.reboot_command))
+        # subprocess.run in a worker thread: asyncio's child watcher in this non-main thread
+        # can clash with Qt's own SIGCHLD handling
         try:
-            proc = await asyncio.create_subprocess_exec(
-                *self.reboot_command, stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE)
-            _, err = await asyncio.wait_for(proc.communicate(), timeout=15)
-        except (OSError, asyncio.TimeoutError) as e:
+            proc = await asyncio.to_thread(subprocess.run, self.reboot_command, stdout=subprocess.DEVNULL,
+                                           stderr=subprocess.PIPE, timeout=15)
+            err = proc.stderr
+        except (OSError, subprocess.TimeoutExpired) as e:
             self.restarting.emit("")
             self.toast.emit(tr("Could not restart the Raspberry Pi: {error}").format(error=e))
             return
@@ -478,19 +550,21 @@ class Controller(QObject):
             self.apply_language()
         if "idle_seconds" in keys:
             self.idleChanged.emit()
+        if "show_general" in keys:
+            self._refresh_rooms()
 
     # ---------- messages from the background thread ----------
     def _on_message(self, msg: dict[str, Any]) -> None:
         kind = msg.get("type")
         if kind == "snapshot":
-            self._model.set_all(msg.get("devices", []))
+            self._model.set_all([self._stamp(d) for d in msg.get("devices", [])])
             self._backends = msg.get("backends", {})
             self._started = "title" in msg
             self._refresh_rooms()
             self.climateChanged.emit()
             self.statusChanged.emit()
         elif kind == "device":
-            d = msg["device"]
+            d = self._stamp(msg["device"])
             if self._model.upsert(d):
                 self._refresh_rooms()
             self.deviceUpdated.emit(d["id"])
@@ -506,8 +580,35 @@ class Controller(QObject):
         elif kind == "scene" and msg.get("errors"):
             self.toast.emit(tr("Scene only partly applied. Not reached: {names}").format(names=", ".join(msg["errors"])))
 
+    def _stamp(self, d: dict[str, Any]) -> dict[str, Any]:
+        """Remembers since when a window or door is open (shown as "Open for 25 min")."""
+        if d.get("type") == "security":
+            if d.get("state", {}).get("triggered"):
+                self._since.setdefault(d["id"], time.time())
+            else:
+                self._since.pop(d["id"], None)
+            d = {**d, "since": self._since.get(d["id"])}
+        return d
+
+    def _check_alarms(self) -> None:
+        alarms = {d["id"]: d for d in self._model.all() if alert_level(d) == 2}
+        for dev_id in alarms.keys() - self._alarms:
+            d = alarms[dev_id]
+            self.securityAlarm.emit(tr("{state}: {room}, {name}").format(
+                state=state_text(d), room=d["room"], name=short_name(d["name"], d["room"])))
+        self._alarms = set(alarms)
+
+    def _tab_rooms(self) -> list[str]:
+        if self._category == "scenes":
+            rooms = self._model.layout.sort({s["room"] for s in self._scenes if s.get("room")})
+        else:
+            rooms = self._model.rooms(self._category)
+        if not self.store.get("show_general"):
+            rooms = [r for r in rooms if r != self._model.layout.default_room]
+        return rooms
+
     def _refresh_rooms(self) -> None:
-        rooms = self._model.rooms()
+        rooms = self._tab_rooms()
         if self._room != ALL_ROOMS and self._room not in rooms:
             self._room = ALL_ROOMS
             self._model.set_room(ALL_ROOMS)
@@ -515,6 +616,8 @@ class Controller(QObject):
         if rooms != self._rooms:
             self._rooms = rooms
             self.roomsChanged.emit()
+        self._check_alarms()
+        self.summaryChanged.emit()
         self._room_editor.changed.emit()    # device counts and assignments in the settings
 
     # ---------- commands from QML ----------
@@ -564,11 +667,22 @@ class Controller(QObject):
         return {**d, "shortName": short_name(d["name"], d["room"]), "stateText": state_text(d)}
 
     @Slot(str)
+    def selectCategory(self, cat: str) -> None:
+        if cat == self._category:
+            return
+        self._category = cat
+        self._model.set_category(cat, self._room)
+        self.categoryChanged.emit()
+        self._refresh_rooms()
+        self.scenesChanged.emit()
+
+    @Slot(str)
     def selectRoom(self, room: str) -> None:
         if room != self._room:
             self._room = room
             self._model.set_room(room)
             self.currentRoomChanged.emit()
+            self.scenesChanged.emit()
 
     def apply_language(self) -> None:
         """Switches the language at runtime: QML retranslates (see main.py), Python texts are rebuilt."""
@@ -620,6 +734,36 @@ class Controller(QObject):
     @Property("QVariantList", notify=scenesChanged)
     def scenes(self) -> list[dict[str, Any]]:
         return self._scenes
+
+    @Property("QVariantList", notify=scenesChanged)
+    def visibleScenes(self) -> list[dict[str, Any]]:
+        """Scenes of the selected room; "All" shows every scene, whole-house scenes first."""
+        if self._room != ALL_ROOMS:
+            return [s for s in self._scenes if s.get("room") == self._room]
+        return sorted(self._scenes, key=lambda s: s.get("room") is not None)
+
+    @Property(str, notify=categoryChanged)
+    def category(self) -> str:
+        return self._category
+
+    @Property("QVariantMap", notify=summaryChanged)
+    def summary(self) -> dict[str, str]:
+        """Short status per menu area, e.g. {"light": "3 on", "security": "2 alerts"}."""
+        m = self._model
+        on = m.count(lambda d: category(d) == "light" and d["type"] != "blind" and d["reachable"]
+                     and bool(d.get("state", {}).get("on")))
+        heating = m.count(lambda d: d["type"] == "thermostat" and d["reachable"] and d.get("state", {}).get("heating"))
+        alerts = self.securityCount
+        return {
+            "light": tr("{n} on").format(n=on) if on else "",
+            "climate": tr("{n} heating").format(n=heating) if heating else "",
+            "scenes": "",
+            "security": (tr("1 alert") if alerts == 1 else tr("{n} alerts").format(n=alerts)) if alerts else "",
+        }
+
+    @Property(int, notify=summaryChanged)
+    def securityCount(self) -> int:
+        return self._model.count(lambda d: alert_level(d) > 0)
 
     @Property(bool, notify=statusChanged)
     def statusOk(self) -> bool:

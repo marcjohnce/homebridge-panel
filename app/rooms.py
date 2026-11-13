@@ -1,9 +1,11 @@
-"""Rooms edited on the panel: their order and which device belongs to which room.
+"""Rooms and devices edited on the panel: room order, room of each device, display names
+and the kind of security sensors (window, door, glass break …).
 
 A device's room comes from config.yaml (`devices: <id>: room:`) or the default room.
 The panel can override it; overrides and the room order are stored in settings.json:
 
-    "rooms": {"order": ["Living Room", "Kitchen"], "devices": {"hap:...": "Kitchen"}}
+    "rooms": {"order": ["Living Room", "Kitchen"], "devices": {"hap:...": "Kitchen"},
+              "names": {"hap:...": "Coffee"}, "kinds": {"hap:...": "window"}}
 
 Rooms without devices are kept in "order" so they can be prepared before devices are
 assigned. On the home screen only rooms with devices appear.
@@ -16,6 +18,7 @@ from typing import Any
 from .i18n import tr
 
 MAX_NAME = 24
+MAX_DEVICE_NAME = 40
 BUILTIN_DEFAULT = "General"
 
 
@@ -27,11 +30,18 @@ class RoomLayout:
         devs = data.get("devices", {})
         self.assign: dict[str, str] = ({str(k): str(v) for k, v in devs.items() if isinstance(v, str) and v.strip()}
                                        if isinstance(devs, dict) else {})
+        self.names = self._strings(data.get("names"))
+        self.kinds = self._strings(data.get("kinds"))
         self._default = default_room
+
+    @staticmethod
+    def _strings(d: Any) -> dict[str, str]:
+        return {str(k): str(v) for k, v in d.items() if isinstance(v, str) and v.strip()} if isinstance(d, dict) else {}
 
     # ---------- reading ----------
     def to_dict(self) -> dict[str, Any]:
-        return {"order": list(self.order), "devices": dict(self.assign)}
+        return {"order": list(self.order), "devices": dict(self.assign),
+                "names": dict(self.names), "kinds": dict(self.kinds)}
 
     @property
     def default_room(self) -> str:
@@ -116,6 +126,25 @@ class RoomLayout:
             self.order = rooms
         self._set(dev_id, room, base)
         return None
+
+    def check_device_name(self, name: str) -> tuple[str, str | None]:
+        name = " ".join(str(name).split())
+        if len(name) > MAX_DEVICE_NAME:
+            return name, tr("At most {n} characters").format(n=MAX_DEVICE_NAME)
+        return name, None
+
+    def set_name(self, dev_id: str, name: str, base: str) -> None:
+        """Empty or the original name: back to the name from Homebridge / config.yaml."""
+        if not name or name == base:
+            self.names.pop(dev_id, None)
+        else:
+            self.names[dev_id] = name
+
+    def set_kind(self, dev_id: str, kind: str, base: str) -> None:
+        if not kind or kind == base:
+            self.kinds.pop(dev_id, None)
+        else:
+            self.kinds[dev_id] = kind
 
     def _set(self, dev_id: str, room: str, base: str) -> None:
         if room == self.base_name(base):

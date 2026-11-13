@@ -11,9 +11,10 @@ python tools/doc_screenshots.py      # writes docs/images/*.png
 ## Screen sizes
 
 The layout adapts to the display. Wide screens show a **sidebar** on the left with the clock,
-indoor temperature and scenes. Square and portrait screens (width less than 1.4 × height)
-switch to a **top bar** with the same elements in one row and the scenes as a horizontal strip,
-so the tiles get the full width. The callout numbers below are the same for both layouts.
+date, temperatures and the menu (*Lights*, *Climate*, *Scenes*, *Security*). Square and portrait
+screens (width less than 1.4 × height) switch to a slim **top bar**: clock, the menu as icon
+buttons, status and settings in one row, so the tiles get as much room as possible. Date and
+temperature appear in the top bar only on portrait screens.
 
 The panel is optimized for **1280 × 800** and **720 × 720**:
 
@@ -39,19 +40,18 @@ Start the app at a given size in a window with `.venv/bin/python -m app --size 8
 
 | # | Element | What it does |
 |---|---|---|
-| 1 | Clock and date | Current time and date (in the top bar: clock with date and temperature next to it) |
+| 1 | Clock and date | Current time and date (the top bar shows only the clock on square screens) |
 | 2 | Indoor and outdoor temperature | *indoors*: average of all reachable thermostats and indoor sensors. *outdoors*: sensors marked `outdoor: true` (shown only if there is one) |
-| 3 | Scenes | Tap to run a scene from `config.yaml`, e.g. *All off* or *Comfort* |
+| 3 | Menu | Chooses what the tiles show: [Lights](#menu), [Climate](#menu), [Scenes](#scenes), [Security](#security). Each entry shows a short status, e.g. *2 on*, *1 heating* or *1 alert* in red. The top bar shows the menu as icons with a red count on *Security* |
 | 4 | Connection status | Green: all bridges connected. Red: a bridge is not reachable (details under Settings → Info) |
 | 5 | Settings | Opens the [settings page](#settings) |
-| 6 | Rooms | Filter the tiles by room; *All* shows every device with its room above the name |
+| 6 | Rooms | Filter the tiles by room. Only rooms with devices of the chosen menu entry appear; *All* comes last and shows every device with its room above the name |
 | 7 | Device that is on | Gold tiles are switched on. Tap a tile to switch it on or off (blinds: open or close) |
 | 8 | Open controls | Opens brightness, color or speed controls. A long press on the tile does the same |
-| 9 | Heating tile | Small arc with the target temperature; the text turns orange while heating. Tap to open the thermostat |
-| 10 | Sensor tile | Current readings, e.g. temperature, humidity and air pressure of a weather station. Tap to open the [sensor view](#sensors) |
 
 Tiles leave out the room from the device name when the room is shown anyway
-("Living Room Heating" → "Heating"). The detail view shows the full name.
+("Living Room Heating" → "Heating"). The detail view shows the full name. The panel starts with
+*Lights* and returns to it after the screen saver.
 
 ### 1280 × 800 – 10.1″ displays
 
@@ -60,6 +60,8 @@ Tiles leave out the room from the device name when the room is shown anyway
 ### 720 × 720 – square displays (top bar)
 
 ![Home screen at 720 × 720](images/home-720x720.png)
+
+![Security at 720 × 720](images/home-security-720x720.png)
 
 ### 1024 × 600
 
@@ -76,6 +78,53 @@ Tiles leave out the room from the device name when the room is shown anyway
 ### 720 × 1280 – portrait (top bar)
 
 <img src="images/home-720x1280.png" alt="Home screen at 720 × 1280 in portrait" width="360">
+
+## Menu
+
+| Menu entry | Shows |
+|---|---|
+| Lights | lights, switches, plugs and blinds |
+| Climate | heating, temperature, humidity, air pressure and light sensors, fans |
+| Scenes | the scenes of the room; *All* shows every scene, whole-house scenes first |
+| Security | window, door, glass break, leak and motion sensors – alarms and open windows first |
+
+![Climate](images/home-climate.png)
+
+| # | Element | What it does |
+|---|---|---|
+| 1 | Climate | Selected menu entry |
+| 2 | Heating tile | Small arc with the target temperature; the text turns orange while heating. Tap to open the thermostat |
+| 3 | Sensor tile | Current readings, e.g. temperature, humidity and air pressure of a weather station. Tap to open the [sensor view](#sensors) |
+
+### Scenes
+
+![Scenes](images/home-scenes.png)
+
+| # | Element | What it does |
+|---|---|---|
+| 1 | Scenes | Selected menu entry |
+| 2 | Scene of a room | Tap to run it; the tile flashes gold. The room comes from `room:` of the scene in `config.yaml` |
+| 3 | Scene for the whole house | Scenes without a room appear under *All* |
+
+### Security
+
+![Security](images/home-security.png)
+
+| # | Element | What it does |
+|---|---|---|
+| 1 | Security | Selected menu entry with the number of alerts (open windows and doors, motion, alarms) |
+| 2 | Open window | Red text, e.g. *Open for 25 min*; open windows and doors come first |
+| 3 | Glass break sensor | *No alarm* while quiet |
+
+A **leak or glass break alarm** turns the tile red, wakes the panel from the screen saver,
+switches to *Security* and shows a message. Open windows and doors only raise the count in the
+menu.
+
+![Alarm](images/home-alarm.png)
+
+HomeKit has no glass break type: plugins expose such detectors as contact or motion sensors.
+Choose the kind of a contact or motion sensor in [Settings → Rooms and devices](#rooms-and-devices)
+(window, door / contact, glass break, motion) or with `security:` in `config.yaml`.
 
 ## Thermostat
 
@@ -206,8 +255,10 @@ layout (QWERTZ for German, AZERTY for French).
 
 ### Rooms and devices
 
-*Settings → Rooms and devices* manages the rooms shown as tabs on the home screen. Every
-change is saved at once and the home screen follows immediately.
+*Settings → Rooms and devices* manages the rooms shown as tabs on the home screen and the
+display names of devices. Every change is saved at once and the home screen follows
+immediately. *Show the “General” room* (in the same section of the settings) hides the tab of
+the default room; its devices then appear only under *All*.
 
 ![Rooms](images/rooms.png)
 
@@ -231,17 +282,20 @@ Names are entered with an on-screen keyboard; a connected keyboard works as well
 | 2 | Keys | Letter layout of the panel language. *?123* switches to digits, punctuation and accented letters; hold delete to clear |
 | 3 | Done | Saves the name, or shows why it cannot be used (empty, longer than 24 characters, name already taken) |
 
-The *Devices* tab lists all devices grouped by room. Tap a device to move it:
+The *Devices* tab lists all devices grouped by room. Tap a device to edit it:
 
-![Choose a room](images/room-picker.png)
+![Edit device](images/device-editor.png)
 
 | # | Element | What it does |
 |---|---|---|
-| 1 | Rooms | The current room is highlighted; tap another one to move the device there |
-| 2 | New room … | Creates a room with the keyboard and moves the device into it |
+| 1 | Display name | Opens the keyboard. Below it the name from Homebridge; *Original name* restores it (an empty name does the same) |
+| 2 | Kind | Only for contact and motion sensors: window, door / contact, glass break or motion |
+| 3 | Room | The current room is highlighted. *New room …* creates a room with the keyboard |
+| 4 | Save | Saves name, kind and room together; *Cancel* discards the changes |
 
-Rooms set here take precedence over `room:` in `config.yaml`. Moving a device back to its room from
-`config.yaml` removes the override again.
+Names, kinds and rooms set here take precedence over `name:`, `security:` and `room:` in
+`config.yaml`. Scenes keep working with the original names. Setting a value back to the one from
+`config.yaml` or Homebridge removes the override again.
 
 ### Keypad
 

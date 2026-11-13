@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 
-// Left column: clock, indoor temperature, scenes, status and access to settings
+// Left column: clock, indoor temperature, menu (light, climate, scenes, security), status, settings
 ColumnLayout {
     id: root
 
@@ -73,50 +73,14 @@ ColumnLayout {
         }
     }
 
-    Text {
-        visible: panel.scenes.length > 0
-        Layout.topMargin: root.compact ? 16 : Theme.s(28)
-        Layout.bottomMargin: 4
-        text: qsTr("Scenes")
-        color: Theme.muted
-        font.pixelSize: Theme.s(14)
+    CategoryMenu {
+        Layout.fillWidth: true
+        Layout.topMargin: root.compact ? 8 : Theme.s(30)
+        compact: root.compact
     }
 
-    Flickable {
-        id: sceneFlick
-        objectName: "scenes"
-        layer.enabled: GraphicsInfo.api === GraphicsInfo.Software   // see TileGrid.qml
-
-        // opaque background for the layer above (transparent layers render black in software mode)
-        Rectangle {
-            parent: sceneFlick
-            anchors.fill: parent
-            z: -1
-            visible: sceneFlick.layer.enabled
-            color: Theme.page
-        }
-
-        Layout.fillWidth: true
+    Item {
         Layout.fillHeight: true
-        contentHeight: sceneColumn.height
-        boundsBehavior: Flickable.StopAtBounds
-        clip: true
-
-        Column {
-            id: sceneColumn
-            width: parent.width
-            Repeater {
-                model: panel.scenes
-                SceneButton {
-                    required property var modelData
-                    width: sceneColumn.width
-                    sceneId: modelData.id
-                    label: modelData.name
-                    iconName: modelData.icon
-                    compact: root.compact
-                }
-            }
-        }
     }
 
     RowLayout {

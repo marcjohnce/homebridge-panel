@@ -30,8 +30,12 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 - **Blinds**: open, close, stop, position by dragging, slat angle; smooth position updates while moving
 - **Sensors**: temperature, humidity, air pressure (Eve) and light level; sensors of one device
   combined into one tile; outdoor sensors shown as outdoor temperature
-- **Rooms** managed on the panel: add, rename, reorder and delete rooms, move devices between them
-- **Scenes and schedules** (e.g. weekdays 06:30 "Comfort", daily 22:30 "Eco")
+- **Security**: window, door, glass break, leak and motion sensors; open windows and alarms first,
+  a leak or glass break wakes the panel and shows a message
+- **Menu** Lights, Climate, Scenes, Security; room tabs per menu entry with "All" last
+- **Rooms** managed on the panel: add, rename, reorder and delete rooms, move devices between them,
+  change display names; optionally hide the "General" room
+- **Scenes per room and schedules** (e.g. weekdays 06:30 "Comfort", daily 22:30 "Eco")
 - **Languages**: English, German, French, Italian, Spanish – selectable in the settings
 - **Light / dark / automatic** appearance and a **screen saver** with a large clock
 - **Settings page** for appearance, screen saver and the Homebridge connection (address, port, PIN)
@@ -84,7 +88,8 @@ In the app (icon at the bottom left), stored in `~/.config/smarthome-panel/setti
 | Display | Appearance: Automatic (dark 7 pm – 7 am), Light, Dark | saved immediately |
 | Display | Language: System, English, Deutsch, Français, Italiano, Español | saved immediately |
 | Display | Screen saver after: never, 1, 2, 5, 15 minutes | saved immediately |
-| Rooms | Rooms and devices: rooms and which device is in which room | saved immediately |
+| Rooms | Rooms and devices: rooms, display names, kind of security sensors, room of each device | saved immediately |
+| Rooms | Show the "General" room (on/off) | saved immediately |
 | Homebridge | Connect to Homebridge (on/off) | saved with **Apply** |
 | Homebridge | Address (IP or host name), port, PIN | saved with **Apply**, try **Test connection** first |
 | System | Restart app, Restart Raspberry Pi | buttons with a confirmation dialog |
@@ -127,8 +132,8 @@ column to the catalog.
 | `hap` | additional bridges (child bridges); the main bridge comes from the settings |
 | `homebridge_ui` | alternatively access via the Homebridge web UI (username/password) |
 | `demo` | simulated devices |
-| `devices` | per device (ID or name): `room`, `name`, `icon`, `order`, `hidden`, `outdoor` (sensors); rooms set on the panel take precedence |
-| `scenes` | scenes with actions `{device: …, set: {…}}` |
+| `devices` | per device (ID or name): `room`, `name`, `icon`, `order`, `hidden`, `outdoor` (sensors), `security` (`window`, `door`, `glassbreak`, `motion` for contact/motion sensors); values set on the panel take precedence |
+| `scenes` | scenes with actions `{device: …, set: {…}}` and an optional `room` (without: whole house) |
 | `schedules` | run a scene at a time on weekdays (`mo tu we th fr sa su`) |
 
 **Scene attributes**: `on`, `brightness` (0–100), `hue` (0–360), `saturation` (0–100),

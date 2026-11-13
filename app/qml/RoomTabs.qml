@@ -22,7 +22,7 @@ ListView {
         color: Theme.page
     }
 
-    model: [""].concat(panel.rooms)
+    model: panel.rooms.concat([""])      // "All" comes last
 
     delegate: UnderlineButton {
         required property string modelData

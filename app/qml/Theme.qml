@@ -25,6 +25,9 @@ QtObject {
     readonly property color knob: dark ? "#F2EFE9" : "#FFFFFF"
     readonly property color ok: dark ? "#6FB08C" : "#5E9C7B"
     readonly property color err: dark ? "#D86A5C" : "#C4584B"
+    // security alarm tile (leak, glass break) with white text
+    readonly property color alarm: dark ? "#A9443A" : "#B4473B"
+    readonly property color alarmInk: "#FFFFFF"
 
     readonly property string fontFamily: "Jost"
 

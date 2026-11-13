@@ -20,7 +20,8 @@ os.environ.setdefault("QT_QUICK_BACKEND", "software")
 os.environ["QT_QUICK_CONTROLS_STYLE"] = "Basic"
 
 from PIL import Image, ImageDraw, ImageFont  # noqa: E402
-from PySide6.QtCore import QEvent, QEventLoop, QObject, QPointF, QRectF, Qt, QTimer, qInstallMessageHandler  # noqa: E402
+from PySide6.QtCore import (Q_ARG, QEvent, QEventLoop, QMetaObject, QObject, QPointF, QRectF, Qt,  # noqa: E402
+                            QTimer, qInstallMessageHandler)
 from PySide6.QtGui import QGuiApplication, QKeyEvent  # noqa: E402
 from PySide6.QtQml import QQmlApplicationEngine  # noqa: E402
 from PySide6.QtQuick import QQuickItem, QQuickWindow  # noqa: E402
@@ -111,12 +112,6 @@ class Panel:
         h = it.height()
         if name == "roomTabs":  # horizontal list: only the part covered by tabs
             w = min(w, it.property("contentWidth"))
-        if name == "scenes":    # scene list (vertical in the sidebar, horizontal in the top bar)
-            cw, ch = it.property("contentWidth"), it.property("contentHeight")
-            if cw and cw > 0:
-                w = min(w, cw)
-            if ch and ch > 0:
-                h = min(h, ch)
         r = QRectF(it.mapToScene(QPointF(0, 0)), it.mapToScene(QPointF(w, h)))
         p = it.parentItem()
         while p is not None:
@@ -230,19 +225,51 @@ def save(img: Image.Image, out: Path, name: str) -> None:
 
 def home_callouts(p: Panel, top_layout: bool) -> list[tuple]:
     lamp = p.device_id("Living Room Ceiling Light")
-    heating = p.device_id("Bathroom Heating")   # first tile, visible at every size
-    return [
-        (1, [p.rect("clock")], "Clock and date"),
-        (2, [p.rect("climate")], "Indoor and outdoor temperature", *(["top"] if top_layout else [])),
-        (3, [p.rect("scenes")], "Scenes", "left"),
-        (4, [p.rect("statusDot").united(p.rect("statusText"))], "Connection status"),
+    status = p.rect("statusDot") if top_layout else p.rect("statusDot").united(p.rect("statusText"))
+    out = [(1, [p.rect("clock")], "Clock" if top_layout else "Clock and date")]
+    if not top_layout:
+        out.append((2, [p.rect("climate")], "Indoor and outdoor temperature"))
+    out += [
+        (3, [p.rect("categoryMenu")], "Menu: lights, climate, scenes, security", *(["top"] if top_layout else ["left"])),
+        (4, [status], "Connection status"),
         (5, [p.rect("settingsButton")], "Settings"),
-        (6, [p.rect("roomTabs")], "Rooms", *([] if top_layout else ["top"])),
+        (6, [p.rect("roomTabs")], "Rooms; “All” comes last", *([] if top_layout else ["top"])),
         (7, [p.rect(f"tile:{lamp}")], "Device that is on (tap to switch)"),
         (8, [p.rect(f"more:{lamp}")], "Open controls"),
-        (9, [p.rect(f"tile:{heating}")], "Heating tile"),
-        (10, [p.rect(f"tile:{p.device_id('Weather Station')}")], "Sensor tile"),
     ]
+    return [(i, *c[1:]) for i, c in enumerate(out, 1)]
+
+
+def menu_views(p: Panel, out: Path, size: str, suffix: str = "") -> None:
+    """Climate, scenes and security as chosen in the menu."""
+    p.win.setProperty("openDevice", "")
+    p.ctl.selectCategory("climate")
+    save(annotate(p.grab(), [
+        (1, [p.rect("category:climate")], "Climate", "left" if not suffix else "top"),
+        (2, [p.rect(f"tile:{p.device_id('Living Room Heating')}")], "Heating tile"),
+        (3, [p.rect(f"tile:{p.device_id('Weather Station')}")], "Sensor tile"),
+    ], f"Climate – {size}"), out, f"home-climate{suffix}")
+    p.ctl.selectCategory("scenes")
+    save(annotate(p.grab(), [
+        (1, [p.rect("category:scenes")], "Scenes", "left" if not suffix else "top"),
+        (2, [p.rect("scene:movie")], "Scene of a room (tap to run)"),
+        (3, [p.rect("scene:all-off")], "Scene for the whole house"),
+    ], f"Scenes – {size}"), out, f"home-scenes{suffix}")
+    p.ctl.selectCategory("security")
+    save(annotate(p.grab(), [
+        (1, [p.rect("category:security")], "Security with number of alerts", "left" if not suffix else "top"),
+        (2, [p.rect(f"tile:{p.device_id('Bedroom Window')}")], "Open window (shown first)"),
+        (3, [p.rect(f"tile:{p.device_id('Terrace Glass Break')}")], "Glass break sensor"),
+    ], f"Security – {size}"), out, f"home-security{suffix}")
+    leak = p.device_id("Washing Machine Leak")
+    d = p.ctl.devices.get(leak)
+    p.ctl._on_message({"type": "device", "device": {**d, "state": {"triggered": True}}})
+    wait(300)
+    save(annotate(p.grab(), [
+        (1, [p.rect(f"tile:{leak}")], "Alarm: leak or glass break"),
+    ], f"Alarm – {size}"), out, f"home-alarm{suffix}")
+    p.ctl._on_message({"type": "device", "device": {**d, "state": {"triggered": False}}})
+    p.ctl.selectCategory("light")
 
 
 def detail_views(p: Panel, out: Path, suffix: str, size: str) -> None:
@@ -313,9 +340,11 @@ def main() -> int:
     # Detail views at the primary size (1280×800) and at 720×720
     square = Panel(SQUARE_SIZE)
     detail_views(square, out, "-720x720", "720 × 720")
+    menu_views(square, out, "720 × 720", "-720x720")
     square.close()
     p = Panel(DETAIL_SIZE)
     detail_views(p, out, "", "1280 × 800")
+    menu_views(p, out, "1280 × 800")
 
     # Settings, keypad and screen saver at the primary size
 
@@ -355,13 +384,15 @@ def main() -> int:
     devices_tab = p.rect("tab:devices")
     p.click(devices_tab.center().x(), devices_tab.center().y())
     wait(400)
-    fan = p.rect("device:" + p.device_id("Fan"))
-    p.click(fan.center().x(), fan.center().y())
+    door = next(d for d in p.ctl.roomEditor.devices if d["name"] == "Terrace Door")
+    QMetaObject.invokeMethod(p.engine.rootObjects()[0].findChild(QObject, "deviceEditor"), "edit", Q_ARG("QVariant", door))
     wait(400)
     save(annotate(p.grab(), [
-        (1, [p.rect("roomChoices")], "Current room highlighted; tap another to move the device", "left"),
-        (2, [p.rect("newRoomChoice")], "Create a room and move the device there", "bottom"),
-    ], "Choose a room"), out, "room-picker")
+        (1, [p.rect("deviceName")], "Display name (tap to change)", "left"),
+        (2, [p.rect("kindChoices")], "Kind: window, door or glass break", "left"),
+        (3, [p.rect("roomChoices")], "Room; “New room …” creates one", "left"),
+        (4, [p.rect("deviceSave")], "Save", "bottom"),
+    ], "Edit device"), out, "device-editor")
     p.key(Qt.Key.Key_Escape)
     wait(300)
     p.win.setProperty("settingsOpen", False)
