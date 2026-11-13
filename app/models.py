@@ -13,6 +13,7 @@ class DeviceType(str, Enum):
     THERMOSTAT = "thermostat"
     FAN = "fan"
     SENSOR = "sensor"
+    BLIND = "blind"
 
 
 # Icon names used by the UI (see app/qml/Icons.js):
@@ -25,6 +26,7 @@ DEFAULT_ICONS = {
     DeviceType.THERMOSTAT: "thermostat",
     DeviceType.FAN: "fan",
     DeviceType.SENSOR: "thermostat",
+    DeviceType.BLIND: "blinds",
 }
 
 

@@ -83,7 +83,8 @@ class DeviceModel(QAbstractListModel):
             case "room": return d["room"]
             case "type": return d["type"]
             case "icon": return d["icon"]
-            case "isOn": return d["type"] != "thermostat" and bool(s.get("on")) and d["reachable"]
+            # gold "on" highlight: not for heating, sensors or blinds (open is not "on")
+            case "isOn": return d["type"] not in ("thermostat", "sensor", "blind") and bool(s.get("on")) and d["reachable"]
             case "reachable": return d["reachable"]
             case "heating": return bool(s.get("heating")) and d["reachable"]
             case "stateText": return state_text(d)

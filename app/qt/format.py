@@ -47,6 +47,15 @@ def state_text(d: dict[str, Any]) -> str:
     s = d.get("state", {})
     if d["type"] == "sensor":
         return ", ".join(sensor_parts(s)) or "No reading"
+    if d["type"] == "blind":
+        if s.get("obstructed"):
+            return "Obstructed"
+        if s.get("moving") == "opening":
+            return f"Opening … {s.get('position', 0)}%"
+        if s.get("moving") == "closing":
+            return f"Closing … {s.get('position', 0)}%"
+        pos = s.get("position", 0)
+        return "Open" if pos >= 100 else "Closed" if pos <= 0 else f"{pos}% open"
     if d["type"] == "thermostat":
         if s.get("mode") == "off":
             return f"Off, {fmt_temp(s.get('current_temp'))} °C"
@@ -65,4 +74,4 @@ def state_text(d: dict[str, Any]) -> str:
 
 def has_detail(d: dict[str, Any]) -> bool:
     caps = d.get("capabilities", [])
-    return d["type"] in ("thermostat", "sensor") or any(c in caps for c in ("brightness", "color", "color_temp", "speed"))
+    return d["type"] in ("thermostat", "sensor", "blind") or any(c in caps for c in ("brightness", "color", "color_temp", "speed"))

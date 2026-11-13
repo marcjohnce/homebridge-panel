@@ -31,6 +31,7 @@ SERVICE_TYPES: dict[str, str] = {
     "82": "HumiditySensor",
     "84": "LightSensor",
     "8A": "TemperatureSensor",
+    "8C": "WindowCovering",
     EVE_WEATHER_SERVICE: "EveWeather",
     EVE_AIR_PRESSURE_SERVICE: "AirPressureSensor",
 }
@@ -61,6 +62,15 @@ CHAR_TYPES: dict[str, str] = {
     "CE": "ColorTemperature",
     "E3": "ConfiguredName",
     "10": "CurrentRelativeHumidity",
+    "24": "ObstructionDetected",
+    "6C": "CurrentHorizontalTiltAngle",
+    "6D": "CurrentPosition",
+    "6E": "CurrentVerticalTiltAngle",
+    "6F": "HoldPosition",
+    "72": "PositionState",
+    "7B": "TargetHorizontalTiltAngle",
+    "7C": "TargetPosition",
+    "7D": "TargetVerticalTiltAngle",
     "6B": "CurrentAmbientLightLevel",
     EVE_AIR_PRESSURE: "AirPressure",
 }
@@ -75,7 +85,11 @@ DEVICE_TYPE_BY_SERVICE: dict[str, DeviceType] = {
     "Fan": DeviceType.FAN,
     "Fanv2": DeviceType.FAN,
     "Sensor": DeviceType.SENSOR,
+    "WindowCovering": DeviceType.BLIND,
 }
+
+# WindowCovering.PositionState; position 0 = closed, 100 = fully open
+POSITION_STATES = {0: "closing", 1: "opening", 2: "stopped"}
 
 # Thermostat.TargetHeatingCoolingState
 THERMOSTAT_MODES = {0: "off", 1: "heat", 2: "cool", 3: "auto"}
@@ -146,7 +160,26 @@ def snapshot_to_state(s: ServiceSnapshot) -> tuple[DeviceType, dict[str, Any], l
     meta: dict[str, Any] = {}
     c = s.chars
 
-    if s.service_type == "Sensor":
+    if s.service_type == "WindowCovering":
+        pos = int(round(_num(s.get("CurrentPosition", 0)) or 0))
+        target = int(round(_num(s.get("TargetPosition", pos)) or 0))
+        state["position"] = pos
+        state["target"] = target
+        moving = POSITION_STATES.get(int(s.get("PositionState", 2)), "stopped")
+        # Many plugins report "stopped" all the time: if the target differs, the blind is moving
+        if moving == "stopped" and abs(target - pos) > 1:
+            moving = "opening" if target > pos else "closing"
+        state["moving"] = moving
+        state["on"] = pos > 0
+        state["obstructed"] = bool(s.get("ObstructionDetected", False))
+        caps += ["on", "position", "stop"]
+        tilt = c.get("TargetHorizontalTiltAngle") or c.get("TargetVerticalTiltAngle")
+        if tilt is not None:
+            state["tilt"] = int(_num(tilt.value) or 0)
+            caps.append("tilt")
+            meta.update(min_tilt=tilt.min if tilt.min is not None else -90,
+                        max_tilt=tilt.max if tilt.max is not None else 90)
+    elif s.service_type == "Sensor":
         if "CurrentRelativeHumidity" in c:
             state["humidity"] = _num(s.get("CurrentRelativeHumidity"))
             caps.append("humidity")
@@ -247,6 +280,8 @@ def command_to_writes(s: ServiceSnapshot, attrs: dict[str, Any]) -> list[tuple[C
             if s.service_type == "Thermostat":
                 ch = need("TargetHeatingCoolingState")
                 writes.append((ch, THERMOSTAT_MODES_REV["heat"] if on else 0))
+            elif s.service_type == "WindowCovering":     # on = open fully, off = close
+                writes.append((need("TargetPosition"), 100 if on else 0))
             elif "On" in c:
                 writes.append((c["On"], on))
             elif "Active" in c:
@@ -261,6 +296,21 @@ def command_to_writes(s: ServiceSnapshot, attrs: dict[str, Any]) -> list[tuple[C
             writes.append((need("Saturation"), _clamp(value, need("Saturation"), 0, 100)))
         elif key == "color_temp":
             writes.append((need("ColorTemperature"), int(_clamp(value, need("ColorTemperature"), 140, 500))))
+        elif key == "position":
+            writes.append((need("TargetPosition"), int(_clamp(value, need("TargetPosition"), 0, 100))))
+        elif key == "stop":
+            if not value:
+                continue
+            hold = c.get("HoldPosition")
+            if hold is not None and hold.writable:
+                writes.append((hold, True))
+            else:   # without HoldPosition: target = where the blind is now
+                writes.append((need("TargetPosition"), int(_num(s.get("CurrentPosition", 0)) or 0)))
+        elif key == "tilt":
+            ch = c.get("TargetHorizontalTiltAngle") or c.get("TargetVerticalTiltAngle")
+            if ch is None:
+                raise ValueError(f"Device '{s.name}' does not support 'tilt'")
+            writes.append((ch, int(_clamp(value, ch, -90, 90))))
         elif key == "speed":
             writes.append((need("RotationSpeed"), _clamp(value, need("RotationSpeed"), 0, 100)))
         elif key == "target_temp":

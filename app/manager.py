@@ -12,6 +12,8 @@ from .hap_types import ServiceSnapshot, command_to_writes, snapshot_to_state
 from .models import DEFAULT_ICONS, Device
 
 log = logging.getLogger(__name__)
+MOVING_POLL = 1.0   # seconds between polls while a blind is moving
+MOVING_STALL = 5    # stop fast polling after this many polls without any position change
 
 
 class DeviceNotFound(KeyError):
@@ -30,6 +32,8 @@ class DeviceManager:
         self._listeners: set[asyncio.Queue] = set()
         self._task: asyncio.Task | None = None
         self._locks = {b.name: asyncio.Lock() for b in backends}
+        self._follow: set[str] = set()
+        self._stall: dict[str, tuple[tuple, int]] = {}   # backend -> (last positions, polls unchanged)
 
     # ---------- lifecycle ----------
     async def start(self) -> None:
@@ -94,9 +98,32 @@ class DeviceManager:
                     await self._broadcast({"type": "remove", "id": dev_id})
             st.update(ok=True, error=None, last_update=time.time(),
                       devices=sum(1 for d in self.devices.values() if d.backend == backend.name))
+            self._follow_movement(backend)
             if not was_ok:
                 log.info("Backend %s connected (%d devices)", backend.name, st["devices"])
                 await self._broadcast({"type": "status", "backends": self.status})
+
+    def _follow_movement(self, backend: Backend) -> None:
+        """While a blind of this backend is moving, poll it every MOVING_POLL seconds
+        instead of waiting for the regular interval, so its position updates smoothly."""
+        positions = tuple(sorted((d.id, d.state.get("position")) for d in self.devices.values()
+                                 if d.backend == backend.name and d.state.get("moving") in ("opening", "closing")))
+        if not positions:
+            self._stall.pop(backend.name, None)
+            return
+        last, unchanged = self._stall.get(backend.name, ((), 0))
+        unchanged = unchanged + 1 if positions == last else 0
+        self._stall[backend.name] = (positions, unchanged)
+        if unchanged >= MOVING_STALL:     # blind stuck short of its target: back to normal polling
+            return
+        if backend.name not in self._follow:
+            self._follow.add(backend.name)
+
+            async def again():
+                self._follow.discard(backend.name)
+                await self.refresh(backend)
+
+            asyncio.get_running_loop().call_later(MOVING_POLL, lambda: asyncio.ensure_future(again()))
 
     def _build(self, dev_id: str, backend: Backend, snap: ServiceSnapshot) -> Device | None:
         ov = self.cfg.devices.get(dev_id) or self.cfg.devices.get(snap.name)
@@ -148,6 +175,8 @@ class DeviceManager:
         asyncio.get_running_loop().call_later(
             1.0, lambda: asyncio.ensure_future(self.refresh(backend))
         )
+        self._stall.pop(backend.name, None)
+        self._follow_movement(backend)
         return dev
 
     async def run_scene(self, scene_id: str) -> dict[str, Any]:

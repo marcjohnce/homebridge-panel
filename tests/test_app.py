@@ -275,3 +275,111 @@ def test_outdoor_override_and_icon_hint():
         assert "icon_hint" not in ws.meta
         await m.stop()
     asyncio.run(run())
+
+
+# ---------- blinds ----------
+def blind_snapshot(with_hold=True, with_tilt=True):
+    chars = [
+        {"iid": 10, "type": U("6D"), "value": 40, "perms": ["pr", "ev"]},
+        {"iid": 11, "type": U("7C"), "value": 40, "perms": ["pr", "pw", "ev"], "minValue": 0, "maxValue": 100},
+        {"iid": 12, "type": U("72"), "value": 2, "perms": ["pr", "ev"]},
+    ]
+    if with_hold:
+        chars.append({"iid": 13, "type": U("6F"), "perms": ["pw"]})
+    if with_tilt:
+        chars.append({"iid": 14, "type": U("7B"), "value": 0, "perms": ["pr", "pw"], "minValue": -90, "maxValue": 90})
+    data = {"accessories": [{"aid": 6, "services": [
+        {"iid": 1, "type": U("3E"), "characteristics": [{"iid": 2, "type": U("23"), "value": "Study Blind", "perms": ["pr"]}]},
+        {"iid": 9, "type": U("8C"), "characteristics": chars}]}]}
+    return HapBackend.parse_accessories(data)[0]
+
+
+def test_blind_state_and_commands():
+    s = blind_snapshot()
+    dtype, state, caps, meta = snapshot_to_state(s)
+    assert dtype.value == "blind" and s.service_type == "WindowCovering"
+    assert state == {"position": 40, "target": 40, "moving": "stopped", "on": True, "obstructed": False, "tilt": 0}
+    assert set(caps) >= {"position", "stop", "tilt"} and meta == {"min_tilt": -90, "max_tilt": 90}
+
+    w = lambda attrs: [(ch.name, v) for ch, v in command_to_writes(s, attrs)]  # noqa: E731
+    assert w({"position": 130}) == [("TargetPosition", 100)]
+    assert w({"on": False}) == [("TargetPosition", 0)]
+    assert w({"on": True}) == [("TargetPosition", 100)]
+    assert w({"stop": True}) == [("HoldPosition", True)]
+    assert w({"stop": False}) == []
+    assert w({"tilt": -120}) == [("TargetHorizontalTiltAngle", -90)]
+
+    plain = blind_snapshot(with_hold=False, with_tilt=False)
+    assert [(ch.name, v) for ch, v in command_to_writes(plain, {"stop": True})] == [("TargetPosition", 40)]
+    with pytest.raises(ValueError):
+        command_to_writes(plain, {"tilt": 10})
+    with pytest.raises(ValueError):
+        command_to_writes(plain, {"brightness": 10})
+
+
+def test_blind_moving_state_without_position_state():
+    s = blind_snapshot()
+    del s.chars["PositionState"]
+    s.chars["TargetPosition"].value = 90
+    assert snapshot_to_state(s)[1]["moving"] == "opening"
+    s.chars["TargetPosition"].value = 10
+    assert snapshot_to_state(s)[1]["moving"] == "closing"
+
+
+def test_blind_moves_and_is_followed_quickly():
+    cfg = AppConfig.model_validate({"demo": {"enabled": True}, "server": {"poll_interval": 60}})
+
+    async def run():
+        m = DeviceManager(cfg, create_backends(cfg))
+        await m.start()
+        dev = await m.command("Living Room Blinds", {"position": 0})
+        assert dev.state["target"] == 0 and dev.state["moving"] == "closing"
+        # regular polling is 60 s; the blind must still arrive within a few seconds
+        for _ in range(60):
+            await asyncio.sleep(0.1)
+            if m.devices[m.resolve("Living Room Blinds")].state["position"] == 0:
+                break
+        state = m.devices[m.resolve("Living Room Blinds")].state
+        assert state["position"] == 0 and state["moving"] == "stopped"
+        await m.command("Bedroom Blinds", {"on": True})
+        await asyncio.sleep(1.2)
+        await m.command("Bedroom Blinds", {"stop": True})
+        await asyncio.sleep(2.5)
+        state = m.devices[m.resolve("Bedroom Blinds")].state
+        assert 0 < state["position"] < 100 and state["moving"] == "stopped"
+        await m.stop()
+    asyncio.run(run())
+
+
+def test_fast_polling_stops_for_stuck_blind():
+    import app.manager as mgr_mod
+    cfg = AppConfig.model_validate({"demo": {"enabled": True}, "server": {"poll_interval": 60}})
+
+    async def run():
+        m = DeviceManager(cfg, create_backends(cfg))
+        await m.start()
+        backend = next(iter(m.backends.values()))
+        calls = 0
+        orig = backend.fetch
+
+        async def counting_fetch():
+            nonlocal calls
+            calls += 1
+            snaps = await orig()
+            for s in snaps:                       # blind never reaches its target
+                if s.key == "living-blinds":
+                    s.chars["CurrentPosition"].value = 55
+                    s.chars["TargetPosition"].value = 0
+                    s.chars["PositionState"].value = 2
+            return snaps
+        backend.fetch = counting_fetch
+        old = mgr_mod.MOVING_POLL
+        mgr_mod.MOVING_POLL = 0.05
+        try:
+            await m.refresh(backend)
+            await asyncio.sleep(1.5)
+            assert calls <= mgr_mod.MOVING_STALL + 3      # stopped following, no endless fast polling
+        finally:
+            mgr_mod.MOVING_POLL = old
+        await m.stop()
+    asyncio.run(run())

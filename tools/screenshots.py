@@ -95,6 +95,8 @@ def main() -> int:
         shot(f"{theme}-light")
         win.setProperty("openDevice", devs["Weather Station"])
         shot(f"{theme}-sensor")
+        win.setProperty("openDevice", devs["Living Room Blinds"])
+        shot(f"{theme}-blinds")
         win.setProperty("openDevice", "")
         win.setProperty("settingsOpen", True)
         shot(f"{theme}-settings")

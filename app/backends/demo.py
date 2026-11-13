@@ -33,7 +33,17 @@ _DEVICES = [
     ("living-climate", "Sensor", "Living Room Climate",
      [("CurrentTemperature", 21.2, False, {}), ("CurrentRelativeHumidity", 46.0, False, {})]),
     ("hall-light", "Sensor", "Hall Light Sensor", [("CurrentAmbientLightLevel", 320.0, False, {})]),
+    ("living-blinds", "WindowCovering", "Living Room Blinds",
+     [("CurrentPosition", 60, False, {}), ("TargetPosition", 60, True, dict(min=0, max=100, step=1)),
+      ("PositionState", 2, False, {}), ("HoldPosition", False, True, {}),
+      ("CurrentHorizontalTiltAngle", 30, False, {}),
+      ("TargetHorizontalTiltAngle", 30, True, dict(min=-90, max=90, step=1))]),
+    # without HoldPosition and tilt: stop sets the target to the current position
+    ("bedroom-blinds", "WindowCovering", "Bedroom Blinds",
+     [("CurrentPosition", 0, False, {}), ("TargetPosition", 0, True, dict(min=0, max=100, step=1)),
+      ("PositionState", 2, False, {})]),
 ]
+BLIND_STEP = 20   # % per poll
 
 # Simulated drift per poll for sensor readings: (step, lower bound, upper bound, decimals)
 _SENSOR_DRIFT = {
@@ -69,6 +79,15 @@ class DemoBackend(Backend):
             for name, ch in s.chars.items():
                 step, lo, hi, digits = _SENSOR_DRIFT[name]
                 ch.value = round(max(lo, min(hi, ch.value + random.uniform(-step, step))), digits)
+        for s in self._services.values():
+            if s.service_type != "WindowCovering":
+                continue
+            cur, tgt = s.chars["CurrentPosition"], s.chars["TargetPosition"].value
+            diff = tgt - cur.value
+            cur.value += max(-BLIND_STEP, min(BLIND_STEP, diff))
+            s.chars["PositionState"].value = 2 if cur.value == tgt else (1 if tgt > cur.value else 0)
+            if "TargetHorizontalTiltAngle" in s.chars:
+                s.chars["CurrentHorizontalTiltAngle"].value = s.chars["TargetHorizontalTiltAngle"].value
         coffee = self._services["coffee"].chars
         coffee["OutletInUse"].value = bool(coffee["On"].value)
 
@@ -79,4 +98,11 @@ class DemoBackend(Backend):
     async def write(self, writes: list[tuple[Char, Any]]) -> None:
         for ch, value in writes:
             key, cname = ch.ref
-            self._services[key].chars[cname].value = value
+            chars = self._services[key].chars
+            if cname == "HoldPosition":     # stop where the blind is now
+                chars["TargetPosition"].value = chars["CurrentPosition"].value
+                continue
+            chars[cname].value = value
+            if cname == "TargetPosition" and "PositionState" in chars:
+                cur = chars["CurrentPosition"].value
+                chars["PositionState"].value = 2 if value == cur else (1 if value > cur else 0)

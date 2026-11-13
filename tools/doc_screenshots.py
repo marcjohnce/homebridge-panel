@@ -232,6 +232,16 @@ def detail_views(p: Panel, out: Path, suffix: str) -> None:
     ]), out, f"sensor{suffix}")
     p.win.setProperty("openDevice", p.device_id("Hall Light Sensor"))
     save(annotate(p.grab(), [(5, [p.rect("reading:lux")])]), out, f"sensor-light{suffix}")
+
+    p.win.setProperty("openDevice", p.device_id("Living Room Blinds"))
+    save(annotate(p.grab(), [
+        (1, [p.rect("blindVisual")]),
+        (2, [p.rect("blindPosition")]),
+        (3, [p.rect("openButton")]),
+        (4, [p.rect("stopButton")]),
+        (5, [p.rect("closeButton")]),
+        (6, [p.rect("tiltSlider")]),
+    ]), out, f"blinds{suffix}")
     p.win.setProperty("openDevice", "")
 
 

@@ -11,12 +11,13 @@ GridView {
 
     model: panel.devices
     cellWidth: width / columns
-    // Tiles are 6:5. If the rows almost fit on screen, flatten the tiles slightly (max. 15%)
-    // so that only whole rows are visible, e.g. three rows on 720×720.
+    // Tiles are 6:5. If the rows almost fit on screen, flatten the tiles slightly (max. 15%,
+    // and never below 160 px × scale) so that only whole rows are visible, e.g. three rows on 720×720.
     readonly property real naturalHeight: Math.round(cellWidth * 5 / 6)
     readonly property int rowsNeeded: Math.ceil(count / columns)
     readonly property int rowsFit: Math.max(1, Math.round(height / naturalHeight))
     readonly property bool fitRows: rowsNeeded * naturalHeight > height && height / rowsFit >= naturalHeight * 0.85
+                                    && height / rowsFit >= Theme.s(160)
     cellHeight: Math.max(118, fitRows ? Math.floor(height / rowsFit) : naturalHeight)
     boundsBehavior: Flickable.StopAtBounds
     clip: true

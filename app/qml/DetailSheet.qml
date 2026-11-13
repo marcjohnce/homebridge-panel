@@ -11,6 +11,7 @@ Rectangle {
 
     readonly property bool isThermostat: dev.type === "thermostat"
     readonly property bool isSensor: dev.type === "sensor"
+    readonly property bool isBlind: dev.type === "blind"
     readonly property bool heatingNow: isThermostat && dev.reachable && dev.state.heating
 
     color: Theme.page
@@ -75,21 +76,30 @@ Rectangle {
             title: root.dev.name || ""
             note: !root.dev.reachable ? qsTr("Not reachable")
                 : root.heatingNow ? qsTr("Heating now")
+                : (root.isBlind && root.dev.state.obstructed) ? qsTr("Obstructed")
                 : (root.isSensor && root.dev.meta && root.dev.meta.outdoor) ? qsTr("Outdoors") : ""
-            noteColor: root.heatingNow ? Theme.heat2 : Theme.muted
+            noteColor: root.heatingNow ? Theme.heat2 : (root.isBlind && root.dev.state.obstructed) ? Theme.err : Theme.muted
             onBack: root.closed()
         }
 
         Loader {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            sourceComponent: root.isThermostat ? thermostatComponent : root.isSensor ? sensorComponent : lightComponent
+            sourceComponent: root.isThermostat ? thermostatComponent : root.isSensor ? sensorComponent
+                           : root.isBlind ? blindComponent : lightComponent
         }
     }
 
     Component {
         id: thermostatComponent
         ThermostatControl {
+            dev: root.dev
+            sheet: root
+        }
+    }
+    Component {
+        id: blindComponent
+        BlindControl {
             dev: root.dev
             sheet: root
         }

@@ -92,3 +92,13 @@ def test_sensor_texts():
     assert state_text(d) == "21.2 °C, 46%"
     assert state_text({"type": "sensor", "reachable": True, "state": {}}) == "No reading"
     assert has_detail(d)
+
+
+def test_blind_texts():
+    b = lambda **s: state_text({"type": "blind", "reachable": True, "state": {"position": 0, "moving": "stopped", **s}})  # noqa: E731
+    assert b() == "Closed"
+    assert b(position=100) == "Open"
+    assert b(position=35) == "35% open"
+    assert b(position=35, moving="closing") == "Closing … 35%"
+    assert b(position=35, moving="opening") == "Opening … 35%"
+    assert b(position=35, obstructed=True) == "Obstructed"

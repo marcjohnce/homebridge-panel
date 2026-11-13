@@ -44,7 +44,7 @@ Start the app at a given size in a window with `.venv/bin/python -m app --size 8
 | 4 | Connection status | Green: all bridges connected. Red: a bridge is not reachable (details under Settings → Info) |
 | 5 | Settings | Opens the [settings page](#settings) |
 | 6 | Rooms | Filter the tiles by room; *All* shows every device with its room above the name |
-| 7 | Device that is on | Gold tiles are switched on. Tap a tile to switch it on or off |
+| 7 | Device that is on | Gold tiles are switched on. Tap a tile to switch it on or off (blinds: open or close) |
 | 8 | Open controls | Opens brightness, color or speed controls. A long press on the tile does the same |
 | 9 | Heating tile | Small arc with the target temperature; the text turns orange while heating. Tap to open the thermostat |
 | 10 | Sensor tile | Current readings, e.g. temperature, humidity and air pressure of a weather station. Tap to open the [sensor view](#sensors) |
@@ -115,6 +115,31 @@ results in one command.
 | 4 | White tone | From cool (left) to warm (right), shown in kelvin |
 
 Only the controls the device supports are shown.
+
+## Blinds
+
+Window blinds (HomeKit *Window Covering*). Tap the tile to open fully or close, tap "›"
+or press and hold for the detail view.
+
+![Blinds at 1280 × 800](images/blinds.png)
+
+<img src="images/blinds-720x720.png" alt="Blinds at 720 × 720" width="480">
+
+| # | Element | What it does |
+|---|---|---|
+| 1 | Blind | Drag up or down (or tap) to set the position; the gold rail is the lower edge of the blind |
+| 2 | Position | 0% = closed, 100% = fully open. While moving it shows the target and *Opening …* / *Closing …* |
+| 3 | Open | Opens fully |
+| 4 | Stop | Stops where the blind is (uses the blind's own stop function if it has one) |
+| 5 | Close | Closes fully |
+| 6 | Slat angle | Tilts the slats from −90° to 90°; only shown for blinds that support it |
+
+While a blind moves, the panel polls it every second so the position follows smoothly,
+then returns to the normal interval. If a blind reports an obstruction, the tile and the
+detail view show *Obstructed*.
+
+In scenes: `position` (0–100), `tilt` (−90…90), `stop: true`; `on: true` opens fully and
+`on: false` closes.
 
 ## Sensors
 

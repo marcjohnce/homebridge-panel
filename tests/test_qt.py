@@ -89,7 +89,7 @@ def test_controller_demo_model_and_commands(qapp, tmp_path):
     ctl = make_controller(tmp_path)
     ctl.start()
     model = ctl.devices
-    assert pump_until(lambda: model.rowCount() == 11)
+    assert pump_until(lambda: model.rowCount() == 13)
     assert ctl.statusOk and ctl.statusText == "Connected"
     assert "Kitchen" in ctl.rooms and ctl.indoorTemp != ""
 
@@ -99,7 +99,7 @@ def test_controller_demo_model_and_commands(qapp, tmp_path):
     ctl.toggle(coffee)
     assert pump_until(lambda: ctl.device(coffee)["state"]["on"] is True)
     ctl.selectRoom("")
-    assert model.rowCount() == 11
+    assert model.rowCount() == 13
 
     errors = []
     ctl.toast.connect(errors.append)
@@ -111,7 +111,7 @@ def test_controller_demo_model_and_commands(qapp, tmp_path):
 def test_settings_reconnect_and_test_connection(qapp, tmp_path, hap_server):
     ctl = make_controller(tmp_path)
     ctl.start()
-    assert pump_until(lambda: ctl.devices.rowCount() == 11)
+    assert pump_until(lambda: ctl.devices.rowCount() == 13)
 
     results = []
     ctl.settings.testFinished.connect(lambda ok, msg: results.append((ok, msg)))
@@ -127,7 +127,7 @@ def test_settings_reconnect_and_test_connection(qapp, tmp_path, hap_server):
                               "hap_port": hap_server, "hap_pin": "12345678"}) == {}
     lamp = "homebridge:2.9"
     assert pump_until(lambda: ctl.device(lamp).get("name") == "Hall Light")
-    assert pump_until(lambda: ctl.devices.rowCount() == 12 and ctl.statusOk)
+    assert pump_until(lambda: ctl.devices.rowCount() == 14 and ctl.statusOk)
     ctl.toggle(lamp)
     assert pump_until(lambda: FakeHap.lamp_on is True)
     assert json.loads((tmp_path / "settings.json").read_text())["hap_pin"] == "123-45-678"
@@ -194,7 +194,7 @@ def test_indoor_and_outdoor_temperature(qapp, tmp_path):
                                     "devices": {"Weather Station": {"outdoor": True}}})
     ctl = Controller(cfg, store)
     ctl.start()
-    assert pump_until(lambda: ctl.devices.rowCount() == 11 and ctl.outdoorTemp != "")
+    assert pump_until(lambda: ctl.devices.rowCount() == 13 and ctl.outdoorTemp != "")
     devs = ctl.devices.all()
     outdoor = [d["state"]["current_temp"] for d in devs if d.get("meta", {}).get("outdoor")]
     indoor = [d["state"]["current_temp"] for d in devs
@@ -205,3 +205,38 @@ def test_indoor_and_outdoor_temperature(qapp, tmp_path):
     ws = next(d for d in devs if d["name"] == "Weather Station")
     assert ctl.device(ws["id"])["stateText"].count(",") == 2      # temperature, humidity, pressure
     ctl.shutdown()
+
+
+def test_blind_detail_drag_sets_position(qapp, tmp_path):
+    """Tapping the drawn blind at 3/4 of its height closes it to about 25% open."""
+    from PySide6.QtCore import QObject, QPointF, Qt
+    from PySide6.QtQml import QQmlApplicationEngine
+    from PySide6.QtQuick import QQuickItem, QQuickWindow
+    from PySide6.QtTest import QTest
+    from shiboken6 import Shiboken
+    from app.qt.main import QML_DIR
+
+    ctl = make_controller(tmp_path)
+    engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty("panel", ctl)
+    engine.rootContext().setContextProperty("initialWidth", 1280)
+    engine.rootContext().setContextProperty("initialHeight", 800)
+    engine.load(QML_DIR / "Main.qml")
+    win = Shiboken.wrapInstance(Shiboken.getCppPointer(engine.rootObjects()[0])[0], QQuickWindow)
+    ctl.start()
+    assert pump_until(lambda: ctl.devices.rowCount() == 13)
+    blind = next(d["id"] for d in ctl.devices.all() if d["name"] == "Living Room Blinds")
+    win.setProperty("openDevice", blind)
+    assert pump_until(lambda: win.findChild(QObject, "blindVisual") is not None)
+    pump_until(lambda: False, timeout=0.5)
+
+    obj = win.findChild(QObject, "blindVisual")
+    vis = Shiboken.wrapInstance(Shiboken.getCppPointer(obj)[0], QQuickItem)
+    p = vis.mapToScene(QPointF(vis.width() / 2, vis.height() * 0.75))
+    QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, p.toPoint())
+    assert pump_until(lambda: ctl.device(blind)["state"]["target"] != 60, timeout=4)
+    assert 20 <= ctl.device(blind)["state"]["target"] <= 30
+    assert pump_until(lambda: ctl.device(blind)["state"]["moving"] == "stopped"
+                      and ctl.device(blind)["state"]["position"] == ctl.device(blind)["state"]["target"], timeout=8)
+    ctl.shutdown()
+    win.close()

@@ -51,12 +51,16 @@ devices:
   "Weather Station":           { room: Garden, outdoor: true }
   "Living Room Climate":       { room: Living Room }
   "Hall Light Sensor":         { room: Hall }
+  "Living Room Blinds":        { room: Living Room }
+  "Bedroom Blinds":            { room: Bedroom }
   # "homebridge:12.10":        { hidden: true }
 
 # --- Scenes (icon: moon, sun, film, leaf, home, power) -----------------------------
 # Attributes: on, brightness (0–100), hue (0–360), saturation (0–100),
 #             color_temp (mired 140–500), speed (0–100),
-#             target_temp (°C), mode (off | heat | cool | auto)
+#             target_temp (°C), mode (off | heat | cool | auto),
+#             blinds: position (0 = closed … 100 = open), tilt (−90…90°), stop (true);
+#                     on: true opens fully, on: false closes
 scenes:
   - id: all-off
     name: All off
@@ -73,6 +77,7 @@ scenes:
       - { device: Living Room Ceiling Light, set: { on: true, brightness: 20 } }
       - { device: LED Strip,                 set: { on: true, brightness: 60, hue: 260, saturation: 80 } }
       - { device: TV Plug,                   set: { on: true } }
+      - { device: Living Room Blinds,        set: { position: 10 } }
   - id: heating-comfort
     name: Comfort
     icon: sun
