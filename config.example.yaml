@@ -41,7 +41,7 @@ devices:
   # Icons (icon): light, ceiling, strip, plug, switch, thermostat, radiator, floor, fan, coffee, tv,
   #               weather, drop, sun
   # Sensors: outdoor: true shows the temperature as "outdoors" instead of indoors
-  # Contact/motion sensors: security: window | door | glassbreak | motion (also selectable on the panel)
+  # Contact/motion sensors: security: window | door | contact | glassbreak | motion (also selectable on the panel)
   "Living Room Ceiling Light": { room: Living Room, order: 1, icon: ceiling }
   "LED Strip":                 { room: Living Room, name: TV Light, icon: strip }
   "Living Room Heating":       { room: Living Room, icon: radiator }
@@ -54,7 +54,7 @@ devices:
   "Hall Light Sensor":         { room: Hall }
   "Living Room Blinds":        { room: Living Room }
   "Bedroom Blinds":            { room: Bedroom }
-  "Terrace Door":              { room: Living Room }
+  "Terrace Door":              { room: Living Room, security: door }
   "Terrace Glass Break":       { room: Living Room, security: glassbreak }
   "Bedroom Window":            { room: Bedroom, security: window }
   "Washing Machine Leak":      { room: Bathroom }

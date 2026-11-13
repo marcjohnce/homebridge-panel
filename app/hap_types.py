@@ -103,7 +103,7 @@ DEVICE_TYPE_BY_SERVICE: dict[str, DeviceType] = {
 
 # Security sensors: (characteristic, value meaning "triggered", default kind, selectable kinds)
 SECURITY_SERVICES = {
-    "ContactSensor": ("ContactSensorState", 1, "door", ("window", "door", "glassbreak")),   # 1 = no contact = open
+    "ContactSensor": ("ContactSensorState", 1, "contact", ("window", "door", "contact", "glassbreak")),  # 1 = open
     "LeakSensor": ("LeakDetected", 1, "leak", ("leak",)),
     "MotionSensor": ("MotionDetected", True, "motion", ("motion", "glassbreak")),
     "OccupancySensor": ("OccupancyDetected", 1, "motion", ("motion", "glassbreak")),

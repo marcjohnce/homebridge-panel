@@ -5,7 +5,10 @@ A device's room comes from config.yaml (`devices: <id>: room:`) or the default r
 The panel can override it; overrides and the room order are stored in settings.json:
 
     "rooms": {"order": ["Living Room", "Kitchen"], "devices": {"hap:...": "Kitchen"},
-              "names": {"hap:...": "Coffee"}, "kinds": {"hap:...": "window"}}
+              "names": {"hap:...": "Coffee"}, "kinds": {"hap:...": "window"}, "hidden": ["hap:..."]}
+
+Hidden devices are left out of the home screen (tiles, menu status, alarms, temperatures)
+and are only listed in the settings.
 
 Rooms without devices are kept in "order" so they can be prepared before devices are
 assigned. On the home screen only rooms with devices appear.
@@ -32,6 +35,8 @@ class RoomLayout:
                                        if isinstance(devs, dict) else {})
         self.names = self._strings(data.get("names"))
         self.kinds = self._strings(data.get("kinds"))
+        hidden = data.get("hidden", [])
+        self.hidden: set[str] = {str(h) for h in hidden} if isinstance(hidden, list) else set()
         self._default = default_room
 
     @staticmethod
@@ -41,7 +46,7 @@ class RoomLayout:
     # ---------- reading ----------
     def to_dict(self) -> dict[str, Any]:
         return {"order": list(self.order), "devices": dict(self.assign),
-                "names": dict(self.names), "kinds": dict(self.kinds)}
+                "names": dict(self.names), "kinds": dict(self.kinds), "hidden": sorted(self.hidden)}
 
     @property
     def default_room(self) -> str:
@@ -139,6 +144,9 @@ class RoomLayout:
             self.names.pop(dev_id, None)
         else:
             self.names[dev_id] = name
+
+    def set_hidden(self, dev_id: str, hidden: bool) -> None:
+        (self.hidden.add if hidden else self.hidden.discard)(dev_id)
 
     def set_kind(self, dev_id: str, kind: str, base: str) -> None:
         if not kind or kind == base:

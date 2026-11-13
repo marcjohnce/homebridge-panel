@@ -389,9 +389,10 @@ def main() -> int:
     wait(400)
     save(annotate(p.grab(), [
         (1, [p.rect("deviceName")], "Display name (tap to change)", "left"),
-        (2, [p.rect("kindChoices")], "Kind: window, door or glass break", "left"),
+        (2, [p.rect("kindChoices")], "Kind: window, door, contact or glass break", "left"),
         (3, [p.rect("roomChoices")], "Room; “New room …” creates one", "left"),
-        (4, [p.rect("deviceSave")], "Save", "bottom"),
+        (4, [p.rect("hiddenToggle")], "Hide on the home screen", "right"),
+        (5, [p.rect("deviceSave")], "Save", "bottom"),
     ], "Edit device"), out, "device-editor")
     p.key(Qt.Key.Key_Escape)
     wait(300)

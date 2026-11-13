@@ -107,7 +107,7 @@ class DeviceModel(QAbstractListModel):
     # --- maintenance ---
     def rooms(self, cat: str | None = None) -> list[str]:
         """Rooms with devices (of a menu area), in the order set in the settings."""
-        return self.layout.sort({d["room"] for d in self._all.values() if not cat or category(d) == cat})
+        return self.layout.sort({d["room"] for d in self.shown() if not cat or category(d) == cat})
 
     def device_rooms(self) -> dict[str, str]:
         return {d["id"]: d["room"] for d in self._all.values()}
@@ -121,7 +121,8 @@ class DeviceModel(QAbstractListModel):
         base = d.get("baseRoom", d["room"])
         base_name = d.get("baseName", d["name"])
         out = {**d, "baseRoom": base, "room": self.layout.room_of(d["id"], base),
-               "baseName": base_name, "name": self.layout.names.get(d["id"]) or base_name}
+               "baseName": base_name, "name": self.layout.names.get(d["id"]) or base_name,
+               "hidden": d["id"] in self.layout.hidden}
         meta = d.get("meta", {})
         if "security" in meta:
             base_kind = d.get("baseKind", meta["security"])
@@ -145,7 +146,7 @@ class DeviceModel(QAbstractListModel):
             self.refresh_texts()
 
     def _visible(self) -> list[str]:
-        devs = [d for d in self._all.values() if self._room in (ALL_ROOMS, d["room"])
+        devs = [d for d in self.shown() if self._room in (ALL_ROOMS, d["room"])
                 and self._category in ("", category(d))]
         room_rank = {r: i for i, r in enumerate(self.rooms())}
         # alarms first, then open windows/doors; otherwise by room, kind of device, order, name
@@ -159,7 +160,11 @@ class DeviceModel(QAbstractListModel):
         self._relayout()
 
     def count(self, pred) -> int:
-        return sum(1 for d in self._all.values() if pred(d))
+        """Counts devices shown on the home screen (hidden ones are left out)."""
+        return sum(1 for d in self.shown() if pred(d))
+
+    def shown(self) -> list[dict[str, Any]]:
+        return [d for d in self._all.values() if not d.get("hidden")]
 
     def _relayout(self) -> None:
         rows = self._visible()
@@ -183,7 +188,7 @@ class DeviceModel(QAbstractListModel):
         old = self._all.get(d["id"])
         d = self._place(d)
         self._all[d["id"]] = d
-        structural = (old is None or any(old.get(k) != d.get(k) for k in ("room", "name", "order"))
+        structural = (old is None or any(old.get(k) != d.get(k) for k in ("room", "name", "order", "hidden"))
                       or alert_level(old) != alert_level(d))
         if structural:
             self._relayout()
@@ -291,6 +296,7 @@ class RoomsBridge(QObject):
         self._store.save()
         self._ctl._model.reassign()
         self._ctl._refresh_rooms()
+        self._ctl.climateChanged.emit()     # hidden sensors leave the temperature average
 
     @Property("QVariantList", notify=changed)
     def rooms(self) -> list[dict[str, Any]]:
@@ -302,7 +308,7 @@ class RoomsBridge(QObject):
         return [{"name": r, "count": counts.get(r, 0), "isDefault": r == default}
                 for r in self._layout.all_rooms(dev_rooms.values())]
 
-    KIND_LABELS = {"window": "Window", "door": "Door / contact", "glassbreak": "Glass break",
+    KIND_LABELS = {"window": "Window", "door": "Door", "contact": "Contact", "glassbreak": "Glass break",
                    "leak": "Leak", "motion": "Motion"}
 
     @Property("QVariantList", notify=changed)
@@ -313,13 +319,13 @@ class RoomsBridge(QObject):
             kinds = d.get("meta", {}).get("kinds", [])
             out.append({"id": d["id"], "name": d["name"], "baseName": d["baseName"], "icon": d["icon"],
                         "room": d["room"], "reachable": d["reachable"],
-                        "kind": d.get("meta", {}).get("security", ""),
+                        "kind": d.get("meta", {}).get("security", ""), "hidden": bool(d.get("hidden")),
                         "kinds": [{"value": k, "label": tr(self.KIND_LABELS[k])} for k in kinds] if len(kinds) > 1 else []})
         return out
 
-    @Slot(str, str, str, str, result=str)
-    def saveDevice(self, dev_id: str, name: str, kind: str, room: str) -> str:
-        """Display name ("" = original), kind of a security sensor and room, saved together."""
+    @Slot(str, str, str, str, bool, result=str)
+    def saveDevice(self, dev_id: str, name: str, kind: str, room: str, hidden: bool = False) -> str:
+        """Display name ("" = original), kind of a security sensor, room and hidden flag, saved together."""
         m = self._ctl._model
         d = m.get(dev_id)
         if not d:
@@ -333,6 +339,7 @@ class RoomsBridge(QObject):
         if kind and kind in d.get("meta", {}).get("kinds", []):
             self._layout.set_kind(dev_id, kind, d.get("baseKind", kind))
         self._layout.set_room(dev_id, room, d["baseRoom"], m.device_rooms())
+        self._layout.set_hidden(dev_id, hidden)
         self._commit()
         return ""
 
@@ -591,7 +598,7 @@ class Controller(QObject):
         return d
 
     def _check_alarms(self) -> None:
-        alarms = {d["id"]: d for d in self._model.all() if alert_level(d) == 2}
+        alarms = {d["id"]: d for d in self._model.shown() if alert_level(d) == 2}
         for dev_id in alarms.keys() - self._alarms:
             d = alarms[dev_id]
             self.securityAlarm.emit(tr("{state}: {room}, {name}").format(
@@ -794,7 +801,7 @@ class Controller(QObject):
         return len(self._model.all())
 
     def _avg_temp(self, outdoor: bool) -> str:
-        temps = [d["state"]["current_temp"] for d in self._model.all()
+        temps = [d["state"]["current_temp"] for d in self._model.shown()
                  if d["reachable"] and d["state"].get("current_temp") is not None
                  and bool(d.get("meta", {}).get("outdoor")) == outdoor]
         return fmt_temp(sum(temps) / len(temps)) if temps else ""

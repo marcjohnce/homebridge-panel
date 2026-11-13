@@ -322,11 +322,11 @@ _ROWS: list[tuple[str, str, str, str, str]] = [
     ("No heating or climate sensors here.", "Hier gibt es keine Heizung und keine Klimasensoren.",
      "Aucun chauffage ni capteur de climat ici.", "Nessun riscaldamento o sensore di clima qui.",
      "No hay calefacción ni sensores de clima aquí."),
-    ("No window, door, glass break or leak sensors here.",
-     "Hier gibt es keine Fenster-, Tür-, Glasbruch- oder Leckagesensoren.",
-     "Aucun capteur de fenêtre, de porte, de bris de vitre ou de fuite ici.",
-     "Nessun sensore di finestra, porta, rottura vetri o perdita qui.",
-     "No hay sensores de ventana, puerta, rotura de cristal ni fugas aquí."),
+    ("No window, door, contact, glass break or leak sensors here.",
+     "Hier gibt es keine Fenster-, Tür-, Kontakt-, Glasbruch- oder Leckagesensoren.",
+     "Aucun capteur de fenêtre, de porte, de contact, de bris de vitre ou de fuite ici.",
+     "Nessun sensore di finestra, porta, contatto, rottura vetri o perdita qui.",
+     "No hay sensores de ventana, puerta, contacto, rotura de cristal ni fugas aquí."),
 
     # ---------- security sensors ----------
     ("Open for {n} min", "Offen seit {n} Min.", "Ouvert depuis {n} min", "Aperta da {n} min", "Abierta desde hace {n} min"),
@@ -338,7 +338,8 @@ _ROWS: list[tuple[str, str, str, str, str]] = [
     ("Motion", "Bewegung", "Mouvement", "Movimento", "Movimiento"),
     ("No motion", "Keine Bewegung", "Aucun mouvement", "Nessun movimento", "Sin movimiento"),
     ("Window", "Fenster", "Fenêtre", "Finestra", "Ventana"),
-    ("Door / contact", "Tür / Kontakt", "Porte / contact", "Porta / contatto", "Puerta / contacto"),
+    ("Door", "Tür", "Porte", "Porta", "Puerta"),
+    ("Contact", "Kontakt", "Contact", "Contatto", "Contacto"),
     ("Glass break", "Glasbruch", "Bris de vitre", "Rottura vetri", "Rotura de cristal"),
     ("Leak", "Leckage", "Fuite", "Perdita", "Fuga"),
 
@@ -367,6 +368,14 @@ _ROWS: list[tuple[str, str, str, str, str]] = [
     ("Original name", "Originalname", "Nom d'origine", "Nome originale", "Nombre original"),
     ("Kind", "Art", "Type", "Tipo", "Tipo"),
     ("Room", "Raum", "Pièce", "Stanza", "Habitación"),
+    ("Hide on the home screen", "Auf dem Startbildschirm ausblenden", "Masquer sur l'écran d'accueil",
+     "Nascondi nella schermata principale", "Ocultar en la pantalla de inicio"),
+    ("Hidden devices are only listed here, also not under “All”",
+     "Ausgeblendete Geräte stehen nur hier, auch nicht unter „Alle“",
+     "Les appareils masqués n'apparaissent qu'ici, pas non plus sous « Tous »",
+     "I dispositivi nascosti compaiono solo qui, nemmeno in “Tutti”",
+     "Los dispositivos ocultos solo aparecen aquí, tampoco en «Todos»"),
+    ("Hidden", "Ausgeblendet", "Masqué", "Nascosto", "Oculto"),
     ("Save", "Speichern", "Enregistrer", "Salva", "Guardar"),
 
     # ---------- on-screen keyboard ----------

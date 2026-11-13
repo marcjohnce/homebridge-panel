@@ -124,7 +124,7 @@ menu.
 
 HomeKit has no glass break type: plugins expose such detectors as contact or motion sensors.
 Choose the kind of a contact or motion sensor in [Settings → Rooms and devices](#rooms-and-devices)
-(window, door / contact, glass break, motion) or with `security:` in `config.yaml`.
+(window, door, contact, glass break, motion) or with `security:` in `config.yaml`. A *contact* is any other opening, e.g. a gate or a cupboard.
 
 ## Thermostat
 
@@ -289,9 +289,15 @@ The *Devices* tab lists all devices grouped by room. Tap a device to edit it:
 | # | Element | What it does |
 |---|---|---|
 | 1 | Display name | Opens the keyboard. Below it the name from Homebridge; *Original name* restores it (an empty name does the same) |
-| 2 | Kind | Only for contact and motion sensors: window, door / contact, glass break or motion |
+| 2 | Kind | Only for contact and motion sensors: window, door, contact, glass break or motion |
 | 3 | Room | The current room is highlighted. *New room …* creates a room with the keyboard |
-| 4 | Save | Saves name, kind and room together; *Cancel* discards the changes |
+| 4 | Hide on the home screen | See below |
+| 5 | Save | Saves name, kind, room and *Hide on the home screen* together; *Cancel* discards the changes |
+
+*Hide on the home screen* removes a device from the tiles – also
+under *All* and in the default room – and from the menu status, alarms and temperatures. It stays
+listed here, marked *Hidden*, so it can be shown again. (`hidden: true` in `config.yaml` removes a
+device completely, also from the settings.)
 
 Names, kinds and rooms set here take precedence over `name:`, `security:` and `room:` in
 `config.yaml`. Scenes keep working with the original names. Setting a value back to the one from

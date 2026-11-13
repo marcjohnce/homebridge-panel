@@ -54,7 +54,7 @@ GridView {
         text: panel.deviceCount === 0 ? qsTr("No devices yet. Enter your Homebridge address, port and PIN in Settings.")
             : panel.category === "light" ? qsTr("No lights, switches or blinds here.")
             : panel.category === "climate" ? qsTr("No heating or climate sensors here.")
-            : qsTr("No window, door, glass break or leak sensors here.")
+            : qsTr("No window, door, contact, glass break or leak sensors here.")
         color: Theme.muted
         font.pixelSize: Theme.s(18)
     }

@@ -298,14 +298,21 @@ Rectangle {
                                                     Layout.preferredWidth: Theme.s(24)
                                                     Layout.preferredHeight: Theme.s(24)
                                                     name: devItem.modelData.icon
-                                                    color: devItem.modelData.reachable ? Theme.ink : Theme.muted
+                                                    color: devItem.modelData.reachable && !devItem.modelData.hidden ? Theme.ink : Theme.muted
                                                 }
                                                 Text {
                                                     Layout.fillWidth: true
                                                     text: devItem.modelData.name
-                                                    color: devItem.modelData.reachable ? Theme.ink : Theme.muted
+                                                    color: devItem.modelData.reachable && !devItem.modelData.hidden ? Theme.ink : Theme.muted
                                                     font.pixelSize: Theme.s(16)
                                                     elide: Text.ElideRight
+                                                }
+                                                Text {
+                                                    objectName: "hiddenLabel:" + devItem.modelData.id
+                                                    visible: devItem.modelData.hidden
+                                                    text: qsTr("Hidden")
+                                                    color: Theme.muted
+                                                    font.pixelSize: Theme.s(14)
                                                 }
                                                 LineIcon {
                                                     Layout.preferredWidth: 20

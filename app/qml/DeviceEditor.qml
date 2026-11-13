@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 
 // Edit a device in Settings → Rooms and devices: display name, kind (contact and motion
-// sensors: window, door, glass break …) and room. Saved together with "Save".
+// sensors: window, door, glass break …), room and whether it is hidden. Saved with "Save".
 Popup {
     id: root
 
@@ -11,6 +11,7 @@ Popup {
     property string draftName
     property string draftKind
     property string draftRoom
+    property bool draftHidden
     property string error
 
     function edit(d) {
@@ -18,11 +19,12 @@ Popup {
         draftName = d.name;
         draftKind = d.kind || "";
         draftRoom = d.room;
+        draftHidden = !!d.hidden;
         error = "";
         open();
     }
     function save() {
-        const err = panel.roomEditor.saveDevice(device.id, draftName, draftKind, draftRoom);
+        const err = panel.roomEditor.saveDevice(device.id, draftName, draftKind, draftRoom, draftHidden);
         if (err !== "")
             error = err;
         else
@@ -186,6 +188,68 @@ Popup {
                 objectName: "newRoomChoice"
                 text: qsTr("New room …")
                 onClicked: root.newRoom()
+            }
+        }
+
+        Item {
+            width: parent.width
+            height: Math.max(Theme.s(52), hiddenText.implicitHeight + 8)
+
+            Column {
+                id: hiddenText
+                anchors.left: parent.left
+                anchors.right: hiddenToggle.left
+                anchors.rightMargin: 16
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 2
+                Text {
+                    width: parent.width
+                    text: qsTr("Hide on the home screen")
+                    color: Theme.ink
+                    font.pixelSize: Theme.s(16)
+                    wrapMode: Text.WordWrap
+                }
+                Text {
+                    width: parent.width
+                    text: qsTr("Hidden devices are only listed here, also not under “All”")
+                    color: Theme.muted
+                    font.pixelSize: Theme.s(13)
+                    wrapMode: Text.WordWrap
+                }
+            }
+            Rectangle {
+                id: hiddenToggle
+                objectName: "hiddenToggle"
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                width: Theme.s(54)
+                height: Theme.s(32)
+                radius: height / 2
+                color: root.draftHidden ? Theme.gold : Theme.line
+                border.color: activeFocus ? Theme.ink : "transparent"
+                border.width: 2
+                activeFocusOnTab: true
+                Accessible.role: Accessible.CheckBox
+                Accessible.name: qsTr("Hide on the home screen")
+                Accessible.checked: root.draftHidden
+                Keys.onSpacePressed: root.draftHidden = !root.draftHidden
+
+                Behavior on color { ColorAnimation { duration: 150 } }
+
+                Rectangle {
+                    width: parent.height - 6
+                    height: parent.height - 6
+                    radius: height / 2
+                    y: 3
+                    x: root.draftHidden ? parent.width - width - 3 : 3
+                    color: Theme.knob
+                    Behavior on x { NumberAnimation { duration: 150 } }
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    anchors.margins: -8
+                    onClicked: root.draftHidden = !root.draftHidden
+                }
             }
         }
 

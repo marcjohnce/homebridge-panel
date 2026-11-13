@@ -28,13 +28,15 @@ DEFAULT_ICONS = {
     DeviceType.FAN: "fan",
     DeviceType.SENSOR: "thermostat",
     DeviceType.BLIND: "blinds",
-    DeviceType.SECURITY: "door",
+    DeviceType.SECURITY: "contact",
 }
 
-# Kinds of security sensors. A contact sensor can be a window, a door or a glass break
-# detector; HomeKit has no glass break type, so plugins expose those as contact or motion sensors.
-SECURITY_KINDS = ("window", "door", "glassbreak", "leak", "motion")
-SECURITY_ICONS = {"window": "window", "door": "door", "glassbreak": "glass", "leak": "leak", "motion": "motion"}
+# Kinds of security sensors. A contact sensor can be a window, a door, a plain contact
+# (e.g. a cupboard or a gate) or a glass break detector; HomeKit has no glass break type, so
+# plugins expose those as contact or motion sensors.
+SECURITY_KINDS = ("window", "door", "contact", "glassbreak", "leak", "motion")
+SECURITY_ICONS = {"window": "window", "door": "door", "contact": "contact", "glassbreak": "glass",
+                  "leak": "leak", "motion": "motion"}
 ALARM_KINDS = {"glassbreak", "leak"}     # triggered = alarm; the others are only "open" / "motion"
 
 

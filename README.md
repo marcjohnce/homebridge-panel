@@ -132,7 +132,7 @@ column to the catalog.
 | `hap` | additional bridges (child bridges); the main bridge comes from the settings |
 | `homebridge_ui` | alternatively access via the Homebridge web UI (username/password) |
 | `demo` | simulated devices |
-| `devices` | per device (ID or name): `room`, `name`, `icon`, `order`, `hidden`, `outdoor` (sensors), `security` (`window`, `door`, `glassbreak`, `motion` for contact/motion sensors); values set on the panel take precedence |
+| `devices` | per device (ID or name): `room`, `name`, `icon`, `order`, `hidden`, `outdoor` (sensors), `security` (`window`, `door`, `contact`, `glassbreak`, `motion` for contact/motion sensors); values set on the panel take precedence |
 | `scenes` | scenes with actions `{device: …, set: {…}}` and an optional `room` (without: whole house) |
 | `schedules` | run a scene at a time on weekdays (`mo tu we th fr sa su`) |
 

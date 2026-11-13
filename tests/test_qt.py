@@ -373,7 +373,7 @@ def test_device_editor_name_kind_room_and_hide_general(qapp, tmp_path):
     assert pump_until(lambda: len(ctl.devices.all()) == 17)
     ed = ctl.roomEditor
     door = next(d for d in ed.devices if d["name"] == "Terrace Door")
-    assert [k["value"] for k in door["kinds"]] == ["window", "door", "glassbreak"]
+    assert [k["value"] for k in door["kinds"]] == ["window", "door", "contact", "glassbreak"]
     assert ed.addRoom("Terrace") == ""
     assert ed.saveDevice(door["id"], "Garden door", "window", "Terrace") == ""
     d = ctl.device(door["id"])
@@ -382,6 +382,8 @@ def test_device_editor_name_kind_room_and_hide_general(qapp, tmp_path):
     assert ed.saveDevice(door["id"], "x" * 41, "door", "Terrace") != ""
     assert ed.saveDevice(door["id"], "", "door", "Terrace") == ""       # back to the original name
     assert ctl.device(door["id"])["name"] == "Terrace Door" and ctl.device(door["id"])["icon"] == "door"
+    assert ed.saveDevice(door["id"], "", "contact", "Terrace") == ""    # the default kind of contact sensors
+    assert ctl.device(door["id"])["icon"] == "contact" and door["id"] not in ed._layout.kinds
 
     assert "General" in ctl.rooms
     ctl.settings.save({"show_general": False})
@@ -389,3 +391,29 @@ def test_device_editor_name_kind_room_and_hide_general(qapp, tmp_path):
     ctl.shutdown()
     saved = json.loads((tmp_path / "settings.json").read_text())
     assert saved["rooms"]["devices"][door["id"]] == "Terrace" and door["id"] not in saved["rooms"]["names"]
+
+
+def test_hidden_device_only_in_settings(qapp, tmp_path):
+    ctl = make_controller(tmp_path)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 17)
+    ed = ctl.roomEditor
+    fan = next(d for d in ed.devices if d["name"] == "Fan")
+    assert ed.addRoom("Attic") == "" and ed.saveDevice(fan["id"], "", "", "Attic", False) == ""
+    ctl.selectCategory("climate")
+    rows = ctl.devices.rowCount()
+    assert "Attic" in ctl.rooms
+    assert ed.saveDevice(fan["id"], "", "", "Attic", True) == ""
+    assert ctl.devices.rowCount() == rows - 1 and "Attic" not in ctl.rooms     # its only device is hidden
+    assert fan["id"] not in ctl.devices._rows
+    assert next(d for d in ed.devices if d["id"] == fan["id"])["hidden"] is True     # still in the settings
+
+    leak = next(d for d in ctl.devices.all() if d["name"] == "Washing Machine Leak")
+    assert ed.saveDevice(leak["id"], "", "", leak["room"], True) == ""
+    alarms = []
+    ctl.securityAlarm.connect(alarms.append)
+    ctl._on_message({"type": "device", "device": {k: v for k, v in leak.items() if k not in ("hidden",)}
+                     | {"state": {"triggered": True}}})
+    assert alarms == [] and ctl.securityCount == 1                  # hidden sensors raise no alarm
+    ctl.shutdown()
+    assert sorted(json.loads((tmp_path / "settings.json").read_text())["rooms"]["hidden"]) == sorted([fan["id"], leak["id"]])

@@ -36,9 +36,9 @@ def _open_for(since: float | None) -> str:
 
 
 def security_text(d: dict[str, Any]) -> str:
-    kind = d.get("meta", {}).get("security", "door")
+    kind = d.get("meta", {}).get("security", "contact")
     hit = bool(d.get("state", {}).get("triggered"))
-    if kind in ("window", "door"):
+    if kind in ("window", "door", "contact"):
         return _open_for(d.get("since")) if hit else tr("Closed")
     if kind == "glassbreak":
         return tr("Glass break detected") if hit else tr("No alarm")

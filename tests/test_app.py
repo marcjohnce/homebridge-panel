@@ -396,7 +396,7 @@ def test_security_sensors_from_hap():
     contact, leak, motion = HapBackend.parse_accessories(data)
     dtype, st, _, meta = snapshot_to_state(contact)
     assert dtype.value == "security" and st == {"triggered": True}
-    assert meta == {"security": "door", "kinds": ["window", "door", "glassbreak"]}
+    assert meta == {"security": "contact", "kinds": ["window", "door", "contact", "glassbreak"]}
     assert snapshot_to_state(leak)[1:4:2] == ({"triggered": False}, {"security": "leak", "kinds": ["leak"]})
     assert snapshot_to_state(motion)[1] == {"triggered": True}
     with pytest.raises(ValueError):
