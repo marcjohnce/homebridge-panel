@@ -9,7 +9,10 @@ python tools/doc_screenshots.py      # writes docs/images/*.png
 
 ## Screen sizes
 
-The layout adapts to the display. Landscape is recommended.
+The layout adapts to the display. Wide screens show a **sidebar** on the left with the clock,
+indoor temperature and scenes. Square and portrait screens (width less than 1.4 × height)
+switch to a **top bar** with the same elements in one row and the scenes as a horizontal strip,
+so the tiles get the full width. The callout numbers below are the same for both layouts.
 
 | Resolution | Typical display | Tile columns | Notes |
 |---|---|---|---|
@@ -17,7 +20,8 @@ The layout adapts to the display. Landscape is recommended.
 | 1024 × 600 | common 7″ HDMI/DSI displays | 4 | reference size for this guide |
 | 1280 × 720 | Raspberry Pi Touch Display 2 (7″), rotated to landscape | 5 | |
 | 1280 × 800 | common 10.1″ displays | 5 | |
-| 720 × 1280 | Raspberry Pi Touch Display 2 in its native portrait orientation | 2 | usable, but leaves space unused and cuts off long room tabs; rotate the display to landscape |
+| 720 × 720 | square displays, e.g. Pimoroni HyperPixel 4.0 Square (4″) | 3 | top bar layout |
+| 720 × 1280 | Raspberry Pi Touch Display 2 in its native portrait orientation | 3 | top bar layout |
 
 Start the app at a given size in a window with `.venv/bin/python -m app --size 800x480`.
 
@@ -25,7 +29,7 @@ Start the app at a given size in a window with `.venv/bin/python -m app --size 8
 
 | # | Element | What it does |
 |---|---|---|
-| 1 | Clock and date | Current time and date |
+| 1 | Clock and date | Current time and date (in the top bar: clock with date and temperature next to it) |
 | 2 | Indoor temperature | Average of all reachable thermostats |
 | 3 | Scenes | Tap to run a scene from `config.yaml`, e.g. *All off* or *Comfort* |
 | 4 | Connection status | Green: all bridges connected. Red: a bridge is not reachable (details under Settings → Info) |
@@ -54,7 +58,14 @@ Tiles leave out the room from the device name when the room is shown anyway
 
 ![Home screen at 1280 × 800](images/home-1280x800.png)
 
-### 720 × 1280 – portrait
+### 720 × 720 – square displays (top bar)
+
+![Home screen at 720 × 720](images/home-720x720.png)
+
+The detail views, settings and keypad need no changes at this size; they center their
+controls in the available space.
+
+### 720 × 1280 – portrait (top bar)
 
 <img src="images/home-720x1280.png" alt="Home screen at 720 × 1280 in portrait" width="360">
 

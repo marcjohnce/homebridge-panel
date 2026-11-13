@@ -33,7 +33,7 @@ from app.qt.main import FONT_DIR, QML_DIR, load_fonts  # noqa: E402
 from app.settings import SettingsStore  # noqa: E402
 
 # Screen sizes documented: (width, height, file suffix)
-SIZES = [(800, 480), (1024, 600), (1280, 720), (1280, 800), (720, 1280)]
+SIZES = [(800, 480), (1024, 600), (1280, 720), (1280, 800), (720, 720), (720, 1280)]
 DETAIL_SIZE = (1024, 600)
 
 CALLOUT = (37, 99, 235)          # blue: clearly separate from the gold UI accent
@@ -100,8 +100,12 @@ class Panel:
         h = it.height()
         if name == "roomTabs":  # horizontal list: only the part covered by tabs
             w = min(w, it.property("contentWidth"))
-        if name == "scenes":    # scrollable list: only the part covered by scenes
-            h = min(h, it.property("contentHeight"))
+        if name == "scenes":    # scene list (vertical in the sidebar, horizontal in the top bar)
+            cw, ch = it.property("contentWidth"), it.property("contentHeight")
+            if cw and cw > 0:
+                w = min(w, cw)
+            if ch and ch > 0:
+                h = min(h, ch)
         r = QRectF(it.mapToScene(QPointF(0, 0)), it.mapToScene(QPointF(w, h)))
         p = it.parentItem()
         while p is not None:
@@ -134,8 +138,9 @@ class Panel:
 def annotate(img: Image.Image, callouts: list[tuple]) -> Image.Image:
     """Draws a box around each rectangle and a numbered badge.
 
-    Each callout is (number, [rects]) or (number, [rects], "left"); "left" puts the
-    badge outside the box on its left side (if there is room) so it covers no text.
+    Each callout is (number, [rects]) or (number, [rects], anchor). Anchor "left" puts the
+    badge outside the box on its left side (if there is room), "bottom" at its bottom-left
+    corner, so it covers no text.
     """
     img = img.copy()
     d = ImageDraw.Draw(img)
@@ -149,6 +154,8 @@ def annotate(img: Image.Image, callouts: list[tuple]) -> Image.Image:
             d.rounded_rectangle((x0, y0, x1, y1), radius=8, outline=CALLOUT, width=2)
             if opt and opt[0] == "left" and x0 - 2 * BADGE_R - 6 >= 0:
                 bx, by = x0 - BADGE_R - 4, y0 + min(y1 - y0, 44) / 2
+            elif opt and opt[0] == "bottom":
+                bx, by = max(BADGE_R + 2, x0), min(y1, H - BADGE_R - 2)
             else:
                 bx = min(max(BADGE_R + 2, x0), W - BADGE_R - 2)
                 by = min(max(BADGE_R + 2, y0), H - BADGE_R - 2)
@@ -166,12 +173,12 @@ def save(img: Image.Image, out: Path, name: str) -> None:
     print(f"  {path.relative_to(ROOT) if path.is_relative_to(ROOT) else path}")
 
 
-def home_callouts(p: Panel) -> list[tuple[int, list[QRectF]]]:
+def home_callouts(p: Panel, top_layout: bool) -> list[tuple]:
     lamp = p.device_id("Living Room Ceiling Light")
     heating = p.device_id("Living Room Heating")
     return [
         (1, [p.rect("clock").united(p.rect("date"))]),
-        (2, [p.rect("climate")]),
+        (2, [p.rect("climate")], "bottom") if top_layout else (2, [p.rect("climate")]),
         (3, [p.rect("scenes")]),
         (4, [p.rect("statusDot").united(p.rect("statusText"))]),
         (5, [p.rect("settingsButton")]),
@@ -193,7 +200,7 @@ def main() -> int:
     for w, h in SIZES:
         p = Panel((w, h))
         p.win.setProperty("idle", False)
-        save(annotate(p.grab(), home_callouts(p)), out, f"home-{w}x{h}")
+        save(annotate(p.grab(), home_callouts(p, w / h < 1.4)), out, f"home-{w}x{h}")
         p.close()
 
     # Detail views, settings and keypad at the reference size

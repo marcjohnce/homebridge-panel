@@ -31,7 +31,7 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 - **Light / dark / automatic** appearance and a **screen saver** with a large clock
 - **Settings page** for appearance, screen saver and the Homebridge connection (address, port, PIN)
   with keypad, connection test and apply without restart
-- Layouts for 800×480, 1024×600, 1280×720, 1280×800 and portrait displays
+- Layouts for 800×480, 1024×600, 1280×720, 1280×800, square 720×720 and portrait displays
 
 ## Requirements
 

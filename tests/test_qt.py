@@ -144,8 +144,9 @@ def test_theme_setting(qapp, tmp_path):
     ctl.shutdown()
 
 
-def test_qml_loads_without_warnings(tmp_path):
-    r = subprocess.run([sys.executable, str(ROOT / "tools" / "screenshots.py"), str(tmp_path), "--theme", "dark"],
-                       capture_output=True, text=True, timeout=180)
+@pytest.mark.parametrize("size", ["1024x600", "720x720"])
+def test_qml_loads_without_warnings(tmp_path, size):
+    r = subprocess.run([sys.executable, str(ROOT / "tools" / "screenshots.py"), str(tmp_path),
+                        "--theme", "dark", "--size", size], capture_output=True, text=True, timeout=180)
     assert r.returncode == 0, r.stdout + r.stderr
     assert (tmp_path / "dark-settings.png").stat().st_size > 10_000
