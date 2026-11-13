@@ -417,3 +417,19 @@ def test_hidden_device_only_in_settings(qapp, tmp_path):
     assert alarms == [] and ctl.securityCount == 1                  # hidden sensors raise no alarm
     ctl.shutdown()
     assert sorted(json.loads((tmp_path / "settings.json").read_text())["rooms"]["hidden"]) == sorted([fan["id"], leak["id"]])
+
+
+def test_outdoor_sensor_set_on_the_panel(qapp, tmp_path):
+    ctl = make_controller(tmp_path)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 17)
+    ed = ctl.roomEditor
+    ws = next(d for d in ed.devices if d["name"] == "Weather Station")
+    heating = next(d for d in ed.devices if d["name"] == "Living Room Heating")
+    assert ws["canOutdoor"] and not ws["outdoor"] and not heating["canOutdoor"]
+    assert ctl.outdoorTemp == ""                                   # nothing marked outdoor in this config
+    assert ed.saveDevice(ws["id"], "", "", ws["room"], False, True) == ""
+    assert ctl.outdoorTemp != "" and next(d for d in ed.devices if d["id"] == ws["id"])["outdoor"]
+    assert ed.saveDevice(ws["id"], "", "", ws["room"], False, False) == ""
+    assert ctl.outdoorTemp == "" and ws["id"] not in ed._layout.outdoor     # back to config.yaml
+    ctl.shutdown()

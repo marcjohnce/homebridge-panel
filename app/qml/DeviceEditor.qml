@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 
 // Edit a device in Settings → Rooms and devices: display name, kind (contact and motion
-// sensors: window, door, glass break …), room and whether it is hidden. Saved with "Save".
+// sensors: window, door, glass break …), room, outdoor sensor and hidden. Saved with "Save".
 Popup {
     id: root
 
@@ -12,6 +12,7 @@ Popup {
     property string draftKind
     property string draftRoom
     property bool draftHidden
+    property bool draftOutdoor
     property string error
 
     function edit(d) {
@@ -20,11 +21,12 @@ Popup {
         draftKind = d.kind || "";
         draftRoom = d.room;
         draftHidden = !!d.hidden;
+        draftOutdoor = !!d.outdoor;
         error = "";
         open();
     }
     function save() {
-        const err = panel.roomEditor.saveDevice(device.id, draftName, draftKind, draftRoom, draftHidden);
+        const err = panel.roomEditor.saveDevice(device.id, draftName, draftKind, draftRoom, draftHidden, draftOutdoor);
         if (err !== "")
             error = err;
         else
@@ -191,66 +193,23 @@ Popup {
             }
         }
 
-        Item {
+        ToggleRow {
+            objectName: "outdoorRow"
+            visible: !!root.device.canOutdoor
             width: parent.width
-            height: Math.max(Theme.s(52), hiddenText.implicitHeight + 8)
-
-            Column {
-                id: hiddenText
-                anchors.left: parent.left
-                anchors.right: hiddenToggle.left
-                anchors.rightMargin: 16
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 2
-                Text {
-                    width: parent.width
-                    text: qsTr("Hide on the home screen")
-                    color: Theme.ink
-                    font.pixelSize: Theme.s(16)
-                    wrapMode: Text.WordWrap
-                }
-                Text {
-                    width: parent.width
-                    text: qsTr("Hidden devices are only listed here, also not under “All”")
-                    color: Theme.muted
-                    font.pixelSize: Theme.s(13)
-                    wrapMode: Text.WordWrap
-                }
-            }
-            Rectangle {
-                id: hiddenToggle
-                objectName: "hiddenToggle"
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                width: Theme.s(54)
-                height: Theme.s(32)
-                radius: height / 2
-                color: root.draftHidden ? Theme.gold : Theme.line
-                border.color: activeFocus ? Theme.ink : "transparent"
-                border.width: 2
-                activeFocusOnTab: true
-                Accessible.role: Accessible.CheckBox
-                Accessible.name: qsTr("Hide on the home screen")
-                Accessible.checked: root.draftHidden
-                Keys.onSpacePressed: root.draftHidden = !root.draftHidden
-
-                Behavior on color { ColorAnimation { duration: 150 } }
-
-                Rectangle {
-                    width: parent.height - 6
-                    height: parent.height - 6
-                    radius: height / 2
-                    y: 3
-                    x: root.draftHidden ? parent.width - width - 3 : 3
-                    color: Theme.knob
-                    Behavior on x { NumberAnimation { duration: 150 } }
-                }
-                MouseArea {
-                    anchors.fill: parent
-                    anchors.margins: -8
-                    onClicked: root.draftHidden = !root.draftHidden
-                }
-            }
+            label: qsTr("Outdoor sensor")
+            help: qsTr("Counts for the outdoor temperature instead of indoors")
+            checked: root.draftOutdoor
+            toggleName: "outdoorToggle"
+            onToggled: root.draftOutdoor = !root.draftOutdoor
+        }
+        ToggleRow {
+            width: parent.width
+            label: qsTr("Hide on the home screen")
+            help: qsTr("Hidden devices are only listed here, also not under “All”")
+            checked: root.draftHidden
+            toggleName: "hiddenToggle"
+            onToggled: root.draftHidden = !root.draftHidden
         }
 
         Text {
@@ -274,6 +233,75 @@ Popup {
                 primary: true
                 text: qsTr("Save")
                 onClicked: root.save()
+            }
+        }
+    }
+
+    // label and help on the left, switch on the right
+    component ToggleRow: Item {
+        id: row
+        property string label
+        property string help
+        property bool checked
+        property string toggleName
+        signal toggled
+
+        height: Math.max(Theme.s(52), texts.implicitHeight + 8)
+
+        Column {
+            id: texts
+            anchors.left: parent.left
+            anchors.right: toggle.left
+            anchors.rightMargin: 16
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 2
+            Text {
+                width: parent.width
+                text: row.label
+                color: Theme.ink
+                font.pixelSize: Theme.s(16)
+                wrapMode: Text.WordWrap
+            }
+            Text {
+                width: parent.width
+                text: row.help
+                color: Theme.muted
+                font.pixelSize: Theme.s(13)
+                wrapMode: Text.WordWrap
+            }
+        }
+        Rectangle {
+            id: toggle
+            objectName: row.toggleName
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            width: Theme.s(54)
+            height: Theme.s(32)
+            radius: height / 2
+            color: row.checked ? Theme.gold : Theme.line
+            border.color: activeFocus ? Theme.ink : "transparent"
+            border.width: 2
+            activeFocusOnTab: true
+            Accessible.role: Accessible.CheckBox
+            Accessible.name: row.label
+            Accessible.checked: row.checked
+            Keys.onSpacePressed: row.toggled()
+
+            Behavior on color { ColorAnimation { duration: 150 } }
+
+            Rectangle {
+                width: parent.height - 6
+                height: parent.height - 6
+                radius: height / 2
+                y: 3
+                x: row.checked ? parent.width - width - 3 : 3
+                color: Theme.knob
+                Behavior on x { NumberAnimation { duration: 150 } }
+            }
+            MouseArea {
+                anchors.fill: parent
+                anchors.margins: -8
+                onClicked: row.toggled()
             }
         }
     }

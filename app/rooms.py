@@ -5,7 +5,8 @@ A device's room comes from config.yaml (`devices: <id>: room:`) or the default r
 The panel can override it; overrides and the room order are stored in settings.json:
 
     "rooms": {"order": ["Living Room", "Kitchen"], "devices": {"hap:...": "Kitchen"},
-              "names": {"hap:...": "Coffee"}, "kinds": {"hap:...": "window"}, "hidden": ["hap:..."]}
+              "names": {"hap:...": "Coffee"}, "kinds": {"hap:...": "window"}, "hidden": ["hap:..."],
+              "outdoor": {"hap:...": true}}
 
 Hidden devices are left out of the home screen (tiles, menu status, alarms, temperatures)
 and are only listed in the settings.
@@ -37,6 +38,10 @@ class RoomLayout:
         self.kinds = self._strings(data.get("kinds"))
         hidden = data.get("hidden", [])
         self.hidden: set[str] = {str(h) for h in hidden} if isinstance(hidden, list) else set()
+        outdoor = data.get("outdoor", {})
+        # outdoor sensor or not, where it differs from config.yaml
+        self.outdoor: dict[str, bool] = ({str(k): bool(v) for k, v in outdoor.items() if isinstance(v, bool)}
+                                         if isinstance(outdoor, dict) else {})
         self._default = default_room
 
     @staticmethod
@@ -46,7 +51,8 @@ class RoomLayout:
     # ---------- reading ----------
     def to_dict(self) -> dict[str, Any]:
         return {"order": list(self.order), "devices": dict(self.assign),
-                "names": dict(self.names), "kinds": dict(self.kinds), "hidden": sorted(self.hidden)}
+                "names": dict(self.names), "kinds": dict(self.kinds), "hidden": sorted(self.hidden),
+                "outdoor": dict(self.outdoor)}
 
     @property
     def default_room(self) -> str:
@@ -144,6 +150,12 @@ class RoomLayout:
             self.names.pop(dev_id, None)
         else:
             self.names[dev_id] = name
+
+    def set_outdoor(self, dev_id: str, outdoor: bool, base: bool) -> None:
+        if outdoor == base:
+            self.outdoor.pop(dev_id, None)
+        else:
+            self.outdoor[dev_id] = outdoor
 
     def set_hidden(self, dev_id: str, hidden: bool) -> None:
         (self.hidden.add if hidden else self.hidden.discard)(dev_id)

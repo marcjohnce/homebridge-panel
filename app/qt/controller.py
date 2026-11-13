@@ -124,6 +124,10 @@ class DeviceModel(QAbstractListModel):
                "baseName": base_name, "name": self.layout.names.get(d["id"]) or base_name,
                "hidden": d["id"] in self.layout.hidden}
         meta = d.get("meta", {})
+        base_outdoor = d.get("baseOutdoor", bool(meta.get("outdoor")))
+        outdoor = self.layout.outdoor.get(d["id"], base_outdoor)
+        meta = {**meta, "outdoor": outdoor} if outdoor else {k: v for k, v in meta.items() if k != "outdoor"}
+        out.update(baseOutdoor=base_outdoor, meta=meta)
         if "security" in meta:
             base_kind = d.get("baseKind", meta["security"])
             kind = self.layout.kinds.get(d["id"], base_kind)
@@ -320,12 +324,16 @@ class RoomsBridge(QObject):
             out.append({"id": d["id"], "name": d["name"], "baseName": d["baseName"], "icon": d["icon"],
                         "room": d["room"], "reachable": d["reachable"],
                         "kind": d.get("meta", {}).get("security", ""), "hidden": bool(d.get("hidden")),
+                        # temperature sensors can be marked as outdoor sensors (not thermostats)
+                        "canOutdoor": d["type"] == "sensor" and d.get("state", {}).get("current_temp") is not None,
+                        "outdoor": bool(d.get("meta", {}).get("outdoor")),
                         "kinds": [{"value": k, "label": tr(self.KIND_LABELS[k])} for k in kinds] if len(kinds) > 1 else []})
         return out
 
-    @Slot(str, str, str, str, bool, result=str)
-    def saveDevice(self, dev_id: str, name: str, kind: str, room: str, hidden: bool = False) -> str:
-        """Display name ("" = original), kind of a security sensor, room and hidden flag, saved together."""
+    @Slot(str, str, str, str, bool, bool, result=str)
+    def saveDevice(self, dev_id: str, name: str, kind: str, room: str, hidden: bool = False,
+                   outdoor: bool = False) -> str:
+        """Display name ("" = original), kind of a security sensor, room, hidden and outdoor flags."""
         m = self._ctl._model
         d = m.get(dev_id)
         if not d:
@@ -340,6 +348,8 @@ class RoomsBridge(QObject):
             self._layout.set_kind(dev_id, kind, d.get("baseKind", kind))
         self._layout.set_room(dev_id, room, d["baseRoom"], m.device_rooms())
         self._layout.set_hidden(dev_id, hidden)
+        if d["type"] == "sensor":
+            self._layout.set_outdoor(dev_id, outdoor, d.get("baseOutdoor", False))
         self._commit()
         return ""
 

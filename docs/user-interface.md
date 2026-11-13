@@ -41,7 +41,7 @@ Start the app at a given size in a window with `.venv/bin/python -m app --size 8
 | # | Element | What it does |
 |---|---|---|
 | 1 | Clock and date | Current time and date (the top bar shows only the clock on square screens) |
-| 2 | Indoor and outdoor temperature | *indoors*: average of all reachable thermostats and indoor sensors. *outdoors*: sensors marked `outdoor: true` (shown only if there is one) |
+| 2 | Indoor and outdoor temperature | *indoors*: average of all reachable thermostats and indoor sensors. *outdoors*: sensors marked as *Outdoor sensor* in Settings → Rooms and devices or with `outdoor: true` in `config.yaml` (shown only if there is one). Hidden devices are left out |
 | 3 | Menu | Chooses what the tiles show: [Lights](#menu), [Climate](#menu), [Scenes](#scenes), [Security](#security). Each entry shows a short status, e.g. *2 on*, *1 heating* or *1 alert* in red. The top bar shows the menu as icons with a red count on *Security* |
 | 4 | Connection status | Green: all bridges connected. Red: a bridge is not reachable (details under Settings → Info) |
 | 5 | Settings | Opens the [settings page](#settings) |
@@ -291,7 +291,7 @@ The *Devices* tab lists all devices grouped by room. Tap a device to edit it:
 | 1 | Display name | Opens the keyboard. Below it the name from Homebridge; *Original name* restores it (an empty name does the same) |
 | 2 | Kind | Only for contact and motion sensors: window, door, contact, glass break or motion |
 | 3 | Room | The current room is highlighted. *New room …* creates a room with the keyboard |
-| 4 | Hide on the home screen | See below |
+| 4 | Hide on the home screen | See below. Temperature sensors also have *Outdoor sensor*: it then counts for the outdoor temperature in the sidebar instead of indoors (same as `outdoor: true` in `config.yaml`) |
 | 5 | Save | Saves name, kind, room and *Hide on the home screen* together; *Cancel* discards the changes |
 
 *Hide on the home screen* removes a device from the tiles – also

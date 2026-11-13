@@ -88,7 +88,7 @@ In the app (icon at the bottom left), stored in `~/.config/smarthome-panel/setti
 | Display | Appearance: Automatic (dark 7 pm – 7 am), Light, Dark | saved immediately |
 | Display | Language: System, English, Deutsch, Français, Italiano, Español | saved immediately |
 | Display | Screen saver after: never, 1, 2, 5, 15 minutes | saved immediately |
-| Rooms | Rooms and devices: rooms, display names, kind of security sensors, room of each device | saved immediately |
+| Rooms | Rooms and devices: rooms, display names, kind of security sensors, outdoor sensors, hidden devices, room of each device | saved immediately |
 | Rooms | Show the "General" room (on/off) | saved immediately |
 | Homebridge | Connect to Homebridge (on/off) | saved with **Apply** |
 | Homebridge | Address (IP or host name), port, PIN | saved with **Apply**, try **Test connection** first |
