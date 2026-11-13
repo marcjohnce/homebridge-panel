@@ -289,9 +289,9 @@ The *Devices* tab lists all devices grouped by room. Tap a device to edit it:
 | # | Element | What it does |
 |---|---|---|
 | 1 | Display name | Opens the keyboard. Below it the name from Homebridge; *Original name* restores it (an empty name does the same) |
-| 2 | Kind | Only for contact and motion sensors: window, door, contact, glass break or motion |
+| 2 | Kind | Contact and motion sensors: window, door, contact, glass break or motion. Switches and plugs: switch, plug, TV, coffee machine, washing machine, dishwasher or fan – sets the icon; *Fan* shows the device under *Climate*; washing machine and dishwasher show *Running* while their plug measures power, otherwise *Ready* |
 | 3 | Room | The current room is highlighted. *New room …* creates a room with the keyboard |
-| 4 | Hide on the home screen | See below. Temperature sensors also have *Outdoor sensor*: it then counts for the outdoor temperature in the sidebar instead of indoors (same as `outdoor: true` in `config.yaml`) |
+| 4 | Show under, hide on the home screen | *Show under* moves the device to another menu entry (*Automatic*: by device type). Further down: see below. Temperature sensors also have *Outdoor sensor*: it then counts for the outdoor temperature in the sidebar instead of indoors (same as `outdoor: true` in `config.yaml`) |
 | 5 | Save | Saves name, kind, room and *Hide on the home screen* together; *Cancel* discards the changes |
 
 *Hide on the home screen* removes a device from the tiles – also

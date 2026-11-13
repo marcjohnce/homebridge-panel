@@ -19,6 +19,7 @@ _DEVICES = [
       ("ColorTemperature", 300, True, dict(min=140, max=500, step=1))]),
     ("coffee", "Outlet", "Coffee Maker", [("On", False, True, {}), ("OutletInUse", False, False, {})]),
     ("tv", "Outlet", "TV Plug", [("On", True, True, {}), ("OutletInUse", True, False, {})]),
+    ("washer", "Outlet", "Washing Machine", [("On", True, True, {}), ("OutletInUse", True, False, {})]),
     ("heating-living", "Thermostat", "Living Room Heating",
      [("TargetHeatingCoolingState", 1, True, dict(min=0, max=3)), ("CurrentHeatingCoolingState", 1, False, {}),
       ("TargetTemperature", 21.0, True, dict(min=10, max=30, step=0.5)), ("CurrentTemperature", 19.6, False, {})]),

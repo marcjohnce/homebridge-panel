@@ -37,7 +37,15 @@ DEFAULT_ICONS = {
 SECURITY_KINDS = ("window", "door", "contact", "glassbreak", "leak", "motion")
 SECURITY_ICONS = {"window": "window", "door": "door", "contact": "contact", "glassbreak": "glass",
                   "leak": "leak", "motion": "motion"}
-ALARM_KINDS = {"glassbreak", "leak"}     # triggered = alarm; the others are only "open" / "motion"
+ALARM_KINDS = {"glassbreak", "leak"}
+
+# What a switch or plug powers; chosen on the panel or with appliance: in config.yaml.
+# The kind sets the icon; "fan" puts the device under "Climate", washer and dishwasher
+# show "Running" while their plug reports power use.
+APPLIANCE_KINDS = ("switch", "plug", "tv", "coffee", "washer", "dishwasher", "fan")
+APPLIANCE_ICONS = {k: k for k in APPLIANCE_KINDS}
+KIND_ICONS = {**SECURITY_ICONS, **APPLIANCE_ICONS}
+AREAS = ("light", "climate", "security")      # menu areas a device can be moved to     # triggered = alarm; the others are only "open" / "motion"
 
 
 @dataclass

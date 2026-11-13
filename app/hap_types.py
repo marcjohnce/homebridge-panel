@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .i18n import tr
-from .models import DeviceType
+from .models import APPLIANCE_KINDS, DeviceType
 
 HAP_BASE_SUFFIX = "-0000-1000-8000-0026BB765291"
 # Eve (Elgato) custom types: air pressure is not an Apple-defined characteristic
@@ -250,6 +250,8 @@ def snapshot_to_state(s: ServiceSnapshot) -> tuple[DeviceType, dict[str, Any], l
                         temp_step=t.step or 0.5)
         meta["modes"] = ["off", "heat", "auto"]
     else:
+        if s.service_type in ("Switch", "Outlet"):
+            meta.update(appliance="plug" if s.service_type == "Outlet" else "switch", kinds=list(APPLIANCE_KINDS))
         if "On" in c:
             state["on"] = bool(s.get("On", False))
             caps.append("on")

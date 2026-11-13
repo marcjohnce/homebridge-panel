@@ -16,6 +16,12 @@ CATEGORY_OF_TYPE = {"light": "light", "plug": "light", "switch": "light", "blind
 
 
 def category(d: dict[str, Any]) -> str:
+    """Menu area: set on the panel or with area: in config.yaml, else by type (a switch for a fan: climate)."""
+    meta = d.get("meta", {})
+    if meta.get("area"):
+        return meta["area"]
+    if meta.get("appliance") == "fan":
+        return "climate"
     return CATEGORY_OF_TYPE.get(d["type"], "light")
 
 
@@ -124,6 +130,8 @@ def state_text(d: dict[str, Any]) -> str:
         return pct(s["brightness"])
     if s.get("speed") is not None:
         return tr("Speed {pct}").format(pct=pct(s["speed"]))
+    if d.get("meta", {}).get("appliance") in ("washer", "dishwasher") and "in_use" in s:   # plug measures power
+        return tr("Running") if s.get("in_use") else tr("Ready")
     if d["type"] == "plug" and s.get("in_use"):
         return tr("On, in use")
     return tr("On")

@@ -97,7 +97,7 @@ def test_controller_demo_model_and_commands(qapp, tmp_path):
     ctl = make_controller(tmp_path)
     ctl.start()
     model = ctl.devices
-    assert pump_until(lambda: len(model.all()) == 17)
+    assert pump_until(lambda: len(model.all()) == 18)
     assert ctl.statusOk and ctl.statusText == "Connected"
     assert "Kitchen" in ctl.rooms and ctl.indoorTemp != ""
 
@@ -107,14 +107,14 @@ def test_controller_demo_model_and_commands(qapp, tmp_path):
     ctl.toggle(coffee)
     assert pump_until(lambda: ctl.device(coffee)["state"]["on"] is True)
     ctl.selectRoom("")
-    assert model.rowCount() == 7 and ctl.category == "light"      # lights, plugs, blinds
+    assert model.rowCount() == 8 and ctl.category == "light"      # lights, plugs, blinds
     ctl.selectCategory("climate")
     assert model.rowCount() == 6 and "Kitchen" not in ctl.rooms
     ctl.selectCategory("security")
     assert model.rowCount() == 4 and ctl.securityCount == 1       # the bedroom window is open
     assert ctl.devices.get(model._rows[0])["name"] == "Bedroom Window"     # alerts first
     ctl.selectCategory("")
-    assert model.rowCount() == 17
+    assert model.rowCount() == 18
 
     errors = []
     ctl.toast.connect(errors.append)
@@ -126,7 +126,7 @@ def test_controller_demo_model_and_commands(qapp, tmp_path):
 def test_settings_reconnect_and_test_connection(qapp, tmp_path, hap_server):
     ctl = make_controller(tmp_path)
     ctl.start()
-    assert pump_until(lambda: len(ctl.devices.all()) == 17)
+    assert pump_until(lambda: len(ctl.devices.all()) == 18)
 
     results = []
     ctl.settings.testFinished.connect(lambda ok, msg: results.append((ok, msg)))
@@ -142,7 +142,7 @@ def test_settings_reconnect_and_test_connection(qapp, tmp_path, hap_server):
                               "hap_port": hap_server, "hap_pin": "12345678"}) == {}
     lamp = "homebridge:2.9"
     assert pump_until(lambda: ctl.device(lamp).get("name") == "Hall Light")
-    assert pump_until(lambda: len(ctl.devices.all()) == 18 and ctl.statusOk)
+    assert pump_until(lambda: len(ctl.devices.all()) == 19 and ctl.statusOk)
     ctl.toggle(lamp)
     assert pump_until(lambda: FakeHap.lamp_on is True)
     assert json.loads((tmp_path / "settings.json").read_text())["hap_pin"] == "123-45-678"
@@ -210,7 +210,7 @@ def test_indoor_and_outdoor_temperature(qapp, tmp_path):
                                     "devices": {"Weather Station": {"outdoor": True}}})
     ctl = Controller(cfg, store)
     ctl.start()
-    assert pump_until(lambda: len(ctl.devices.all()) == 17 and ctl.outdoorTemp != "")
+    assert pump_until(lambda: len(ctl.devices.all()) == 18 and ctl.outdoorTemp != "")
     devs = ctl.devices.all()
     outdoor = [d["state"]["current_temp"] for d in devs if d.get("meta", {}).get("outdoor")]
     indoor = [d["state"]["current_temp"] for d in devs
@@ -240,7 +240,7 @@ def test_blind_detail_drag_sets_position(qapp, tmp_path):
     engine.load(QML_DIR / "Main.qml")
     win = Shiboken.wrapInstance(Shiboken.getCppPointer(engine.rootObjects()[0])[0], QQuickWindow)
     ctl.start()
-    assert pump_until(lambda: len(ctl.devices.all()) == 17)
+    assert pump_until(lambda: len(ctl.devices.all()) == 18)
     blind = next(d["id"] for d in ctl.devices.all() if d["name"] == "Living Room Blinds")
     win.setProperty("openDevice", blind)
     assert pump_until(lambda: win.findChild(QObject, "blindVisual") is not None)
@@ -261,7 +261,7 @@ def test_blind_detail_drag_sets_position(qapp, tmp_path):
 def test_room_editor_changes_rooms_and_persists(qapp, tmp_path):
     ctl = make_controller(tmp_path)
     ctl.start()
-    assert pump_until(lambda: len(ctl.devices.all()) == 17)
+    assert pump_until(lambda: len(ctl.devices.all()) == 18)
     ed = ctl.roomEditor
     coffee = next(d["id"] for d in ctl.devices.all() if d["name"] == "Coffee Maker")
 
@@ -280,7 +280,7 @@ def test_room_editor_changes_rooms_and_persists(qapp, tmp_path):
     assert "Büro" not in saved["order"] and saved["devices"][coffee] == "General"
     ctl2 = Controller(AppConfig.model_validate({"demo": {"enabled": True}}), SettingsStore(tmp_path / "settings.json"))
     ctl2.start()
-    assert pump_until(lambda: len(ctl2.devices.all()) == 17)
+    assert pump_until(lambda: len(ctl2.devices.all()) == 18)
     assert ctl2.device(coffee)["room"] == "General"
     ctl2.shutdown()
 
@@ -304,7 +304,7 @@ def test_rooms_page_rename_with_keyboard(qapp, tmp_path):
     engine.load(QML_DIR / "Main.qml")
     win = Shiboken.wrapInstance(Shiboken.getCppPointer(engine.rootObjects()[0])[0], QQuickWindow)
     ctl.start()
-    assert pump_until(lambda: len(ctl.devices.all()) == 17)
+    assert pump_until(lambda: len(ctl.devices.all()) == 18)
 
     def find(name, root=None):
         # Repeater delegates are not QObject children, so walk the visual item tree
@@ -350,7 +350,7 @@ def test_rooms_page_rename_with_keyboard(qapp, tmp_path):
 def test_security_alarm_and_open_since(qapp, tmp_path):
     ctl = make_controller(tmp_path)
     ctl.start()
-    assert pump_until(lambda: len(ctl.devices.all()) == 17)
+    assert pump_until(lambda: len(ctl.devices.all()) == 18)
     alarms = []
     ctl.securityAlarm.connect(alarms.append)
     leak = next(d for d in ctl.devices.all() if d["name"] == "Washing Machine Leak")
@@ -370,19 +370,19 @@ def test_security_alarm_and_open_since(qapp, tmp_path):
 def test_device_editor_name_kind_room_and_hide_general(qapp, tmp_path):
     ctl = make_controller(tmp_path)
     ctl.start()
-    assert pump_until(lambda: len(ctl.devices.all()) == 17)
+    assert pump_until(lambda: len(ctl.devices.all()) == 18)
     ed = ctl.roomEditor
     door = next(d for d in ed.devices if d["name"] == "Terrace Door")
     assert [k["value"] for k in door["kinds"]] == ["window", "door", "contact", "glassbreak"]
     assert ed.addRoom("Terrace") == ""
-    assert ed.saveDevice(door["id"], "Garden door", "window", "Terrace") == ""
+    assert ed.saveDevice(door["id"], {"name": "Garden door", "kind": "window", "room": "Terrace"}) == ""
     d = ctl.device(door["id"])
     assert d["name"] == "Garden door" and d["room"] == "Terrace" and d["icon"] == "window"
     assert d["meta"]["security"] == "window" and d["baseName"] == "Terrace Door"
-    assert ed.saveDevice(door["id"], "x" * 41, "door", "Terrace") != ""
-    assert ed.saveDevice(door["id"], "", "door", "Terrace") == ""       # back to the original name
+    assert ed.saveDevice(door["id"], {"name": "x" * 41, "kind": "door", "room": "Terrace"}) != ""
+    assert ed.saveDevice(door["id"], {"name": "", "kind": "door", "room": "Terrace"}) == ""       # back to the original name
     assert ctl.device(door["id"])["name"] == "Terrace Door" and ctl.device(door["id"])["icon"] == "door"
-    assert ed.saveDevice(door["id"], "", "contact", "Terrace") == ""    # the default kind of contact sensors
+    assert ed.saveDevice(door["id"], {"name": "", "kind": "contact", "room": "Terrace"}) == ""    # the default kind of contact sensors
     assert ctl.device(door["id"])["icon"] == "contact" and door["id"] not in ed._layout.kinds
 
     assert "General" in ctl.rooms
@@ -396,20 +396,20 @@ def test_device_editor_name_kind_room_and_hide_general(qapp, tmp_path):
 def test_hidden_device_only_in_settings(qapp, tmp_path):
     ctl = make_controller(tmp_path)
     ctl.start()
-    assert pump_until(lambda: len(ctl.devices.all()) == 17)
+    assert pump_until(lambda: len(ctl.devices.all()) == 18)
     ed = ctl.roomEditor
     fan = next(d for d in ed.devices if d["name"] == "Fan")
-    assert ed.addRoom("Attic") == "" and ed.saveDevice(fan["id"], "", "", "Attic", False) == ""
+    assert ed.addRoom("Attic") == "" and ed.saveDevice(fan["id"], {"name": "", "kind": "", "room": "Attic", "hidden": False}) == ""
     ctl.selectCategory("climate")
     rows = ctl.devices.rowCount()
     assert "Attic" in ctl.rooms
-    assert ed.saveDevice(fan["id"], "", "", "Attic", True) == ""
+    assert ed.saveDevice(fan["id"], {"name": "", "kind": "", "room": "Attic", "hidden": True}) == ""
     assert ctl.devices.rowCount() == rows - 1 and "Attic" not in ctl.rooms     # its only device is hidden
     assert fan["id"] not in ctl.devices._rows
     assert next(d for d in ed.devices if d["id"] == fan["id"])["hidden"] is True     # still in the settings
 
     leak = next(d for d in ctl.devices.all() if d["name"] == "Washing Machine Leak")
-    assert ed.saveDevice(leak["id"], "", "", leak["room"], True) == ""
+    assert ed.saveDevice(leak["id"], {"name": "", "kind": "", "room": leak["room"], "hidden": True}) == ""
     alarms = []
     ctl.securityAlarm.connect(alarms.append)
     ctl._on_message({"type": "device", "device": {k: v for k, v in leak.items() if k not in ("hidden",)}
@@ -422,14 +422,58 @@ def test_hidden_device_only_in_settings(qapp, tmp_path):
 def test_outdoor_sensor_set_on_the_panel(qapp, tmp_path):
     ctl = make_controller(tmp_path)
     ctl.start()
-    assert pump_until(lambda: len(ctl.devices.all()) == 17)
+    assert pump_until(lambda: len(ctl.devices.all()) == 18)
     ed = ctl.roomEditor
     ws = next(d for d in ed.devices if d["name"] == "Weather Station")
     heating = next(d for d in ed.devices if d["name"] == "Living Room Heating")
     assert ws["canOutdoor"] and not ws["outdoor"] and not heating["canOutdoor"]
     assert ctl.outdoorTemp == ""                                   # nothing marked outdoor in this config
-    assert ed.saveDevice(ws["id"], "", "", ws["room"], False, True) == ""
+    assert ed.saveDevice(ws["id"], {"name": "", "kind": "", "room": ws["room"], "hidden": False, "outdoor": True}) == ""
     assert ctl.outdoorTemp != "" and next(d for d in ed.devices if d["id"] == ws["id"])["outdoor"]
-    assert ed.saveDevice(ws["id"], "", "", ws["room"], False, False) == ""
+    assert ed.saveDevice(ws["id"], {"name": "", "kind": "", "room": ws["room"], "hidden": False, "outdoor": False}) == ""
     assert ctl.outdoorTemp == "" and ws["id"] not in ed._layout.outdoor     # back to config.yaml
+    ctl.shutdown()
+
+
+def test_appliance_kind_and_menu_area(qapp, tmp_path):
+    ctl = make_controller(tmp_path)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 18)
+    ed = ctl.roomEditor
+    washer = next(d for d in ed.devices if d["name"] == "Washing Machine")
+    assert washer["kind"] == "plug" and [k["value"] for k in washer["kinds"]][:2] == ["switch", "plug"]
+    assert ed.saveDevice(washer["id"], {"kind": "washer"}) == ""
+    d = ctl.device(washer["id"])
+    assert d["icon"] == "washer" and d["stateText"] == "Running"
+
+    ctl.selectCategory("climate")
+    climate = ctl.devices.rowCount()
+    assert ed.saveDevice(washer["id"], {"kind": "fan"}) == ""          # a switched fan belongs to Climate
+    assert ctl.devices.rowCount() == climate + 1 and ctl.device(washer["id"])["icon"] == "fan"
+    assert ed.saveDevice(washer["id"], {"area": "security"}) == ""     # moved by hand
+    assert ctl.devices.rowCount() == climate
+    ctl.selectCategory("security")
+    assert washer["id"] in ctl.devices._rows
+    assert ed.saveDevice(washer["id"], {"area": "", "kind": "plug"}) == ""
+    assert washer["id"] not in ed._layout.kinds and washer["id"] not in ed._layout.areas
+    assert ed.saveDevice(washer["id"], {"area": "nonsense"}) != ""
+    ctl.shutdown()
+
+
+def test_appliance_from_config_and_back_to_automatic(qapp, tmp_path):
+    store = SettingsStore(tmp_path / "settings.json")
+    store.update({"hap_enabled": False, "language": "en"})
+    cfg = AppConfig.model_validate({"demo": {"enabled": True}, "devices": {
+        "Washing Machine": {"appliance": "washer", "area": "climate"}, "Coffee Maker": {"icon": "coffee"}}})
+    ctl = Controller(cfg, store)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 18)
+    ed = ctl.roomEditor
+    washer = next(d for d in ed.devices if d["name"] == "Washing Machine")
+    assert washer["kind"] == "washer" and washer["area"] == "climate" and washer["icon"] == "washer"
+    assert ed.saveDevice(washer["id"], {"area": ""}) == ""             # automatic despite config.yaml
+    assert ed._layout.areas[washer["id"]] == "auto" and ctl.device(washer["id"])["meta"].get("area") is None
+    coffee = next(d for d in ed.devices if d["name"] == "Coffee Maker")
+    assert ed.saveDevice(coffee["id"], {"kind": "tv"}) == ""
+    assert ctl.device(coffee["id"])["icon"] == "coffee"                # an icon from config.yaml stays
     ctl.shutdown()

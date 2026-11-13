@@ -416,3 +416,14 @@ def test_security_kind_override_and_icon():
         assert leak.meta["security"] == "leak" and leak.icon == "leak"     # a leak sensor cannot be a window
         await m.stop()
     asyncio.run(run())
+
+
+def test_washer_state_texts():
+    from app.qt.format import category, state_text
+    d = {"type": "plug", "reachable": True, "meta": {"appliance": "washer"}, "state": {"on": True, "in_use": True}}
+    assert state_text(d) == "Running"
+    assert state_text({**d, "state": {"on": True, "in_use": False}}) == "Ready"
+    assert state_text({**d, "state": {"on": False, "in_use": False}}) == "Off"
+    assert state_text({**d, "type": "switch", "state": {"on": True}}) == "On"     # no power measurement
+    assert category({**d, "meta": {"appliance": "fan"}}) == "climate"
+    assert category({**d, "meta": {"appliance": "fan", "area": "security"}}) == "security"

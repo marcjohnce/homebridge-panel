@@ -25,7 +25,7 @@ def source_texts() -> set[str]:
         if p.name != "i18n_catalog.py":
             texts |= {unescape(m) for m in re.findall(r"\btr\(\s*" + LITERAL, p.read_text(encoding="utf-8"))}
     from app.qt.controller import RoomsBridge     # labels translated with tr(variable)
-    texts |= set(RoomsBridge.KIND_LABELS.values())
+    texts |= set(RoomsBridge.KIND_LABELS.values()) | set(RoomsBridge.AREA_LABELS.values()) - {""}
     for s in settings.SECTIONS:
         texts.add(s.title)
     for f in settings.FIELDS:

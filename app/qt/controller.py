@@ -25,7 +25,7 @@ from ..manager import DeviceManager, DeviceNotFound
 from ..rooms import BUILTIN_DEFAULT, RoomLayout
 from ..scheduler import Scheduler
 from ..settings import ACTIONS, SettingsStore, apply_to_config, validate
-from ..models import SECURITY_ICONS
+from ..models import AREAS, KIND_ICONS
 from .format import alert_level, category, fmt_temp, has_detail, short_name, state_text
 
 log = logging.getLogger(__name__)
@@ -116,8 +116,9 @@ class DeviceModel(QAbstractListModel):
         return {d["id"]: d["baseRoom"] for d in self._all.values()}
 
     def _place(self, d: dict[str, Any]) -> dict[str, Any]:
-        """Applies what was set on the panel: room, display name and the kind of security sensors.
-        "baseRoom", "baseName" and "baseKind" keep the values from Homebridge / config.yaml."""
+        """Applies what was set on the panel: room, display name, kind (security sensors, switches,
+        plugs), menu area and outdoor flag. "baseRoom", "baseName", "baseKind", "baseArea" … keep
+        the values from Homebridge / config.yaml."""
         base = d.get("baseRoom", d["room"])
         base_name = d.get("baseName", d["name"])
         out = {**d, "baseRoom": base, "room": self.layout.room_of(d["id"], base),
@@ -128,14 +129,21 @@ class DeviceModel(QAbstractListModel):
         outdoor = self.layout.outdoor.get(d["id"], base_outdoor)
         meta = {**meta, "outdoor": outdoor} if outdoor else {k: v for k, v in meta.items() if k != "outdoor"}
         out.update(baseOutdoor=base_outdoor, meta=meta)
-        if "security" in meta:
-            base_kind = d.get("baseKind", meta["security"])
+        base_area = d.get("baseArea", meta.get("area", ""))
+        area = self.layout.areas.get(d["id"], base_area).replace("auto", "")
+        meta = {**meta, "area": area} if area else {k: v for k, v in meta.items() if k != "area"}
+        out.update(baseArea=base_area, meta=meta)
+        key = "security" if "security" in meta else "appliance" if "appliance" in meta else None
+        if key:
+            base_kind = d.get("baseKind", meta[key])
             kind = self.layout.kinds.get(d["id"], base_kind)
             if kind not in meta.get("kinds", ()):
                 kind = base_kind
             base_icon = d.get("baseIcon", d["icon"])
-            icon = SECURITY_ICONS[kind] if base_icon == SECURITY_ICONS.get(base_kind) else base_icon
-            out.update(baseKind=base_kind, baseIcon=base_icon, icon=icon, meta={**meta, "security": kind})
+            # follow the kind unless config.yaml set an icon of its own
+            follows = base_icon == KIND_ICONS.get(base_kind) or base_icon in ("switch", "plug")
+            icon = KIND_ICONS[kind] if follows else base_icon
+            out.update(baseKind=base_kind, baseIcon=base_icon, icon=icon, meta={**meta, key: kind})
         return out
 
     def reassign(self) -> None:
@@ -313,7 +321,10 @@ class RoomsBridge(QObject):
                 for r in self._layout.all_rooms(dev_rooms.values())]
 
     KIND_LABELS = {"window": "Window", "door": "Door", "contact": "Contact", "glassbreak": "Glass break",
-                   "leak": "Leak", "motion": "Motion"}
+                   "leak": "Leak", "motion": "Motion",
+                   "switch": "Switch", "plug": "Plug", "tv": "TV", "coffee": "Coffee machine",
+                   "washer": "Washing machine", "dishwasher": "Dishwasher", "fan": "Fan"}
+    AREA_LABELS = {"": "Automatic", "light": "Lights", "climate": "Climate", "security": "Security"}
 
     @Property("QVariantList", notify=changed)
     def devices(self) -> list[dict[str, Any]]:
@@ -323,21 +334,34 @@ class RoomsBridge(QObject):
             kinds = d.get("meta", {}).get("kinds", [])
             out.append({"id": d["id"], "name": d["name"], "baseName": d["baseName"], "icon": d["icon"],
                         "room": d["room"], "reachable": d["reachable"],
-                        "kind": d.get("meta", {}).get("security", ""), "hidden": bool(d.get("hidden")),
+                        "kind": d.get("meta", {}).get("security") or d.get("meta", {}).get("appliance", ""),
+                        "hidden": bool(d.get("hidden")),
+                        "area": d.get("meta", {}).get("area", ""),
+                        "areas": [{"value": a, "label": tr(self.AREA_LABELS[a])} for a in ("", *AREAS)],
                         # temperature sensors can be marked as outdoor sensors (not thermostats)
                         "canOutdoor": d["type"] == "sensor" and d.get("state", {}).get("current_temp") is not None,
                         "outdoor": bool(d.get("meta", {}).get("outdoor")),
-                        "kinds": [{"value": k, "label": tr(self.KIND_LABELS[k])} for k in kinds] if len(kinds) > 1 else []})
+                        "kinds": [{"value": k, "label": tr(self.KIND_LABELS[k]), "icon": KIND_ICONS[k]}
+                                  for k in kinds] if len(kinds) > 1 else []})
         return out
 
-    @Slot(str, str, str, str, bool, bool, result=str)
-    def saveDevice(self, dev_id: str, name: str, kind: str, room: str, hidden: bool = False,
-                   outdoor: bool = False) -> str:
-        """Display name ("" = original), kind of a security sensor, room, hidden and outdoor flags."""
+    @Slot(str, "QVariantMap", result=str)
+    def saveDevice(self, dev_id: str, values: dict[str, Any]) -> str:
+        """Saves what the device editor changed: name ("" = original), kind, room, area
+        ("" = automatic), hidden and outdoor. Missing keys keep their value."""
         m = self._ctl._model
         d = m.get(dev_id)
         if not d:
             return tr("Device not found. It may have been removed from Homebridge.")
+        meta = d.get("meta", {})
+        name = values.get("name", d["name"])
+        kind = values.get("kind", "")
+        room = values.get("room", d["room"])
+        area = values.get("area", meta.get("area", ""))
+        if area and area not in AREAS:
+            return tr("Choose one of the offered options")
+        hidden = bool(values.get("hidden", d.get("hidden", False)))
+        outdoor = bool(values.get("outdoor", meta.get("outdoor", False)))
         name, err = self._layout.check_device_name(name)
         if err:
             return err
@@ -348,6 +372,7 @@ class RoomsBridge(QObject):
             self._layout.set_kind(dev_id, kind, d.get("baseKind", kind))
         self._layout.set_room(dev_id, room, d["baseRoom"], m.device_rooms())
         self._layout.set_hidden(dev_id, hidden)
+        self._layout.set_area(dev_id, area, d.get("baseArea", ""))
         if d["type"] == "sensor":
             self._layout.set_outdoor(dev_id, outdoor, d.get("baseOutdoor", False))
         self._commit()

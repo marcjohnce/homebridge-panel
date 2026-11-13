@@ -88,7 +88,7 @@ In the app (icon at the bottom left), stored in `~/.config/smarthome-panel/setti
 | Display | Appearance: Automatic (dark 7 pm – 7 am), Light, Dark | saved immediately |
 | Display | Language: System, English, Deutsch, Français, Italiano, Español | saved immediately |
 | Display | Screen saver after: never, 1, 2, 5, 15 minutes | saved immediately |
-| Rooms | Rooms and devices: rooms, display names, kind of security sensors, outdoor sensors, hidden devices, room of each device | saved immediately |
+| Rooms | Rooms and devices: rooms, display names, kind of sensors, switches and plugs (TV, washing machine …), menu entry, outdoor sensors, hidden devices, room of each device | saved immediately |
 | Rooms | Show the "General" room (on/off) | saved immediately |
 | Homebridge | Connect to Homebridge (on/off) | saved with **Apply** |
 | Homebridge | Address (IP or host name), port, PIN | saved with **Apply**, try **Test connection** first |
@@ -132,7 +132,7 @@ column to the catalog.
 | `hap` | additional bridges (child bridges); the main bridge comes from the settings |
 | `homebridge_ui` | alternatively access via the Homebridge web UI (username/password) |
 | `demo` | simulated devices |
-| `devices` | per device (ID or name): `room`, `name`, `icon`, `order`, `hidden`, `outdoor` (sensors), `security` (`window`, `door`, `contact`, `glassbreak`, `motion` for contact/motion sensors); values set on the panel take precedence |
+| `devices` | per device (ID or name): `room`, `name`, `icon`, `order`, `hidden`, `outdoor` (sensors), `security` (`window`, `door`, `contact`, `glassbreak`, `motion` for contact/motion sensors), `appliance` (`switch`, `plug`, `tv`, `coffee`, `washer`, `dishwasher`, `fan` for switches/plugs), `area` (`light`, `climate`, `security`); values set on the panel take precedence |
 | `scenes` | scenes with actions `{device: …, set: {…}}` and an optional `room` (without: whole house) |
 | `schedules` | run a scene at a time on weekdays (`mo tu we th fr sa su`) |
 

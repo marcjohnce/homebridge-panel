@@ -6,7 +6,7 @@ The panel can override it; overrides and the room order are stored in settings.j
 
     "rooms": {"order": ["Living Room", "Kitchen"], "devices": {"hap:...": "Kitchen"},
               "names": {"hap:...": "Coffee"}, "kinds": {"hap:...": "window"}, "hidden": ["hap:..."],
-              "outdoor": {"hap:...": true}}
+              "outdoor": {"hap:...": true}, "areas": {"hap:...": "climate"}}
 
 Hidden devices are left out of the home screen (tiles, menu status, alarms, temperatures)
 and are only listed in the settings.
@@ -36,6 +36,7 @@ class RoomLayout:
                                        if isinstance(devs, dict) else {})
         self.names = self._strings(data.get("names"))
         self.kinds = self._strings(data.get("kinds"))
+        self.areas = self._strings(data.get("areas"))         # menu area chosen on the panel
         hidden = data.get("hidden", [])
         self.hidden: set[str] = {str(h) for h in hidden} if isinstance(hidden, list) else set()
         outdoor = data.get("outdoor", {})
@@ -52,7 +53,7 @@ class RoomLayout:
     def to_dict(self) -> dict[str, Any]:
         return {"order": list(self.order), "devices": dict(self.assign),
                 "names": dict(self.names), "kinds": dict(self.kinds), "hidden": sorted(self.hidden),
-                "outdoor": dict(self.outdoor)}
+                "outdoor": dict(self.outdoor), "areas": dict(self.areas)}
 
     @property
     def default_room(self) -> str:
@@ -156,6 +157,13 @@ class RoomLayout:
             self.outdoor.pop(dev_id, None)
         else:
             self.outdoor[dev_id] = outdoor
+
+    def set_area(self, dev_id: str, area: str, base: str) -> None:
+        """"" = automatic (by device type); stored only where it differs from config.yaml."""
+        if area == base:
+            self.areas.pop(dev_id, None)
+        else:
+            self.areas[dev_id] = area or "auto"     # "auto": back to automatic despite config.yaml
 
     def set_hidden(self, dev_id: str, hidden: bool) -> None:
         (self.hidden.add if hidden else self.hidden.discard)(dev_id)
