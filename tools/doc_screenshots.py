@@ -37,8 +37,15 @@ SIZES = [(800, 480), (1024, 600), (1280, 720), (1280, 800), (720, 720), (720, 12
 DETAIL_SIZE = (1280, 800)          # primary display; detail views also at 720×720
 SQUARE_SIZE = (720, 720)
 
-CALLOUT = (37, 99, 235)          # blue: clearly separate from the gold UI accent
+# Annotation style: numbered badges in the side margins with leader lines ending in a dot on
+# the element, legend below the screenshot. Blue callouts stay clear of the gold UI accent.
+CANVAS = (255, 255, 255)
+FRAME = (210, 214, 220)
+CALLOUT = (37, 99, 235)        # callout color (badges, leader lines, dots)
+BADGE_INK = (255, 255, 255)
+TEXT = (40, 44, 52)
 BADGE_R = 13
+MARGIN = 64          # left/right margin for badges
 
 warnings: list[str] = []
 
@@ -136,38 +143,79 @@ class Panel:
         wait(100)
 
 
-def annotate(img: Image.Image, callouts: list[tuple]) -> Image.Image:
-    """Draws a box around each rectangle and a numbered badge.
+def _font(name: str, size: int) -> ImageFont.FreeTypeFont:
+    return ImageFont.truetype(str(FONT_DIR / f"Jost-{name}.ttf"), size)
 
-    Each callout is (number, [rects]) or (number, [rects], anchor). Anchor "left" puts the
-    badge outside the box on its left side (if there is room), "bottom" at its bottom-left
-    corner, so it covers no text.
+
+def _badge(d: ImageDraw.ImageDraw, x: float, y: float, number: int) -> None:
+    d.ellipse((x - BADGE_R, y - BADGE_R, x + BADGE_R, y + BADGE_R), fill=CALLOUT)
+    d.text((x, y), str(number), fill=BADGE_INK, font=_font("Medium", 15), anchor="mm")
+
+
+def annotate(img: Image.Image, callouts: list[tuple], title: str = "") -> Image.Image:
+    """Places the screenshot on a canvas with numbered badges and a legend below.
+
+    Each callout is (number, [rects], label) or (number, [rects], label, side) with side
+    "left", "right", "top" or "bottom". By default the badge goes to the screenshot edge that
+    is nearest to the element, so the leader line stays short and crosses little else. The
+    line ends in a dot on the element's edge. Elements scrolled out of view get no badge.
     """
-    img = img.copy()
-    d = ImageDraw.Draw(img)
-    font = ImageFont.truetype(str(FONT_DIR / "Jost-Medium.ttf"), 16)
-    W, H = img.size
-    badges: list[tuple[float, float]] = []
-    for number, rects, *opt in callouts:
+    w, h = img.size
+    entries = []          # [side, badge position along the edge, target x, target y, number]
+    for number, rects, label, *opt in callouts:
         for r in rects:
-            if r.width() <= 1 or r.height() <= 1:     # scrolled out of view: no callout
+            if r.width() <= 1 or r.height() <= 1:
                 continue
-            x0, y0 = max(2, r.left() - 4), max(2, r.top() - 4)
-            x1, y1 = min(W - 3, r.right() + 4), min(H - 3, r.bottom() + 4)
-            d.rounded_rectangle((x0, y0, x1, y1), radius=8, outline=CALLOUT, width=2)
-            if opt and opt[0] == "left" and x0 - 2 * BADGE_R - 6 >= 0:
-                bx, by = x0 - BADGE_R - 4, y0 + min(y1 - y0, 44) / 2
-            elif opt and opt[0] == "bottom":
-                bx, by = max(BADGE_R + 2, x0), min(y1, H - BADGE_R - 2)
-            else:
-                bx = min(max(BADGE_R + 2, x0), W - BADGE_R - 2)
-                by = min(max(BADGE_R + 2, y0), H - BADGE_R - 2)
-            while any(abs(bx - ox) < 2 * BADGE_R + 2 and abs(by - oy) < 2 * BADGE_R + 2 for ox, oy in badges):
-                bx += 2 * BADGE_R + 4
-            badges.append((bx, by))
-            d.ellipse((bx - BADGE_R, by - BADGE_R, bx + BADGE_R, by + BADGE_R), fill=CALLOUT, outline="white", width=2)
-            d.text((bx, by - 1), str(number), fill="white", font=font, anchor="mm")
-    return img
+            dist = {"left": r.left(), "right": w - r.right(), "top": r.top(), "bottom": h - r.bottom()}
+            side = opt[0] if opt else min(dist, key=dist.get)
+            cx = min(max(r.center().x(), 2), w - 2)
+            cy = min(max(r.center().y(), 2), h - 2)
+            tx, ty = {"left": (r.left(), cy), "right": (r.right(), cy),
+                      "top": (cx, r.top()), "bottom": (cx, r.bottom())}[side]
+            tx, ty = min(max(tx, 2), w - 2), min(max(ty, 2), h - 2)
+            entries.append([side, ty if side in ("left", "right") else tx, tx, ty, number])
+
+    # keep badges on each edge apart
+    gap = 2 * BADGE_R + 6
+    for side in ("left", "right", "top", "bottom"):
+        col = sorted((e for e in entries if e[0] == side), key=lambda e: e[1])
+        for prev, cur in zip(col, col[1:]):
+            cur[1] = max(cur[1], prev[1] + gap)
+
+    legend = sorted({(n, label) for n, _, label, *_ in callouts})
+    title_h = 44 if title else 0
+    legend_h = (24 + title_h + len(legend) * 34) if legend else (title_h + 16 if title else 0)
+    top = MARGIN
+    W = w + 2 * MARGIN
+    H = top + h + MARGIN + legend_h + 24
+    canvas = Image.new("RGB", (W, H), CANVAS)
+    canvas.paste(img, (MARGIN, top))
+    d = ImageDraw.Draw(canvas)
+    d.rectangle((MARGIN - 1, top - 1, MARGIN + w, top + h), outline=FRAME, width=1)
+
+    for side, pos, tx, ty, number in entries:
+        px, py = MARGIN + tx, top + ty
+        if side in ("left", "right"):
+            bx, by = (MARGIN / 2 if side == "left" else W - MARGIN / 2), top + pos
+            knee = (bx + (BADGE_R + 10) * (1 if side == "left" else -1), by)
+        else:
+            bx, by = MARGIN + pos, (top / 2 if side == "top" else top + h + MARGIN / 2)
+            knee = (bx, by + (BADGE_R + 10) * (1 if side == "top" else -1))
+        straight = abs((by - py) if side in ("left", "right") else (bx - px)) <= 1
+        d.line([(bx, by), (px, py)] if straight else [(bx, by), knee, (px, py)],
+               fill=CALLOUT, width=2, joint="curve")
+        d.ellipse((px - 5, py - 5, px + 5, py + 5), fill=CALLOUT, outline=CANVAS, width=2)
+        _badge(d, bx, by, number)
+
+    y = top + h + MARGIN
+    if title:
+        d.text((MARGIN - 18, y), title, fill=TEXT, font=_font("Medium", 22), anchor="lm")
+        y += title_h
+    for number, label in legend:
+        _badge(d, MARGIN - 18 + BADGE_R, y, number)
+        d.text((MARGIN - 18 + 2 * BADGE_R + 12, y), label, fill=TEXT, font=_font("Regular", 18), anchor="lm")
+        y += 34
+    return canvas
 
 
 def save(img: Image.Image, out: Path, name: str) -> None:
@@ -180,68 +228,67 @@ def home_callouts(p: Panel, top_layout: bool) -> list[tuple]:
     lamp = p.device_id("Living Room Ceiling Light")
     heating = p.device_id("Bathroom Heating")   # first tile, visible at every size
     return [
-        (1, [p.rect("clock").united(p.rect("date"))]),
-        (2, [p.rect("climate")], "bottom") if top_layout else (2, [p.rect("climate")]),
-        (3, [p.rect("scenes")]),
-        (4, [p.rect("statusDot").united(p.rect("statusText"))]),
-        (5, [p.rect("settingsButton")]),
-        (6, [p.rect("roomTabs")]),
-        (7, [p.rect(f"tile:{lamp}")]),
-        (8, [p.rect(f"more:{lamp}")]),
-        (9, [p.rect(f"tile:{heating}")]),
-        (10, [p.rect(f"tile:{p.device_id('Weather Station')}")]),
+        (1, [p.rect("clock")], "Clock and date"),
+        (2, [p.rect("climate")], "Indoor and outdoor temperature", *(["top"] if top_layout else [])),
+        (3, [p.rect("scenes")], "Scenes", "left"),
+        (4, [p.rect("statusDot").united(p.rect("statusText"))], "Connection status"),
+        (5, [p.rect("settingsButton")], "Settings"),
+        (6, [p.rect("roomTabs")], "Rooms", *([] if top_layout else ["top"])),
+        (7, [p.rect(f"tile:{lamp}")], "Device that is on (tap to switch)"),
+        (8, [p.rect(f"more:{lamp}")], "Open controls"),
+        (9, [p.rect(f"tile:{heating}")], "Heating tile"),
+        (10, [p.rect(f"tile:{p.device_id('Weather Station')}")], "Sensor tile"),
     ]
 
 
-def detail_views(p: Panel, out: Path, suffix: str) -> None:
+def detail_views(p: Panel, out: Path, suffix: str, size: str) -> None:
     p.win.setProperty("openDevice", p.device_id("Living Room Heating"))
     save(annotate(p.grab(), [
-        (1, [p.rect("backButton")]),
-        (2, [p.rect("headerNote")], "left"),
-        (3, [p.rect("dial")]),
-        (4, [p.rect("minusButton"), p.rect("plusButton")]),
-        (5, [p.rect("modes")], "left"),
-    ]), out, f"heating{suffix}")
+        (1, [p.rect("backButton")], "Back to the room"),
+        (2, [p.rect("headerNote")], "Status"),
+        (3, [p.rect("dial")], "Dial: drag to set the target temperature", "top"),
+        (4, [p.rect("minusButton"), p.rect("plusButton")], "Cooler / warmer"),
+        (5, [p.rect("modes")], "Mode"),
+    ], f"Thermostat – {size}"), out, f"heating{suffix}")
 
     tv = p.device_id("TV Light")
     p.ctl.setAttrs(tv, {"on": True, "brightness": 60, "hue": 200, "saturation": 70})
     wait(800)
     p.win.setProperty("openDevice", tv)
     save(annotate(p.grab(), [
-        (1, [p.rect("brightnessBar")]),
-        (2, [p.rect("colorWheel")]),
-        (3, [p.rect("powerButton")]),
-    ]), out, f"light{suffix}")
+        (1, [p.rect("brightnessBar")], "Brightness", "left"),
+        (2, [p.rect("colorWheel")], "Color wheel", "right"),
+        (3, [p.rect("powerButton")], "Power", "bottom"),
+    ], f"Color light – {size}"), out, f"light{suffix}")
 
     kitchen = p.device_id("Kitchen Light")
     p.ctl.setAttrs(kitchen, {"on": True, "brightness": 80, "color_temp": 330})
     wait(800)
     p.win.setProperty("openDevice", kitchen)
     save(annotate(p.grab(), [
-        (1, [p.rect("brightnessBar")]),
-        (4, [p.rect("colorTemp")]),
-        (3, [p.rect("powerButton")]),
-    ]), out, f"light-white-tone{suffix}")
+        (1, [p.rect("brightnessBar")], "Brightness", "left"),
+        (4, [p.rect("colorTemp")], "White tone", "right"),
+        (3, [p.rect("powerButton")], "Power", "bottom"),
+    ], f"White light – {size}"), out, f"light-white-tone{suffix}")
 
     p.win.setProperty("openDevice", p.device_id("Weather Station"))
     save(annotate(p.grab(), [
-        (1, [p.rect("headerNote")], "left"),
-        (2, [p.rect("reading:temp")]),
-        (3, [p.rect("reading:humidity")]),
-        (4, [p.rect("reading:pressure")]),
-    ]), out, f"sensor{suffix}")
+        (1, [p.rect("headerNote")], "Outdoor sensor"),
+        (2, [p.rect("reading:temp")], "Temperature", "bottom"),
+        (3, [p.rect("reading:humidity")], "Humidity", "bottom"),
+        (4, [p.rect("reading:pressure")], "Air pressure", "bottom"),
+    ], f"Weather station – {size}"), out, f"sensor{suffix}")
     p.win.setProperty("openDevice", p.device_id("Hall Light Sensor"))
-    save(annotate(p.grab(), [(5, [p.rect("reading:lux")])]), out, f"sensor-light{suffix}")
+    save(annotate(p.grab(), [(5, [p.rect("reading:lux")], "Light level")], f"Light sensor – {size}"),
+         out, f"sensor-light{suffix}")
 
     p.win.setProperty("openDevice", p.device_id("Living Room Blinds"))
     save(annotate(p.grab(), [
-        (1, [p.rect("blindVisual")]),
-        (2, [p.rect("blindPosition")]),
-        (3, [p.rect("openButton")]),
-        (4, [p.rect("stopButton")]),
-        (5, [p.rect("closeButton")]),
-        (6, [p.rect("tiltSlider")]),
-    ]), out, f"blinds{suffix}")
+        (1, [p.rect("blindVisual")], "Blind: drag to set the position", "left"),
+        (2, [p.rect("blindPosition")], "Position", "right"),
+        (3, [p.rect("openButton").united(p.rect("closeButton"))], "Open, stop, close", "right"),
+        (4, [p.rect("tiltSlider")], "Slat angle", "right"),
+    ], f"Blinds – {size}"), out, f"blinds{suffix}")
     p.win.setProperty("openDevice", "")
 
 
@@ -256,15 +303,15 @@ def main() -> int:
     for w, h in SIZES:
         p = Panel((w, h))
         p.win.setProperty("idle", False)
-        save(annotate(p.grab(), home_callouts(p, w / h < 1.4)), out, f"home-{w}x{h}")
+        save(annotate(p.grab(), home_callouts(p, w / h < 1.4), f"Home screen – {w} × {h}"), out, f"home-{w}x{h}")
         p.close()
 
     # Detail views at the primary size (1280×800) and at 720×720
     square = Panel(SQUARE_SIZE)
-    detail_views(square, out, "-720x720")
+    detail_views(square, out, "-720x720", "720 × 720")
     square.close()
     p = Panel(DETAIL_SIZE)
-    detail_views(p, out, "")
+    detail_views(p, out, "", "1280 × 800")
 
     # Settings, keypad and screen saver at the primary size
 
@@ -273,11 +320,11 @@ def main() -> int:
     wait(300)
     p.item("settingsFlick").setProperty("contentY", 0)
     save(annotate(p.grab(), [
-        (1, [p.rect("section:display")], "left"),
-        (2, [p.rect("section:homebridge")], "left"),
-        (3, [p.rect("testButton")]),
-        (4, [p.rect("applyButton")]),
-    ]), out, "settings")
+        (1, [p.rect("section:display")], "Display settings (saved immediately)", "left"),
+        (2, [p.rect("section:homebridge")], "Homebridge connection", "left"),
+        (3, [p.rect("testButton")], "Test connection", "bottom"),
+        (4, [p.rect("applyButton")], "Apply", "bottom"),
+    ], "Settings"), out, "settings")
 
     p.item("settingsFlick").setProperty("contentY", 200)
     wait(300)
@@ -287,11 +334,11 @@ def main() -> int:
     for digit in "12345":
         p.key(getattr(Qt.Key, f"Key_{digit}"), digit)
     save(annotate(p.grab(), [
-        (1, [p.rect("keypadDisplay")], "left"),
-        (2, [p.rect("keypadHint")], "left"),
-        (3, [p.rect("keypadKeys")], "left"),
-        (4, [p.rect("keypadDone")]),
-    ]), out, "keypad")
+        (1, [p.rect("keypadDisplay")], "Entry (first key replaces the old value)", "left"),
+        (2, [p.rect("keypadHint")], "Format hint or error", "left"),
+        (3, [p.rect("keypadKeys")], "Keys", "left"),
+        (4, [p.rect("keypadDone")], "Done", "bottom"),
+    ], "Keypad"), out, "keypad")
     p.key(Qt.Key.Key_Escape)
     wait(300)
 
@@ -299,31 +346,31 @@ def main() -> int:
     flick.setProperty("contentY", max(0, flick.property("contentHeight") - flick.height()))
     wait(300)
     save(annotate(p.grab(), [
-        (1, [p.rect("section:system")], "left"),
-        (2, [p.rect("action:restart_app")]),
-        (3, [p.rect("action:reboot")]),
-    ]), out, "settings-system")
+        (1, [p.rect("section:system")], "System", "left"),
+        (2, [p.rect("action:restart_app")], "Restart app", "right"),
+        (3, [p.rect("action:reboot")], "Restart Raspberry Pi", "right"),
+    ], "Settings: System"), out, "settings-system")
 
     reboot = p.rect("action:reboot")
     p.click(reboot.center().x(), reboot.center().y())
     wait(400)
     save(annotate(p.grab(), [
-        (1, [p.rect("confirmCancel")]),
-        (2, [p.rect("confirmOk")]),
-    ]), out, "confirm-restart")
+        (1, [p.rect("confirmCancel")], "Cancel", "bottom"),
+        (2, [p.rect("confirmOk")], "Restart", "bottom"),
+    ], "Confirmation"), out, "confirm-restart")
     p.key(Qt.Key.Key_Escape)
     p.win.setProperty("settingsOpen", False)
 
     p.win.setProperty("idle", True)
     wait(900)   # let the fade-in finish
-    save(p.grab(), out, "screensaver")
+    save(annotate(p.grab(), [], "Screen saver"), out, "screensaver")
     p.close()
 
     # Dark theme
     p = Panel(DETAIL_SIZE, theme="dark")
-    save(p.grab(), out, "home-dark")
+    save(annotate(p.grab(), [], "Home screen, dark"), out, "home-dark")
     p.win.setProperty("openDevice", p.device_id("Living Room Heating"))
-    save(p.grab(), out, "heating-dark")
+    save(annotate(p.grab(), [], "Thermostat, dark"), out, "heating-dark")
     p.close()
 
     if warnings:

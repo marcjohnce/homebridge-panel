@@ -1,7 +1,8 @@
 # User interface
 
 All screenshots are taken from the running app with demo devices and annotated
-automatically. To update them after UI changes, run:
+automatically: numbered callouts point to the elements, and each image has its legend below.
+The tables add details. To update them after UI changes, run:
 
 ```bash
 python tools/doc_screenshots.py      # writes docs/images/*.png
@@ -129,10 +130,8 @@ or press and hold for the detail view.
 |---|---|---|
 | 1 | Blind | Drag up or down (or tap) to set the position; the gold rail is the lower edge of the blind |
 | 2 | Position | 0% = closed, 100% = fully open. While moving it shows the target and *Opening …* / *Closing …* |
-| 3 | Open | Opens fully |
-| 4 | Stop | Stops where the blind is (uses the blind's own stop function if it has one) |
-| 5 | Close | Closes fully |
-| 6 | Slat angle | Tilts the slats from −90° to 90°; only shown for blinds that support it |
+| 3 | Open, stop, close | Opens fully, stops where the blind is (using the blind's own stop function if it has one), closes fully |
+| 4 | Slat angle | Tilts the slats from −90° to 90°; only shown for blinds that support it |
 
 While a blind moves, the panel polls it every second so the position follows smoothly,
 then returns to the normal interval. If a blind reports an obstruction, the tile and the
