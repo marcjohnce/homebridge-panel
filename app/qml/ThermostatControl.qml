@@ -54,20 +54,22 @@ ColumnLayout {
         Item { Layout.fillWidth: true }
 
         CircleButton {
+            objectName: "minusButton"
             iconName: "minus"
-            label: qsTr("Kälter")
+            label: qsTr("Cooler")
             onClicked: root.setTarget(root.shown - root.step)
         }
 
         Item {
             id: dial
+            objectName: "dial"
             readonly property real size: Math.min(340, root.height - 64)
             Layout.preferredWidth: size
             Layout.preferredHeight: size
             Layout.alignment: Qt.AlignVCenter
             activeFocusOnTab: true
             Accessible.role: Accessible.Slider
-            Accessible.name: qsTr("Solltemperatur %1 Grad").arg(Theme.fmt(root.shown))
+            Accessible.name: qsTr("Target temperature %1 degrees").arg(Theme.fmt(root.shown))
             Keys.onUpPressed: root.setTarget(root.shown + root.step)
             Keys.onRightPressed: root.setTarget(root.shown + root.step)
             Keys.onDownPressed: root.setTarget(root.shown - root.step)
@@ -104,7 +106,7 @@ ColumnLayout {
                 }
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: qsTr("Ist %1 °C").arg(Theme.fmt(root.st.current_temp))
+                    text: qsTr("Now %1 °C").arg(Theme.fmt(root.st.current_temp))
                     color: Theme.muted
                     font.pixelSize: 16
                 }
@@ -136,8 +138,9 @@ ColumnLayout {
         }
 
         CircleButton {
+            objectName: "plusButton"
             iconName: "plus"
-            label: qsTr("Wärmer")
+            label: qsTr("Warmer")
             onClicked: root.setTarget(root.shown + root.step)
         }
 
@@ -145,6 +148,7 @@ ColumnLayout {
     }
 
     Row {
+        objectName: "modes"
         Layout.alignment: Qt.AlignHCenter
         Layout.preferredHeight: 52
         spacing: 26
@@ -152,7 +156,7 @@ ColumnLayout {
             model: root.meta.modes || ["off", "heat", "auto"]
             UnderlineButton {
                 required property string modelData
-                readonly property var labels: ({ off: qsTr("Aus"), heat: qsTr("Heizen"), cool: qsTr("Kühlen"), auto: qsTr("Auto") })
+                readonly property var labels: ({ off: qsTr("Off"), heat: qsTr("Heat"), cool: qsTr("Cool"), auto: qsTr("Auto") })
                 text: labels[modelData] || modelData
                 centered: true
                 selected: root.st.mode === modelData

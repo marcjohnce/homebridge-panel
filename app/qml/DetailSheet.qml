@@ -66,7 +66,7 @@ Rectangle {
             Layout.fillWidth: true
             backText: root.dev.room || ""
             title: root.dev.name || ""
-            note: !root.dev.reachable ? qsTr("Nicht erreichbar") : (root.heatingNow ? qsTr("Heizt gerade") : "")
+            note: !root.dev.reachable ? qsTr("Not reachable") : (root.heatingNow ? qsTr("Heating now") : "")
             noteColor: root.heatingNow ? Theme.heat2 : Theme.muted
             onBack: root.closed()
         }

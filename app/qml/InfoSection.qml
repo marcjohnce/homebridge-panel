@@ -5,10 +5,10 @@ ColumnLayout {
     id: root
 
     readonly property var rows: [
-        { label: qsTr("Verbindung"), value: panel.statusDetail !== "" ? panel.statusDetail : panel.statusText },
-        { label: qsTr("Geräte"), value: String(panel.deviceCount) },
-        { label: qsTr("Räume, Szenen, Zeitpläne"), value: panel.configPath !== "" ? panel.configPath : qsTr("keine config.yaml gefunden") },
-        { label: qsTr("Einstellungsdatei"), value: panel.settings.path },
+        { label: qsTr("Connection"), value: panel.statusDetail !== "" ? panel.statusDetail : panel.statusText },
+        { label: qsTr("Devices"), value: String(panel.deviceCount) },
+        { label: qsTr("Rooms, scenes, schedules"), value: panel.configPath !== "" ? panel.configPath : qsTr("no config.yaml found") },
+        { label: qsTr("Settings file"), value: panel.settings.path },
         { label: qsTr("Version"), value: panel.version }
     ]
 

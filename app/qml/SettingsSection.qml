@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 
-// Ein Abschnitt der Einstellungsseite. „instant“: sofort speichern, sonst über „Übernehmen“ (Leiste unten).
+// A section of the settings page. "instant": save immediately, otherwise via "Apply" (bottom bar).
 ColumnLayout {
     id: root
 
@@ -27,6 +27,7 @@ ColumnLayout {
     }
 
     Rectangle {
+        objectName: "section:" + root.section.id
         Layout.fillWidth: true
         Layout.preferredHeight: fieldColumn.implicitHeight
         radius: 14
@@ -51,6 +52,7 @@ ColumnLayout {
                         color: Theme.line
                     }
                     SettingRow {
+                        objectName: "row:" + fieldItem.modelData.key
                         width: parent.width
                         field: fieldItem.modelData
                         value: root.current(fieldItem.modelData)

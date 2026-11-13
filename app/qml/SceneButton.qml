@@ -13,7 +13,7 @@ Item {
     implicitHeight: compact ? 42 : 48
     activeFocusOnTab: true
     Accessible.role: Accessible.Button
-    Accessible.name: qsTr("Szene %1 ausführen").arg(label)
+    Accessible.name: qsTr("Run scene %1").arg(label)
     Keys.onReturnPressed: run()
 
     function run() {

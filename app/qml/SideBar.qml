@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 
-// Linke Spalte: Uhr, Innentemperatur, Szenen, Status und Zugang zu den Einstellungen
+// Left column: clock, indoor temperature, scenes, status and access to settings
 ColumnLayout {
     id: root
 
@@ -20,6 +20,7 @@ ColumnLayout {
     }
 
     Text {
+        objectName: "clock"
         text: Qt.formatTime(root.now, "hh:mm")
         color: Theme.ink
         font.pixelSize: root.compact ? 60 : 84
@@ -27,13 +28,15 @@ ColumnLayout {
         lineHeight: 0.95
     }
     Text {
+        objectName: "date"
         Layout.topMargin: 6
-        text: root.now.toLocaleDateString(Qt.locale("de_DE"), "dddd, d. MMMM")
+        text: root.now.toLocaleDateString(Qt.locale("en_GB"), "dddd, d MMMM")
         color: Theme.muted
         font.pixelSize: 17
     }
 
     RowLayout {
+        objectName: "climate"
         visible: panel.indoorTemp !== ""
         Layout.topMargin: root.compact ? 16 : 26
         spacing: 10
@@ -51,7 +54,7 @@ ColumnLayout {
                 font.weight: Font.Light
             }
             Text {
-                text: qsTr("innen")
+                text: qsTr("indoors")
                 color: Theme.muted
                 font.pixelSize: 14
             }
@@ -62,12 +65,13 @@ ColumnLayout {
         visible: panel.scenes.length > 0
         Layout.topMargin: root.compact ? 16 : 28
         Layout.bottomMargin: 4
-        text: qsTr("Szenen")
+        text: qsTr("Scenes")
         color: Theme.muted
         font.pixelSize: 14
     }
 
     Flickable {
+        objectName: "scenes"
         Layout.fillWidth: true
         Layout.fillHeight: true
         contentHeight: sceneColumn.height
@@ -97,12 +101,14 @@ ColumnLayout {
         spacing: 8
 
         Rectangle {
+            objectName: "statusDot"
             Layout.preferredWidth: 8
             Layout.preferredHeight: 8
             radius: 4
             color: panel.statusOk ? Theme.ok : Theme.err
         }
         Text {
+            objectName: "statusText"
             Layout.fillWidth: true
             text: panel.statusText
             color: Theme.muted
@@ -110,11 +116,12 @@ ColumnLayout {
             elide: Text.ElideRight
         }
         Item {
+            objectName: "settingsButton"
             Layout.preferredWidth: 44
             Layout.preferredHeight: 44
             activeFocusOnTab: true
             Accessible.role: Accessible.Button
-            Accessible.name: qsTr("Einstellungen")
+            Accessible.name: qsTr("Settings")
             Keys.onReturnPressed: root.openSettings()
 
             LineIcon {

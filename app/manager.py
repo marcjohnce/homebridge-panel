@@ -1,4 +1,4 @@
-"""Zentrale Geräteverwaltung: fragt Backends ab, führt Befehle aus, verteilt Änderungen."""
+"""Central device management: polls backends, executes commands, distributes changes."""
 from __future__ import annotations
 
 import asyncio
@@ -31,7 +31,7 @@ class DeviceManager:
         self._task: asyncio.Task | None = None
         self._locks = {b.name: asyncio.Lock() for b in backends}
 
-    # ---------- Lebenszyklus ----------
+    # ---------- lifecycle ----------
     async def start(self) -> None:
         for b in self.backends.values():
             await b.start()
@@ -49,10 +49,10 @@ class DeviceManager:
             await asyncio.sleep(self.cfg.server.poll_interval)
             try:
                 await self.refresh_all()
-            except Exception:  # pragma: no cover - Schutz der Schleife
-                log.exception("Fehler beim Abfragen")
+            except Exception:  # pragma: no cover - keep the loop alive
+                log.exception("Polling failed")
 
-    # ---------- Abfrage ----------
+    # ---------- polling ----------
     async def refresh_all(self) -> None:
         await asyncio.gather(*(self.refresh(b) for b in self.backends.values()))
 
@@ -95,7 +95,7 @@ class DeviceManager:
             st.update(ok=True, error=None, last_update=time.time(),
                       devices=sum(1 for d in self.devices.values() if d.backend == backend.name))
             if not was_ok:
-                log.info("Backend %s verbunden (%d Geräte)", backend.name, st["devices"])
+                log.info("Backend %s connected (%d devices)", backend.name, st["devices"])
                 await self._broadcast({"type": "status", "backends": self.status})
 
     def _build(self, dev_id: str, backend: Backend, snap: ServiceSnapshot) -> Device | None:
@@ -119,9 +119,9 @@ class DeviceManager:
             order=ov.order if ov else 100,
         )
 
-    # ---------- Befehle ----------
+    # ---------- commands ----------
     def resolve(self, ref: str) -> str:
-        """Geräte-ID oder (Anzeige-/Original-)Name -> Geräte-ID."""
+        """Device ID or (display/original) name -> device ID."""
         if ref in self.devices:
             return ref
         low = ref.casefold()
@@ -133,9 +133,9 @@ class DeviceManager:
     async def command(self, ref: str, attrs: dict[str, Any]) -> Device:
         dev_id = self.resolve(ref)
         backend, snap = self.snapshots[dev_id]
-        writes = command_to_writes(snap, attrs)  # ValueError bei ungültigen Befehlen
+        writes = command_to_writes(snap, attrs)  # ValueError for invalid commands
         await backend.write(writes)
-        # Optimistisch übernehmen; die nächste Abfrage korrigiert ggf.
+        # apply optimistically; the next poll corrects it if needed
         for ch, value in writes:
             ch.value = value
         dev = self._build(dev_id, backend, snap)
@@ -161,11 +161,11 @@ class DeviceManager:
 
         await asyncio.gather(*(run(a) for a in scene.actions))
         if errors:
-            log.warning("Szene %s: Fehler %s", scene_id, errors)
+            log.warning("Scene %s: errors %s", scene_id, errors)
         await self._broadcast({"type": "scene", "id": scene_id, "errors": errors})
         return {"scene": scene_id, "errors": errors}
 
-    # ---------- Live-Updates ----------
+    # ---------- live updates ----------
     def subscribe(self) -> asyncio.Queue:
         q: asyncio.Queue = asyncio.Queue(maxsize=500)
         self._listeners.add(q)

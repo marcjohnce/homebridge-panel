@@ -15,7 +15,7 @@ from app.scheduler import Scheduler
 U = lambda s: f"{int(s, 16):08X}-0000-1000-8000-0026BB765291"  # noqa: E731
 
 
-# ---------- Fake-HAP-Server (wie Homebridge im Insecure-Modus) ----------
+# ---------- fake HAP server (like Homebridge in insecure mode) ----------
 def fake_hap_server(pin="031-45-154"):
     accessories = {"accessories": [
         {"aid": 1, "services": [
@@ -99,12 +99,12 @@ def test_hap_wrong_pin():
 def test_homebridge_ui_backend():
     calls = []
     data = [
-        {"uniqueId": "abc", "type": "Outlet", "serviceName": "Waschmaschine",
+        {"uniqueId": "abc", "type": "Outlet", "serviceName": "Washing Machine",
          "serviceCharacteristics": [
              {"type": "On", "value": 0, "canWrite": True},
              {"type": "OutletInUse", "value": 1, "canWrite": False}],
          "accessoryInformation": {"Name": "Plug 1"}},
-        {"uniqueId": "def", "type": "HeaterCooler", "serviceName": "Heizkörper",
+        {"uniqueId": "def", "type": "HeaterCooler", "serviceName": "Radiator",
          "serviceCharacteristics": [
              {"type": "Active", "value": 1, "canWrite": True},
              {"type": "TargetHeaterCoolerState", "value": 1, "canWrite": True},
@@ -130,7 +130,7 @@ def test_homebridge_ui_backend():
         b = HomebridgeUiBackend(HomebridgeUiBackendConfig(username="admin", password="pw"),
                                 transport=httpx.MockTransport(handler))
         snaps = await b.fetch()
-        assert [s.name for s in snaps] == ["Waschmaschine", "Heizkörper"]
+        assert [s.name for s in snaps] == ["Washing Machine", "Radiator"]
         _, st, _, _ = snapshot_to_state(snaps[0])
         assert st == {"on": False, "in_use": True}
         _, st, caps, _ = snapshot_to_state(snaps[1])
@@ -162,11 +162,11 @@ def test_invalid_commands():
 def demo_cfg(**kw):
     return AppConfig.model_validate({
         "demo": {"enabled": True},
-        "devices": {"Kaffeemaschine": {"room": "Küche", "icon": "coffee"}, "Ventilator": {"hidden": True}},
-        "scenes": [{"id": "aus", "name": "Alles aus", "actions": [
-            {"device": "Deckenlicht Wohnzimmer", "set": {"on": False}},
-            {"device": "TV-Steckdose", "set": {"on": False}},
-            {"device": "gibt-es-nicht", "set": {"on": False}}]}],
+        "devices": {"Coffee Maker": {"room": "Kitchen", "icon": "coffee"}, "Fan": {"hidden": True}},
+        "scenes": [{"id": "off", "name": "All off", "actions": [
+            {"device": "Living Room Ceiling Light", "set": {"on": False}},
+            {"device": "TV Plug", "set": {"on": False}},
+            {"device": "does-not-exist", "set": {"on": False}}]}],
         **kw,
     })
 
@@ -177,18 +177,18 @@ def test_manager_with_demo_backend():
         q = m.subscribe()
         await m.start()
         names = {d.name for d in m.devices.values()}
-        assert "Kaffeemaschine" in names and "Ventilator" not in names
-        coffee = m.devices[m.resolve("Kaffeemaschine")]
-        assert coffee.room == "Küche" and coffee.icon == "coffee" and coffee.state["on"] is False
-        assert (await m.command("Kaffeemaschine", {"on": True})).state["on"] is True
-        assert (await m.command("Heizung Bad", {"mode": "heat", "target_temp": 23})).state["target_temp"] == 23
+        assert "Coffee Maker" in names and "Fan" not in names
+        coffee = m.devices[m.resolve("Coffee Maker")]
+        assert coffee.room == "Kitchen" and coffee.icon == "coffee" and coffee.state["on"] is False
+        assert (await m.command("Coffee Maker", {"on": True})).state["on"] is True
+        assert (await m.command("Bathroom Heating", {"mode": "heat", "target_temp": 23})).state["target_temp"] == 23
         with pytest.raises(ValueError):
-            await m.command("Kaffeemaschine", {"brightness": 3})
+            await m.command("Coffee Maker", {"brightness": 3})
         with pytest.raises(DeviceNotFound):
             await m.command("unbekannt", {"on": True})
-        res = await m.run_scene("aus")
-        assert list(res["errors"]) == ["gibt-es-nicht"]
-        assert m.devices[m.resolve("Deckenlicht Wohnzimmer")].state["on"] is False
+        res = await m.run_scene("off")
+        assert list(res["errors"]) == ["does-not-exist"]
+        assert m.devices[m.resolve("Living Room Ceiling Light")].state["on"] is False
         assert not q.empty()
         await m.stop()
     asyncio.run(run())
@@ -196,10 +196,10 @@ def test_manager_with_demo_backend():
 
 def test_scheduler_due():
     cfg = AppConfig.model_validate({"schedules": [
-        {"time": "06:30", "days": ["Mo", "Di"], "scene": "a"},
+        {"time": "06:30", "days": ["Mo", "Di"], "scene": "a"},  # "Di" = German alias for "tu"
         {"time": "06:30", "scene": "b", "enabled": True}]})
     s = Scheduler(cfg, DeviceManager(cfg, []))
     monday = datetime(2026, 11, 16, 6, 30)
     assert s.due(monday) == ["a", "b"]
-    assert s.due(monday) == []                    # nicht doppelt
-    assert s.due(datetime(2026, 11, 18, 6, 30)) == ["b"]  # Mittwoch
+    assert s.due(monday) == []                    # not twice
+    assert s.due(datetime(2026, 11, 18, 6, 30)) == ["b"]  # Wednesday

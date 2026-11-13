@@ -1,9 +1,9 @@
-"""HAP-Typen (Apple HomeKit Accessory Protocol) und die Übersetzung in Panel-Geräte.
+"""HAP types (Apple HomeKit Accessory Protocol) and their translation into panel devices.
 
-Beide Backends (direkter HAP-Zugriff und Homebridge-UI-API) liefern Services mit
-Characteristics. Hier wird daraus ein einheitlicher Gerätezustand gebaut und
-umgekehrt ein Panel-Befehl (z. B. {"on": true, "brightness": 40}) in
-Characteristic-Schreibzugriffe übersetzt.
+Both backends (direct HAP access and the Homebridge UI API) deliver services with
+characteristics. This module turns them into a uniform device state and, in the
+other direction, translates a panel command (e.g. {"on": true, "brightness": 40})
+into characteristic writes.
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from .models import DeviceType
 
 HAP_BASE_SUFFIX = "-0000-1000-8000-0026BB765291"
 
-# Service-UUIDs (Kurzform) -> Name
+# Service UUIDs (short form) -> name
 SERVICE_TYPES: dict[str, str] = {
     "3E": "AccessoryInformation",
     "40": "Fan",
@@ -26,7 +26,7 @@ SERVICE_TYPES: dict[str, str] = {
     "BC": "HeaterCooler",
 }
 
-# Characteristic-UUIDs (Kurzform) -> Name
+# Characteristic UUIDs (short form) -> name
 CHAR_TYPES: dict[str, str] = {
     "8": "Brightness",
     "F": "CurrentHeatingCoolingState",
@@ -78,7 +78,7 @@ def short_uuid(uuid: str) -> str:
 
 @dataclass
 class Char:
-    """Eine Characteristic eines Services. `ref` ist backend-spezifisch (Adresse zum Schreiben)."""
+    """A characteristic of a service. `ref` is backend specific (address used for writing)."""
     name: str
     value: Any
     writable: bool = False
@@ -90,11 +90,11 @@ class Char:
 
 @dataclass
 class ServiceSnapshot:
-    key: str                 # eindeutig innerhalb des Backends
-    service_type: str        # z. B. "Lightbulb"
+    key: str                 # unique within the backend
+    service_type: str        # e.g. "Lightbulb"
     name: str
     chars: dict[str, Char] = field(default_factory=dict)
-    accessory: str = ""      # Name des übergeordneten Accessories
+    accessory: str = ""      # name of the parent accessory
 
     def get(self, name: str, default: Any = None) -> Any:
         c = self.chars.get(name)
@@ -109,7 +109,7 @@ def _num(v: Any) -> float | None:
 
 
 def snapshot_to_state(s: ServiceSnapshot) -> tuple[DeviceType, dict[str, Any], list[str], dict[str, Any]]:
-    """Übersetzt einen Service in (Gerätetyp, Zustand, Fähigkeiten, Metadaten)."""
+    """Translates a service into (device type, state, capabilities, metadata)."""
     dtype = DEVICE_TYPE_BY_SERVICE[s.service_type]
     state: dict[str, Any] = {}
     caps: list[str] = []
@@ -189,13 +189,13 @@ def _clamp(v: float, ch: Char, lo: float, hi: float) -> float:
 
 
 def command_to_writes(s: ServiceSnapshot, attrs: dict[str, Any]) -> list[tuple[Char, Any]]:
-    """Übersetzt einen Panel-Befehl in eine Liste (Characteristic, Wert)."""
+    """Translates a panel command into a list of (characteristic, value)."""
     c = s.chars
     writes: list[tuple[Char, Any]] = []
 
     def need(name: str) -> Char:
         if name not in c:
-            raise ValueError(f"Gerät '{s.name}' unterstützt '{name}' nicht")
+            raise ValueError(f"Device '{s.name}' does not support '{name}'")
         return c[name]
 
     for key, value in attrs.items():
@@ -209,7 +209,7 @@ def command_to_writes(s: ServiceSnapshot, attrs: dict[str, Any]) -> list[tuple[C
             elif "Active" in c:
                 writes.append((c["Active"], 1 if on else 0))
             else:
-                raise ValueError(f"Gerät '{s.name}' kann nicht ein-/ausgeschaltet werden")
+                raise ValueError(f"Device '{s.name}' cannot be switched on or off")
         elif key == "brightness":
             writes.append((need("Brightness"), int(_clamp(value, need("Brightness"), 0, 100))))
         elif key == "hue":
@@ -228,7 +228,7 @@ def command_to_writes(s: ServiceSnapshot, attrs: dict[str, Any]) -> list[tuple[C
             mode = str(value)
             if s.service_type == "Thermostat":
                 if mode not in THERMOSTAT_MODES_REV:
-                    raise ValueError(f"Unbekannter Modus '{mode}'")
+                    raise ValueError(f"Unknown mode '{mode}'")
                 writes.append((need("TargetHeatingCoolingState"), THERMOSTAT_MODES_REV[mode]))
             elif s.service_type == "HeaterCooler":
                 if mode == "off":
@@ -237,13 +237,13 @@ def command_to_writes(s: ServiceSnapshot, attrs: dict[str, Any]) -> list[tuple[C
                     writes.append((need("Active"), 1))
                     writes.append((need("TargetHeaterCoolerState"), HEATERCOOLER_MODES_REV[mode]))
                 else:
-                    raise ValueError(f"Unbekannter Modus '{mode}'")
+                    raise ValueError(f"Unknown mode '{mode}'")
             else:
-                raise ValueError(f"Gerät '{s.name}' hat keine Betriebsmodi")
+                raise ValueError(f"Device '{s.name}' has no operating modes")
         else:
-            raise ValueError(f"Unbekanntes Attribut '{key}'")
+            raise ValueError(f"Unknown attribute '{key}'")
 
     for ch, _ in writes:
         if not ch.writable:
-            raise ValueError(f"'{ch.name}' von '{s.name}' ist nicht beschreibbar")
+            raise ValueError(f"'{ch.name}' of '{s.name}' is read-only")
     return writes

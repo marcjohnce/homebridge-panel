@@ -1,6 +1,6 @@
 import QtQuick
 
-// Ruhebildschirm: große Uhr; die erste Berührung weckt nur auf
+// Screen saver: large clock; the first touch only wakes the panel
 Rectangle {
     id: root
 
@@ -37,7 +37,7 @@ Rectangle {
         }
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: root.now.toLocaleDateString(Qt.locale("de_DE"), "dddd, d. MMMM")
+            text: root.now.toLocaleDateString(Qt.locale("en_GB"), "dddd, d MMMM")
             color: Theme.muted
             font.pixelSize: 22
         }
@@ -53,7 +53,7 @@ Rectangle {
                 color: Theme.gold
             }
             Text {
-                text: qsTr("%1 °C innen").arg(panel.indoorTemp)
+                text: qsTr("%1 °C indoors").arg(panel.indoorTemp)
                 color: Theme.dark ? "#BEB9B0" : Theme.ink
                 font.pixelSize: 24
                 font.weight: Font.Light

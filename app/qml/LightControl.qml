@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 
-// Licht und Ventilator: Helligkeit/Stufe, Farbe, Weißton und Ein/Aus
+// Lights and fans: brightness/speed, color, white tone and power
 ColumnLayout {
     id: root
 
@@ -32,12 +32,13 @@ ColumnLayout {
         Item { Layout.fillWidth: true }
 
         BrightnessBar {
+            objectName: "brightnessBar"
             visible: root.levelKey !== ""
             Layout.alignment: Qt.AlignVCenter
             barHeight: Math.min(300, root.height - 160)
             serverValue: root.st[root.levelKey] || 0
             off: !root.st.on
-            label: root.levelKey === "speed" ? qsTr("Stufe") : qsTr("Helligkeit")
+            label: root.levelKey === "speed" ? qsTr("Speed") : qsTr("Brightness")
             iconName: root.levelKey === "speed" ? "fan" : "sun"
             onInteracting: active => root.interacting(active)
             onCommitted: value => {
@@ -53,6 +54,7 @@ ColumnLayout {
             spacing: 30
 
             ColorWheel {
+                objectName: "colorWheel"
                 visible: root.hasColor
                 readonly property real size: Math.min(250, root.height - 170)
                 Layout.preferredWidth: size
@@ -66,6 +68,7 @@ ColumnLayout {
             }
 
             ColorTempSlider {
+                objectName: "colorTemp"
                 visible: root.hasCt
                 Layout.preferredWidth: 250
                 Layout.alignment: Qt.AlignHCenter
@@ -81,13 +84,14 @@ ColumnLayout {
     }
 
     CircleButton {
+        objectName: "powerButton"
         Layout.alignment: Qt.AlignHCenter
         implicitWidth: 68
         implicitHeight: 68
         iconName: "power"
         iconSize: 30
         highlighted: !!root.st.on
-        label: root.st.on ? qsTr("%1 ausschalten").arg(root.dev.name) : qsTr("%1 einschalten").arg(root.dev.name)
+        label: root.st.on ? qsTr("Turn off %1").arg(root.dev.name) : qsTr("Turn on %1").arg(root.dev.name)
         onClicked: panel.toggle(root.dev.id)
     }
 }

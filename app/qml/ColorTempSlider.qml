@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
 
-// Weißton von kalt (links) bis warm (rechts), Werte in Mired
+// White tone from cool (left) to warm (right), values in mired
 Column {
     id: root
 
@@ -17,7 +17,7 @@ Column {
         width: parent.width
         Text {
             width: parent.width / 2
-            text: qsTr("Weißton")
+            text: qsTr("White tone")
             color: Theme.muted
             font.pixelSize: 14
         }
@@ -36,7 +36,7 @@ Column {
         from: root.minMired
         to: root.maxMired
         stepSize: 1
-        Accessible.name: qsTr("Weißton")
+        Accessible.name: qsTr("White tone")
 
         Binding on value {
             when: !slider.pressed && !commit.running && !release.running

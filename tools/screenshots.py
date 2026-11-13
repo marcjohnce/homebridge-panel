@@ -1,8 +1,8 @@
-"""Startet das Panel ohne Bildschirm mit Demo-Geräten und speichert Screenshots.
+"""Starts the panel headless with demo devices and saves screenshots.
 
-    python tools/screenshots.py ausgabeordner [--size 1024x600]
+    python tools/screenshots.py OUTPUT_DIR [--size 1024x600] [--theme light|dark|both]
 
-Gibt alle QML-Warnungen aus; Exit-Code 1, wenn welche auftreten (für Tests nutzbar).
+Prints all QML warnings; exit code 1 if there are any (used by the tests).
 """
 from __future__ import annotations
 
@@ -86,26 +86,26 @@ def main() -> int:
     for theme in themes:
         store.update({"theme": theme})
         ctl.settings_saved({"theme"})
-        shot(f"{theme}-start")
+        shot(f"{theme}-home")
         devs = {d["name"]: d["id"] for d in ctl.devices.all()}
-        win.setProperty("openDevice", devs["Heizung Wohnzimmer"])
+        win.setProperty("openDevice", devs["Living Room Heating"])
         wait(300)
-        shot(f"{theme}-heizung")
-        win.setProperty("openDevice", devs["TV-Licht"])
-        shot(f"{theme}-licht")
+        shot(f"{theme}-heating")
+        win.setProperty("openDevice", devs["TV Light"])
+        shot(f"{theme}-light")
         win.setProperty("openDevice", "")
         win.setProperty("settingsOpen", True)
-        shot(f"{theme}-einstellungen")
+        shot(f"{theme}-settings")
         win.setProperty("settingsOpen", False)
     win.setProperty("idle", True)
-    shot("ruhebildschirm")
+    shot("screensaver")
     win.setProperty("idle", False)
 
     ctl.shutdown()
     if warnings:
-        print("QML-Warnungen:\n" + "\n".join(warnings))
+        print("QML warnings:\n" + "\n".join(warnings))
         return 1
-    print("ok, keine QML-Warnungen")
+    print("ok, no QML warnings")
     return 0
 
 

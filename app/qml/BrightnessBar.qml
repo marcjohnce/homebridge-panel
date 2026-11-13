@@ -1,6 +1,6 @@
 import QtQuick
 
-// Senkrechter Balken für Helligkeit oder Lüfterstufe (1–100 %)
+// Vertical bar for brightness or fan speed (1–100%)
 Column {
     id: root
 
@@ -50,7 +50,7 @@ Column {
         border.color: activeFocus ? Theme.gold : "transparent"
         border.width: 2
         Accessible.role: Accessible.Slider
-        Accessible.name: qsTr("%1 %2 Prozent").arg(root.label).arg(Math.round(root.shown))
+        Accessible.name: qsTr("%1 %2 percent").arg(root.label).arg(Math.round(root.shown))
         Keys.onUpPressed: root.setValue(root.shown + 5)
         Keys.onDownPressed: root.setValue(root.shown - 5)
 
@@ -83,7 +83,7 @@ Column {
 
     Text {
         anchors.horizontalCenter: parent.horizontalCenter
-        text: qsTr("%1 %").arg(Math.round(root.shown))
+        text: qsTr("%1%").arg(Math.round(root.shown))
         color: Theme.ink
         font.pixelSize: 22
         font.weight: Font.Light

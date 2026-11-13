@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Shapes
 import "Geometry.js" as Geo
 
-// 270°-Bogen mit Farbverlauf (kalt → warm), optional mit Ziehknopf, Skala und Beschriftung.
+// 270° arc with a cold → warm gradient, optional drag knob, scale and labels.
 Item {
     id: root
 
@@ -41,7 +41,7 @@ Item {
         }
     }
 
-    // Kreisförmiger Verlauf: hell am Anfang (unten links), rot am Ende (unten rechts)
+    // Conical gradient: pale at the start (bottom left), red at the end (bottom right)
     ConicalGradient {
         id: heat
         centerX: root.cx

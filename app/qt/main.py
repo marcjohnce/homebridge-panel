@@ -1,4 +1,4 @@
-"""Startpunkt der Qt-Anwendung."""
+"""Entry point of the Qt application."""
 from __future__ import annotations
 
 import argparse
@@ -14,12 +14,12 @@ FONT_DIR = ROOT / "assets" / "fonts"
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     p = argparse.ArgumentParser(prog="smarthome-panel", description="Smart Home Panel (Qt)")
-    p.add_argument("--config", help="Pfad zur config.yaml (Räume, Szenen, Zeitpläne)")
-    p.add_argument("--settings", help="Pfad zur settings.json (Standard: ~/.config/smarthome-panel/)")
-    p.add_argument("--fullscreen", action="store_true", help="Im Vollbild starten (Wandpanel)")
-    p.add_argument("--hide-cursor", action="store_true", help="Mauszeiger ausblenden (Touchscreen)")
-    p.add_argument("--demo", action="store_true", help="Simulierte Geräte zusätzlich anzeigen")
-    p.add_argument("--size", default="1024x600", help="Fenstergröße ohne Vollbild, z. B. 800x480")
+    p.add_argument("--config", help="Path to config.yaml (rooms, scenes, schedules)")
+    p.add_argument("--settings", help="Path to settings.json (default: ~/.config/smarthome-panel/)")
+    p.add_argument("--fullscreen", action="store_true", help="Start in full screen (wall panel)")
+    p.add_argument("--hide-cursor", action="store_true", help="Hide the mouse pointer (touch screen)")
+    p.add_argument("--demo", action="store_true", help="Also show simulated devices")
+    p.add_argument("--size", default="1024x600", help="Window size when not in full screen, e.g. 800x480")
     return p.parse_known_args(argv)[0]
 
 
@@ -71,7 +71,7 @@ def main(argv: list[str] | None = None) -> int:
     engine.rootContext().setContextProperty("initialHeight", int(h or 600))
     engine.load(QML_DIR / "Main.qml")
     if not engine.rootObjects():
-        logging.error("Oberfläche konnte nicht geladen werden")
+        logging.error("Could not load the user interface")
         controller.shutdown()
         return 1
 

@@ -1,4 +1,4 @@
-"""Tests der Qt-Schicht ohne Bildschirm (offscreen)."""
+"""Tests of the Qt layer without a screen (offscreen)."""
 import json
 import os
 import subprocess
@@ -40,7 +40,7 @@ def pump_until(cond, timeout=6.0):
 
 
 class FakeHap(BaseHTTPRequestHandler):
-    """Minimaler HAP-Server wie Homebridge im Insecure-Modus."""
+    """Minimal HAP server, like Homebridge in insecure mode."""
     pin = "123-45-678"
     lamp_on = False
 
@@ -59,7 +59,7 @@ class FakeHap(BaseHTTPRequestHandler):
         if self.headers.get("Authorization") != self.pin:
             return self._send(470, {"status": -70401})
         self._send(200, {"accessories": [{"aid": 2, "services": [
-            {"iid": 1, "type": U("3E"), "characteristics": [{"iid": 2, "type": U("23"), "value": "Flurlicht", "perms": ["pr"]}]},
+            {"iid": 1, "type": U("3E"), "characteristics": [{"iid": 2, "type": U("23"), "value": "Hall Light", "perms": ["pr"]}]},
             {"iid": 9, "type": U("43"), "characteristics": [
                 {"iid": 10, "type": U("25"), "value": FakeHap.lamp_on, "perms": ["pr", "pw"]}]}]}]})
 
@@ -81,7 +81,7 @@ def make_controller(tmp_path, **settings):
     store = SettingsStore(tmp_path / "settings.json")
     store.update({"hap_enabled": False, **settings})
     cfg = AppConfig.model_validate({"demo": {"enabled": True},
-                                    "devices": {"Kaffeemaschine": {"room": "Küche"}}})
+                                    "devices": {"Coffee Maker": {"room": "Kitchen"}}})
     return Controller(cfg, store)
 
 
@@ -90,11 +90,11 @@ def test_controller_demo_model_and_commands(qapp, tmp_path):
     ctl.start()
     model = ctl.devices
     assert pump_until(lambda: model.rowCount() == 8)
-    assert ctl.statusOk and ctl.statusText == "Verbunden"
-    assert "Küche" in ctl.rooms and ctl.indoorTemp != ""
+    assert ctl.statusOk and ctl.statusText == "Connected"
+    assert "Kitchen" in ctl.rooms and ctl.indoorTemp != ""
 
-    ctl.selectRoom("Küche")
-    assert model.rowCount() == 1 and ctl.currentRoom == "Küche"
+    ctl.selectRoom("Kitchen")
+    assert model.rowCount() == 1 and ctl.currentRoom == "Kitchen"
     coffee = model.data(model.index(0), list(model.roleNames())[model.ROLES.index("deviceId")])
     ctl.toggle(coffee)
     assert pump_until(lambda: ctl.device(coffee)["state"]["on"] is True)
@@ -104,7 +104,7 @@ def test_controller_demo_model_and_commands(qapp, tmp_path):
     errors = []
     ctl.toast.connect(errors.append)
     ctl.setAttrs(coffee, {"brightness": 50})
-    assert pump_until(lambda: errors) and "unterstützt" in errors[0]
+    assert pump_until(lambda: errors) and "does not support" in errors[0]
     ctl.shutdown()
 
 
@@ -118,15 +118,15 @@ def test_settings_reconnect_and_test_connection(qapp, tmp_path, hap_server):
     ctl.settings.testConnection("127.0.0.1", hap_server, "11111111")
     assert pump_until(lambda: results) and results[-1][0] is False and "PIN" in results[-1][1]
     ctl.settings.testConnection("127.0.0.1", float(hap_server), "12345678")
-    assert pump_until(lambda: len(results) == 2) and results[-1] == (True, "Verbunden: 1 steuerbare Geräte gefunden")
+    assert pump_until(lambda: len(results) == 2) and results[-1] == (True, "Connected: found 1 controllable devices")
     ctl.settings.testConnection("", hap_server, "123-45-678")
     assert pump_until(lambda: len(results) == 3) and results[-1][0] is False
 
-    assert ctl.settings.save({"hap_port": 0}) == {"hap_port": "Erlaubt sind 1 bis 65535"}
+    assert ctl.settings.save({"hap_port": 0}) == {"hap_port": "Allowed range is 1 to 65535"}
     assert ctl.settings.save({"hap_enabled": True, "hap_host": "127.0.0.1",
                               "hap_port": hap_server, "hap_pin": "12345678"}) == {}
     lamp = "homebridge:2.9"
-    assert pump_until(lambda: ctl.device(lamp).get("name") == "Flurlicht")
+    assert pump_until(lambda: ctl.device(lamp).get("name") == "Hall Light")
     assert pump_until(lambda: ctl.devices.rowCount() == 9 and ctl.statusOk)
     ctl.toggle(lamp)
     assert pump_until(lambda: FakeHap.lamp_on is True)
@@ -148,4 +148,4 @@ def test_qml_loads_without_warnings(tmp_path):
     r = subprocess.run([sys.executable, str(ROOT / "tools" / "screenshots.py"), str(tmp_path), "--theme", "dark"],
                        capture_output=True, text=True, timeout=180)
     assert r.returncode == 0, r.stdout + r.stderr
-    assert (tmp_path / "dark-einstellungen.png").stat().st_size > 10_000
+    assert (tmp_path / "dark-settings.png").stat().st_size > 10_000

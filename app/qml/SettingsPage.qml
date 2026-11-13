@@ -1,8 +1,8 @@
 import QtQuick
 import QtQuick.Layouts
 
-// Einstellungen. Abschnitte mit „instant“ speichern sofort; die übrigen (Homebridge)
-// sammeln Änderungen, die über die feste Leiste unten getestet und übernommen werden.
+// Settings. Sections marked "instant" save immediately; the others (Homebridge)
+// collect changes that are tested and applied from the fixed bar at the bottom.
 Rectangle {
     id: root
 
@@ -61,12 +61,12 @@ Rectangle {
         errors = errs;
         if (Object.keys(errs).length > 0) {
             messageOk = false;
-            message = qsTr("Bitte die markierten Angaben prüfen.");
+            message = qsTr("Check the highlighted entries.");
             return;
         }
         draft = {};
         messageOk = true;
-        message = qsTr("Übernommen. Verbindung wird neu aufgebaut.");
+        message = qsTr("Applied. Reconnecting …");
     }
     function testConnection() {
         testing = true;
@@ -96,8 +96,8 @@ Rectangle {
 
         BackHeader {
             Layout.fillWidth: true
-            backText: qsTr("Übersicht")
-            title: qsTr("Einstellungen")
+            backText: qsTr("Overview")
+            title: qsTr("Settings")
             onBack: root.closed()
         }
 
@@ -129,6 +129,7 @@ Rectangle {
                 }
 
                 InfoSection {
+                    objectName: "infoSection"
                     Layout.fillWidth: true
                 }
             }
@@ -147,10 +148,10 @@ Rectangle {
 
             Text {
                 Layout.fillWidth: true
-                text: root.testing ? qsTr("Teste Verbindung …")
+                text: root.testing ? qsTr("Testing connection …")
                     : root.message !== "" ? root.message
-                    : root.dirty ? qsTr("Änderungen an der Homebridge-Verbindung sind noch nicht übernommen.")
-                    : qsTr("Anzeige-Einstellungen werden sofort gespeichert.")
+                    : root.dirty ? qsTr("Changes to the Homebridge connection are not applied yet.")
+                    : qsTr("Display settings are saved immediately.")
                 color: root.testing || (root.message === "" && !root.dirty) ? Theme.muted
                      : root.message === "" ? Theme.ink : (root.messageOk ? Theme.ok : Theme.err)
                 font.pixelSize: 14
@@ -159,13 +160,15 @@ Rectangle {
                 elide: Text.ElideRight
             }
             PillButton {
-                text: qsTr("Verbindung testen")
+                objectName: "testButton"
+                text: qsTr("Test connection")
                 enabled: !root.testing
                 onClicked: root.testConnection()
             }
             PillButton {
+                objectName: "applyButton"
                 primary: true
-                text: qsTr("Übernehmen")
+                text: qsTr("Apply")
                 enabled: root.dirty
                 onClicked: root.apply()
             }

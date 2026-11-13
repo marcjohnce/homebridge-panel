@@ -1,3 +1,3 @@
-"""Smart Home Panel – Steuerung von Lichtern, Steckdosen und Heizung über Homebridge/HAP."""
+"""Smart Home Panel – control lights, smart plugs and heating via Homebridge/HAP."""
 
 __version__ = "1.0.0"

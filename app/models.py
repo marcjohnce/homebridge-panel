@@ -1,4 +1,4 @@
-"""Datenmodelle für Geräte im Panel."""
+"""Data models for panel devices."""
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
@@ -14,7 +14,7 @@ class DeviceType(str, Enum):
     FAN = "fan"
 
 
-# Symbolnamen für die Weboberfläche (siehe web/app.js, ICONS):
+# Icon names used by the UI (see app/qml/Icons.js):
 # light, strip, ceiling, plug, switch, thermostat, radiator, floor, fan, coffee, tv
 DEFAULT_ICONS = {
     DeviceType.LIGHT: "light",

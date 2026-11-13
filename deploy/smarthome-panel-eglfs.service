@@ -1,6 +1,6 @@
-# Vollbild direkt auf dem Display, ohne Desktop (z. B. Raspberry Pi OS Lite).
+# Full screen directly on the display, without a desktop (e.g. Raspberry Pi OS Lite).
 [Unit]
-Description=Smart Home Panel (Vollbild ohne Desktop)
+Description=Smart Home Panel (full screen without desktop)
 After=network-online.target systemd-user-sessions.service
 Wants=network-online.target
 Conflicts=getty@tty1.service

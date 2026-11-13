@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 
-// Eine Einstellung: Beschriftung links, passendes Bedienelement rechts (je nach Art)
+// One setting: label on the left, matching control on the right (depending on kind)
 Item {
     id: root
 
@@ -106,7 +106,7 @@ Item {
             implicitHeight: 48
             activeFocusOnTab: true
             Accessible.role: Accessible.Button
-            Accessible.name: qsTr("%1 ändern, aktuell %2").arg(root.field.label).arg(String(root.value))
+            Accessible.name: qsTr("Change %1, currently %2").arg(root.field.label).arg(String(root.value))
             Keys.onReturnPressed: root.editRequested()
 
             Row {

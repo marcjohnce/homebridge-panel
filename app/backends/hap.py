@@ -1,14 +1,13 @@
-"""Direkter HAP-Zugriff auf Homebridge (HAP-NodeJS) im Insecure-Modus.
+"""Direct HAP access to Homebridge (HAP-NodeJS) in insecure mode.
 
-Homebridge muss mit `-I` (Insecure-Modus) gestartet sein. Dann akzeptiert der
-HAP-Server unverschlüsselte HTTP-Anfragen mit dem Bridge-PIN im
-Authorization-Header:
+Homebridge must be started with `-I` (insecure mode). The HAP server then accepts
+unencrypted HTTP requests carrying the bridge PIN in the Authorization header:
 
     GET  /accessories
     PUT  /characteristics   {"characteristics":[{"aid":2,"iid":10,"value":true}]}
 
-Child-Bridges laufen auf eigenen Ports – dafür einfach weitere `hap`-Einträge
-in der Konfiguration anlegen.
+Child bridges run on their own ports – add further `hap` entries to the
+configuration for them.
 """
 from __future__ import annotations
 
@@ -43,11 +42,11 @@ class HapBackend(Backend):
         try:
             r = await self.client.get("/accessories")
         except httpx.HTTPError as e:
-            raise BackendError(f"HAP {self.cfg.host}:{self.cfg.port} nicht erreichbar: {e}") from e
+            raise BackendError(f"HAP {self.cfg.host}:{self.cfg.port} not reachable: {e}") from e
         if r.status_code in (401, 470):
-            raise BackendError("HAP: Zugriff verweigert – PIN prüfen und Homebridge mit -I (Insecure) starten")
+            raise BackendError("HAP: access denied – check the PIN and start Homebridge with -I (insecure mode)")
         if r.status_code != 200:
-            raise BackendError(f"HAP: unerwartete Antwort {r.status_code}")
+            raise BackendError(f"HAP: unexpected response {r.status_code}")
         return self.parse_accessories(r.json())
 
     @staticmethod
@@ -95,10 +94,10 @@ class HapBackend(Backend):
         try:
             r = await self.client.put("/characteristics", content=json.dumps(body))
         except httpx.HTTPError as e:
-            raise BackendError(f"HAP-Schreibfehler: {e}") from e
-        if r.status_code == 207:  # Multi-Status: Teilfehler
+            raise BackendError(f"HAP write failed: {e}") from e
+        if r.status_code == 207:  # multi-status: partial failure
             errors = [c for c in r.json().get("characteristics", []) if c.get("status", 0) != 0]
             if errors:
-                raise BackendError(f"HAP meldet Fehler beim Schreiben: {errors}")
+                raise BackendError(f"HAP reported write errors: {errors}")
         elif r.status_code not in (200, 204):
-            raise BackendError(f"HAP-Schreibfehler: Status {r.status_code} {r.text[:200]}")
+            raise BackendError(f"HAP write failed: status {r.status_code} {r.text[:200]}")

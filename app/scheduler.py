@@ -1,4 +1,4 @@
-"""Einfacher Zeitplaner: führt Szenen zu festen Uhrzeiten an bestimmten Wochentagen aus."""
+"""Simple scheduler: runs scenes at fixed times on selected weekdays."""
 from __future__ import annotations
 
 import asyncio
@@ -36,16 +36,16 @@ class Scheduler:
             if s.enabled and s.time == hhmm and day in s.days and key not in self._fired:
                 self._fired.add(key)
                 out.append(s.scene)
-        # alte Einträge aufräumen
+        # drop entries from previous days
         self._fired = {k for k in self._fired if k.startswith(str(now.date()))}
         return out
 
     async def _loop(self) -> None:
         while True:
             for scene in self.due(datetime.now(self.tz)):
-                log.info("Zeitplan: starte Szene %s", scene)
+                log.info("Schedule: running scene %s", scene)
                 try:
                     await self.manager.run_scene(scene)
                 except KeyError:
-                    log.error("Zeitplan verweist auf unbekannte Szene '%s'", scene)
+                    log.error("Schedule refers to unknown scene '%s'", scene)
             await asyncio.sleep(15)

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Startet das Smart Home Panel im Vollbild (für Autostart und Desktop-Verknüpfung).
+# Starts the Smart Home Panel in full screen (for autostart and the desktop shortcut).
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$DIR" || exit 1
 export SMARTHOME_CONFIG="${SMARTHOME_CONFIG:-$DIR/config.yaml}"

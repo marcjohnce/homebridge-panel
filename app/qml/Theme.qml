@@ -23,6 +23,6 @@ QtObject {
     readonly property string fontFamily: "Jost"
 
     function fmt(v) {
-        return (v === undefined || v === null) ? "–" : Number(v).toFixed(1).replace(".", ",");
+        return (v === undefined || v === null) ? "–" : Number(v).toFixed(1);
     }
 }

@@ -1,4 +1,4 @@
-"""Simulierte Geräte – zum Testen der Oberfläche ohne Homebridge."""
+"""Simulated devices – for trying out the UI without Homebridge."""
 from __future__ import annotations
 
 import copy
@@ -9,23 +9,23 @@ from ..hap_types import Char, ServiceSnapshot
 from .base import Backend
 
 _DEVICES = [
-    ("wz-decke", "Lightbulb", "Deckenlicht Wohnzimmer",
+    ("living-ceiling", "Lightbulb", "Living Room Ceiling Light",
      [("On", True, True, {}), ("Brightness", 70, True, dict(min=0, max=100, step=1))]),
-    ("wz-strip", "Lightbulb", "LED-Streifen",
+    ("living-strip", "Lightbulb", "LED Strip",
      [("On", False, True, {}), ("Brightness", 40, True, dict(min=0, max=100, step=1)),
       ("Hue", 30, True, dict(min=0, max=360)), ("Saturation", 80, True, dict(min=0, max=100))]),
-    ("kueche", "Lightbulb", "Küchenlicht",
+    ("kitchen-light", "Lightbulb", "Kitchen Light",
      [("On", False, True, {}), ("Brightness", 100, True, dict(min=0, max=100, step=1)),
       ("ColorTemperature", 300, True, dict(min=140, max=500, step=1))]),
-    ("kaffee", "Outlet", "Kaffeemaschine", [("On", False, True, {}), ("OutletInUse", False, False, {})]),
-    ("tv", "Outlet", "TV-Steckdose", [("On", True, True, {}), ("OutletInUse", True, False, {})]),
-    ("heizung-wz", "Thermostat", "Heizung Wohnzimmer",
+    ("coffee", "Outlet", "Coffee Maker", [("On", False, True, {}), ("OutletInUse", False, False, {})]),
+    ("tv", "Outlet", "TV Plug", [("On", True, True, {}), ("OutletInUse", True, False, {})]),
+    ("heating-living", "Thermostat", "Living Room Heating",
      [("TargetHeatingCoolingState", 1, True, dict(min=0, max=3)), ("CurrentHeatingCoolingState", 1, False, {}),
       ("TargetTemperature", 21.0, True, dict(min=10, max=30, step=0.5)), ("CurrentTemperature", 19.6, False, {})]),
-    ("heizung-bad", "Thermostat", "Heizung Bad",
+    ("heating-bath", "Thermostat", "Bathroom Heating",
      [("TargetHeatingCoolingState", 0, True, dict(min=0, max=3)), ("CurrentHeatingCoolingState", 0, False, {}),
       ("TargetTemperature", 22.0, True, dict(min=10, max=30, step=0.5)), ("CurrentTemperature", 18.4, False, {})]),
-    ("ventilator", "Fan", "Ventilator",
+    ("fan", "Fan", "Fan",
      [("On", False, True, {}), ("RotationSpeed", 50, True, dict(min=0, max=100))]),
 ]
 
@@ -49,7 +49,7 @@ class DemoBackend(Backend):
             s.chars["CurrentHeatingCoolingState"].value = 1 if heating else 0
             drift = 0.1 if heating else -0.03
             cur.value = round(max(15.0, min(28.0, cur.value + drift + random.uniform(-0.02, 0.02))), 1)
-        coffee = self._services["kaffee"].chars
+        coffee = self._services["coffee"].chars
         coffee["OutletInUse"].value = bool(coffee["On"].value)
 
     async def fetch(self) -> list[ServiceSnapshot]:

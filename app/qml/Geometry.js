@@ -1,6 +1,6 @@
 .pragma library
 
-// Winkel in Grad, im Uhrzeigersinn ab 3 Uhr (Bildschirmkoordinaten, y nach unten).
+// Angles in degrees, clockwise from 3 o'clock (screen coordinates, y pointing down).
 var ARC_START = 135;
 var ARC_SWEEP = 270;
 
@@ -13,7 +13,7 @@ function pt(p) {
     return p.x.toFixed(2) + " " + p.y.toFixed(2);
 }
 
-// Ringsegment mit runden Enden als geschlossene Fläche (für Farbverläufe füllbar)
+// Ring segment with round caps as a closed shape (can be filled with gradients)
 function band(cx, cy, r, w, a0, a1) {
     if (a1 - a0 < 0.5)
         a1 = a0 + 0.5;
@@ -33,7 +33,7 @@ function circle(cx, cy, r) {
         + " a" + r + " " + r + " 0 1 0 " + (-2 * r) + " 0 Z";
 }
 
-// Zeigerposition -> Anteil 0..1 auf dem 270°-Bogen
+// Pointer position -> fraction 0..1 along the 270° arc
 function fractionAt(cx, cy, x, y) {
     var a = Math.atan2(y - cy, x - cx) * 180 / Math.PI;
     var rel = (a - ARC_START + 720) % 360;

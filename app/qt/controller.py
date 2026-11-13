@@ -1,4 +1,4 @@
-"""Brücke zwischen Geräteverwaltung (asyncio, eigener Thread) und der QML-Oberfläche."""
+"""Bridge between device management (asyncio, own thread) and the QML UI."""
 from __future__ import annotations
 
 import asyncio
@@ -28,7 +28,7 @@ NIGHT_FROM, NIGHT_TO = 19, 7
 
 
 class AsyncRunner:
-    """Eigene asyncio-Schleife in einem Hintergrund-Thread, damit die Oberfläche nie blockiert."""
+    """Dedicated asyncio loop in a background thread so the UI never blocks."""
 
     def __init__(self) -> None:
         self.loop = asyncio.new_event_loop()
@@ -48,7 +48,7 @@ class AsyncRunner:
 
 
 class DeviceModel(QAbstractListModel):
-    """Geräte des gewählten Raums (oder aller Räume) für das Kachelraster."""
+    """Devices of the selected room (or all rooms) for the tile grid."""
 
     ROLES = ("deviceId", "name", "shortName", "room", "type", "icon", "isOn", "reachable", "heating",
              "stateText", "hasDetail", "targetTemp", "minTemp", "maxTemp", "modeOff")
@@ -92,7 +92,7 @@ class DeviceModel(QAbstractListModel):
             case "modeOff": return s.get("mode") == "off"
         return None
 
-    # --- Pflege ---
+    # --- maintenance ---
     def rooms(self) -> list[str]:
         return sorted({d["room"] for d in self._all.values()}, key=str.casefold)
 
@@ -120,7 +120,7 @@ class DeviceModel(QAbstractListModel):
         self.endResetModel()
 
     def upsert(self, d: dict[str, Any]) -> bool:
-        """Rückgabe True, wenn sich die Struktur (Raum, Name, Reihenfolge) geändert hat."""
+        """Returns True if the structure (room, name, order) changed."""
         old = self._all.get(d["id"])
         self._all[d["id"]] = d
         structural = old is None or any(old.get(k) != d.get(k) for k in ("room", "name", "order"))
@@ -191,11 +191,11 @@ class SettingsBridge(QObject):
             backend = HapBackend(HapBackendConfig(name="test", host=host.strip(), port=port, pin=pin, timeout=4))
             try:
                 snaps = await backend.fetch()
-                return True, f"Verbunden: {len(snaps)} steuerbare Geräte gefunden"
+                return True, f"Connected: found {len(snaps)} controllable devices"
             except BackendError as e:
                 return False, str(e)
-            except Exception as e:  # pragma: no cover - unerwartete Fehler sichtbar machen
-                return False, f"Verbindung fehlgeschlagen: {e}"
+            except Exception as e:  # pragma: no cover - surface unexpected errors
+                return False, f"Connection failed: {e}"
             finally:
                 await backend.stop()
 
@@ -204,7 +204,7 @@ class SettingsBridge(QObject):
 
 
 class ActivityFilter(QObject):
-    """Meldet Berührungen/Tastendrücke (für den Ruhebildschirm)."""
+    """Reports touches and key presses (for the screen saver)."""
 
     TYPES = {QEvent.Type.MouseButtonPress, QEvent.Type.TouchBegin, QEvent.Type.KeyPress}
 
@@ -256,7 +256,7 @@ class Controller(QObject):
         self._theme_timer = QTimer(self, interval=30_000, timeout=self._update_theme)
         self._theme_timer.start()
 
-    # ---------- Lebenszyklus ----------
+    # ---------- lifecycle ----------
     def effective_config(self) -> AppConfig:
         return apply_to_config(self.base_cfg, self.store.values)
 
@@ -308,7 +308,7 @@ class Controller(QObject):
         if "idle_seconds" in keys:
             self.idleChanged.emit()
 
-    # ---------- Nachrichten aus dem Hintergrund-Thread ----------
+    # ---------- messages from the background thread ----------
     def _on_message(self, msg: dict[str, Any]) -> None:
         kind = msg.get("type")
         if kind == "snapshot":
@@ -333,7 +333,7 @@ class Controller(QObject):
             self._backends = msg["backends"]
             self.statusChanged.emit()
         elif kind == "scene" and msg.get("errors"):
-            self.toast.emit("Szene nicht vollständig ausgeführt. Nicht erreicht: " + ", ".join(msg["errors"]))
+            self.toast.emit("Scene only partly applied. Not reached: " + ", ".join(msg["errors"]))
 
     def _refresh_rooms(self) -> None:
         rooms = self._model.rooms()
@@ -345,10 +345,10 @@ class Controller(QObject):
             self._rooms = rooms
             self.roomsChanged.emit()
 
-    # ---------- Befehle aus QML ----------
+    # ---------- commands from QML ----------
     def _command(self, coro_factory) -> None:
         if not self._mgr:
-            self.toast.emit("Noch keine Verbindung zu Homebridge.")
+            self.toast.emit("Not connected to Homebridge yet.")
             return
         fut = self.runner.submit(coro_factory(self._mgr))
 
@@ -357,11 +357,11 @@ class Controller(QObject):
             if e is None:
                 return
             if isinstance(e, DeviceNotFound):
-                self.toast.emit("Gerät nicht gefunden. Es wurde eventuell aus Homebridge entfernt.")
+                self.toast.emit("Device not found. It may have been removed from Homebridge.")
             elif isinstance(e, (ValueError, BackendError)):
                 self.toast.emit(str(e))
             else:
-                self.toast.emit(f"Befehl wurde nicht ausgeführt: {e}")
+                self.toast.emit(f"Command failed: {e}")
         fut.add_done_callback(done)
 
     @Slot(str)
@@ -370,7 +370,7 @@ class Controller(QObject):
         if not d:
             return
         if not d["reachable"]:
-            self.toast.emit(f"{d['name']} ist nicht erreichbar. Prüfe Gerät und Homebridge.")
+            self.toast.emit(f"{d['name']} is not reachable. Check the device and Homebridge.")
             return
         self.setAttrs(dev_id, {"on": not d["state"].get("on")})
 
@@ -398,7 +398,7 @@ class Controller(QObject):
             self._model.set_room(room)
             self.currentRoomChanged.emit()
 
-    # ---------- Eigenschaften ----------
+    # ---------- properties ----------
     @Property(QObject, constant=True)
     def devices(self) -> QObject:
         return self._model
@@ -426,17 +426,17 @@ class Controller(QObject):
     @Property(str, notify=statusChanged)
     def statusText(self) -> str:
         if not self._backends:
-            return "Keine Homebridge eingerichtet"
+            return "No Homebridge set up"
         if not self._started:
-            return "Verbinde …"
+            return "Connecting …"
         bad = [n for n, b in self._backends.items() if not b["ok"]]
         if bad:
-            return "Homebridge nicht erreichbar" if bad == ["homebridge"] else f"Nicht erreichbar: {', '.join(bad)}"
-        return "Verbunden"
+            return "Homebridge not reachable" if bad == ["homebridge"] else f"Not reachable: {', '.join(bad)}"
+        return "Connected"
 
     @Property(str, notify=statusChanged)
     def statusDetail(self) -> str:
-        lines = [f"{n}: {'verbunden' if b['ok'] else b['error'] or 'getrennt'} ({b['devices']} Geräte)"
+        lines = [f"{n}: {'connected' if b['ok'] else b['error'] or 'disconnected'} ({b['devices']} devices)"
                  for n, b in self._backends.items()]
         return "\n".join(lines)
 

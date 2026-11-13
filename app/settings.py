@@ -1,10 +1,10 @@
-"""Einstellungen, die direkt im Panel bearbeitet werden.
+"""Settings that are edited directly on the panel.
 
-Neue Einstellung hinzufügen:
-  1. Einen `Field(...)` in FIELDS eintragen (Abschnitt, Art, Standardwert, Prüfung).
-  2. Falls sie die Gerätekonfiguration betrifft, in `apply_to_config()` auswerten,
-     sonst im Qt-Controller als Eigenschaft bereitstellen.
-Die Einstellungsseite baut sich aus diesem Schema automatisch auf.
+Adding a setting:
+  1. Add a `Field(...)` to FIELDS (section, kind, default, limits).
+  2. If it affects the device configuration, evaluate it in `apply_to_config()`;
+     otherwise expose it as a property of the Qt controller.
+The settings page builds itself from this schema.
 """
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ PRIMARY_BRIDGE = "homebridge"
 class Section:
     id: str
     title: str
-    instant: bool          # True: Änderung wird sofort gespeichert; False: erst mit "Übernehmen"
+    instant: bool          # True: saved immediately; False: saved with "Apply"
 
 
 @dataclass(frozen=True)
@@ -43,23 +43,23 @@ class Field:
 
 
 SECTIONS = [
-    Section("display", "Anzeige", instant=True),
+    Section("display", "Display", instant=True),
     Section("homebridge", "Homebridge", instant=False),
 ]
 
 FIELDS = [
-    Field("theme", "display", "Darstellung", "choice", "auto",
-          help="Automatisch: dunkel von 19 bis 7 Uhr",
-          options=(("auto", "Automatisch"), ("light", "Hell"), ("dark", "Dunkel"))),
-    Field("idle_seconds", "display", "Ruhebildschirm nach", "choice", 120,
-          options=((0, "Nie"), (60, "1 Min."), (120, "2 Min."), (300, "5 Min."), (900, "15 Min."))),
-    Field("hap_enabled", "homebridge", "Mit Homebridge verbinden", "toggle", True),
-    Field("hap_host", "homebridge", "Adresse", "host", "127.0.0.1",
-          help="IP-Adresse oder Name des Rechners, auf dem Homebridge läuft"),
+    Field("theme", "display", "Appearance", "choice", "auto",
+          help="Automatic: dark from 7 pm to 7 am",
+          options=(("auto", "Automatic"), ("light", "Light"), ("dark", "Dark"))),
+    Field("idle_seconds", "display", "Screen saver after", "choice", 120,
+          options=((0, "Never"), (60, "1 min"), (120, "2 min"), (300, "5 min"), (900, "15 min"))),
+    Field("hap_enabled", "homebridge", "Connect to Homebridge", "toggle", True),
+    Field("hap_host", "homebridge", "Address", "host", "127.0.0.1",
+          help="IP address or name of the computer running Homebridge"),
     Field("hap_port", "homebridge", "Port", "number", 51826, min=1, max=65535,
-          help="Steht in der Homebridge-Konfiguration unter „bridge“ → „port“"),
+          help="Found in the Homebridge config under \"bridge\" → \"port\""),
     Field("hap_pin", "homebridge", "PIN", "pin", "031-45-154",
-          help="Format 123-45-678, steht unter „bridge“ → „pin“"),
+          help="Format 123-45-678, found under \"bridge\" → \"pin\""),
 ]
 FIELDS_BY_KEY = {f.key: f for f in FIELDS}
 
@@ -68,44 +68,44 @@ _IPV4_RE = re.compile(r"^\d{1,3}(\.\d{1,3}){3}$")
 
 
 def validate(key: str, value: Any) -> tuple[Any, str | None]:
-    """Prüft und normalisiert einen Wert. Rückgabe: (Wert, Fehlermeldung oder None)."""
+    """Checks and normalizes a value. Returns (value, error message or None)."""
     f = FIELDS_BY_KEY.get(key)
-    if isinstance(value, float) and value.is_integer():   # Zahlen aus QML kommen als float
+    if isinstance(value, float) and value.is_integer():   # numbers from QML arrive as float
         value = int(value)
     if f is None:
-        return value, f"Unbekannte Einstellung „{key}“"
+        return value, f"Unknown setting \"{key}\""
     if f.kind == "choice":
         for opt, _ in f.options:
             if str(opt) == str(value):
                 return opt, None
-        return value, "Bitte eine der angebotenen Möglichkeiten wählen"
+        return value, "Choose one of the offered options"
     if f.kind == "toggle":
         if isinstance(value, bool):
             return value, None
-        return value, "Ein oder Aus erwartet"
+        return value, "Expected on or off"
     if f.kind == "number":
         try:
             n = int(str(value).strip())
         except ValueError:
-            return value, "Bitte eine ganze Zahl eingeben"
+            return value, "Enter a whole number"
         if (f.min is not None and n < f.min) or (f.max is not None and n > f.max):
-            return n, f"Erlaubt sind {f.min} bis {f.max}"
+            return n, f"Allowed range is {f.min} to {f.max}"
         return n, None
     if f.kind == "host":
         v = str(value).strip()
         if not v:
-            return v, "Bitte eine Adresse eingeben"
+            return v, "Enter an address"
         if _IPV4_RE.match(v):
             if any(int(p) > 255 for p in v.split(".")):
-                return v, "Ungültige IP-Adresse: jede Zahl darf höchstens 255 sein"
+                return v, "Invalid IP address: each number can be at most 255"
             return v, None
         if not _HOST_RE.match(v) or v.replace(".", "").isdigit():
-            return v, "Ungültige Adresse, z. B. 192.168.1.20 oder homebridge.local"
+            return v, "Invalid address, e.g. 192.168.1.20 or homebridge.local"
         return v, None
     if f.kind == "pin":
         digits = re.sub(r"\D", "", str(value))
         if len(digits) != 8:
-            return value, "Die PIN hat 8 Ziffern, Format 123-45-678"
+            return value, "The PIN has 8 digits, format 123-45-678"
         return f"{digits[:3]}-{digits[3:5]}-{digits[5:]}", None
     return value, None
 
@@ -138,7 +138,7 @@ class SettingsStore:
         return self.values[key]
 
     def update(self, changes: dict[str, Any]) -> dict[str, str]:
-        """Übernimmt Änderungen, wenn alle gültig sind. Rückgabe: Fehler je Schlüssel."""
+        """Applies changes if all are valid. Returns errors per key."""
         clean, errors = {}, {}
         for key, value in changes.items():
             v, err = validate(key, value)
@@ -160,7 +160,7 @@ class SettingsStore:
         os.replace(tmp, self.path)
 
     def schema(self) -> list[dict[str, Any]]:
-        """Abschnitte mit Feldern und aktuellen Werten – für die Einstellungsseite."""
+        """Sections with fields and current values – for the settings page."""
         out = []
         for s in SECTIONS:
             fields = [{
@@ -173,10 +173,10 @@ class SettingsStore:
 
 
 def apply_to_config(cfg: AppConfig, values: dict[str, Any]) -> AppConfig:
-    """Erzeugt die wirksame Konfiguration: Die Panel-Einstellungen bilden die Bridge „homebridge“.
+    """Builds the effective configuration: the panel settings define the bridge "homebridge".
 
-    Weitere Bridges aus config.yaml (z. B. Child-Bridges) bleiben erhalten; ein dortiger
-    Eintrag mit dem Namen „homebridge“ wird durch die Panel-Einstellung ersetzt.
+    Further bridges from config.yaml (e.g. child bridges) are kept; an entry there
+    named "homebridge" is replaced by the panel setting.
     """
     eff = cfg.model_copy(deep=True)
     others = [h for h in eff.hap if h.name != PRIMARY_BRIDGE]

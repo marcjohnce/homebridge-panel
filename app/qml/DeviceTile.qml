@@ -1,6 +1,6 @@
 import QtQuick
 
-// Kachel im Raster: Antippen schaltet, „›“ oder langes Drücken öffnet die Detailansicht
+// Grid tile: tap toggles, "›" or a long press opens the detail view
 Rectangle {
     id: root
 
@@ -26,6 +26,8 @@ Rectangle {
     signal openDetail(string id)
 
     readonly property bool thermostat: type === "thermostat"
+
+    objectName: "tile:" + deviceId
     readonly property int lastRowStart: Math.floor((count - 1) / columns) * columns
     readonly property real cornerRadius: 14
 
@@ -133,6 +135,7 @@ Rectangle {
     }
 
     Item {
+        objectName: "more:" + root.deviceId
         visible: root.hasDetail && !root.thermostat
         anchors.top: parent.top
         anchors.right: parent.right
@@ -140,7 +143,7 @@ Rectangle {
         width: 44
         height: 44
         Accessible.role: Accessible.Button
-        Accessible.name: qsTr("Einstellungen für %1 öffnen").arg(root.shortName)
+        Accessible.name: qsTr("Open controls for %1").arg(root.shortName)
 
         LineIcon {
             anchors.centerIn: parent

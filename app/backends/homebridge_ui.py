@@ -1,14 +1,14 @@
-"""Zugriff über die REST-API von homebridge-config-ui-x (Homebridge-Weboberfläche).
+"""Access via the REST API of homebridge-config-ui-x (the Homebridge web UI).
 
-Endpunkte:
+Endpoints:
     POST /api/auth/login        {"username","password","otp"} -> {"access_token","expires_in"}
-    POST /api/auth/noauth       (wenn die UI-Authentifizierung deaktiviert ist)
+    POST /api/auth/noauth       (when UI authentication is disabled)
     GET  /api/accessories
     PUT  /api/accessories/{uniqueId}  {"characteristicType":"On","value":true}
 
-Auch hier muss Homebridge im Insecure-Modus laufen (UI-Einstellung
-"Homebridge Insecure Mode" bzw. Startparameter -I), sonst liefert die UI
-keine Accessories.
+Homebridge must run in insecure mode here as well (UI setting
+"Homebridge Insecure Mode" or start parameter -I), otherwise the UI returns
+no accessories.
 """
 from __future__ import annotations
 
@@ -49,9 +49,9 @@ class HomebridgeUiBackend(Backend):
             else:
                 r = await self.client.post("/api/auth/noauth")
         except httpx.HTTPError as e:
-            raise BackendError(f"Homebridge-UI {self.cfg.url} nicht erreichbar: {e}") from e
+            raise BackendError(f"Homebridge UI {self.cfg.url} not reachable: {e}") from e
         if r.status_code not in (200, 201):
-            raise BackendError(f"Homebridge-UI-Login fehlgeschlagen ({r.status_code}) – Zugangsdaten prüfen")
+            raise BackendError(f"Homebridge UI login failed ({r.status_code}) – check username and password")
         data = r.json()
         self._token = data["access_token"]
         self._token_expiry = time.monotonic() + float(data.get("expires_in", 3600)) - 60
@@ -65,7 +65,7 @@ class HomebridgeUiBackend(Backend):
                     method, path, headers={"Authorization": f"Bearer {self._token}"}, **kw
                 )
             except httpx.HTTPError as e:
-                raise BackendError(f"Homebridge-UI-Anfrage fehlgeschlagen: {e}") from e
+                raise BackendError(f"Homebridge UI request failed: {e}") from e
             if r.status_code == 401 and attempt == 1:
                 self._token = None
                 continue
@@ -110,4 +110,4 @@ class HomebridgeUiBackend(Backend):
             r = await self._request("PUT", f"/api/accessories/{uid}",
                                     json={"characteristicType": ctype, "value": value})
             if r.status_code not in (200, 204):
-                raise BackendError(f"Homebridge-UI-Schreibfehler {r.status_code}: {r.text[:200]}")
+                raise BackendError(f"Homebridge UI write failed {r.status_code}: {r.text[:200]}")

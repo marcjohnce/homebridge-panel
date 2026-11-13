@@ -1,6 +1,6 @@
 .pragma library
 
-// Linien-Symbole im 24×24-Raster (SVG-Pfadsyntax), gezeichnet mit Kontur, ohne Füllung.
+// Line icons on a 24×24 grid (SVG path syntax), stroked without fill.
 var paths = {
     light: "M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1V16h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3z",
     ceiling: "M12 3v5M5 15a7 7 0 0 1 14 0zM10 18a2 2 0 0 0 4 0",

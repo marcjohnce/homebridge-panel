@@ -1,6 +1,6 @@
 import QtQuick
 
-// Textschalter mit goldenem Strich unter der aktiven Wahl (Räume, Modi, Auswahlfelder)
+// Text button with a gold line under the active choice (rooms, modes, options)
 Item {
     id: root
 

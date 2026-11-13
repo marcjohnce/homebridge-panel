@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Shapes
 import "Geometry.js" as Geo
 
-// Farbrad: Winkel = Farbton, Abstand zur Mitte = Sättigung
+// Color wheel: angle = hue, distance from the center = saturation
 Item {
     id: root
 
@@ -21,7 +21,7 @@ Item {
 
     activeFocusOnTab: true
     Accessible.role: Accessible.Slider
-    Accessible.name: qsTr("Farbton %1 Grad, Sättigung %2 Prozent").arg(Math.round(h)).arg(Math.round(s))
+    Accessible.name: qsTr("Hue %1 degrees, saturation %2 percent").arg(Math.round(h)).arg(Math.round(s))
     Keys.onRightPressed: setColor((h + 10) % 360, Math.max(s, 60))
     Keys.onLeftPressed: setColor((h + 350) % 360, Math.max(s, 60))
 

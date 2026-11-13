@@ -11,7 +11,7 @@ class BackendError(Exception):
 
 
 class Backend(ABC):
-    """Eine Quelle für Geräte (z. B. eine Homebridge-Instanz)."""
+    """A source of devices (e.g. a Homebridge instance)."""
 
     def __init__(self, name: str):
         self.name = name
@@ -24,8 +24,8 @@ class Backend(ABC):
 
     @abstractmethod
     async def fetch(self) -> list[ServiceSnapshot]:
-        """Liefert alle steuerbaren Services mit aktuellen Werten."""
+        """Returns all controllable services with their current values."""
 
     @abstractmethod
     async def write(self, writes: list[tuple[Char, Any]]) -> None:
-        """Schreibt Characteristic-Werte."""
+        """Writes characteristic values."""

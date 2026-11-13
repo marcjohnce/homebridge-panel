@@ -2,6 +2,7 @@ import QtQuick
 
 GridView {
     id: grid
+    objectName: "tileGrid"
 
     signal openDetail(string id)
 
@@ -30,7 +31,7 @@ GridView {
         visible: grid.count === 0
         horizontalAlignment: Text.AlignHCenter
         wrapMode: Text.WordWrap
-        text: qsTr("Noch keine Geräte. Trage Adresse, Port und PIN deiner Homebridge in den Einstellungen ein.")
+        text: qsTr("No devices yet. Enter your Homebridge address, port and PIN in Settings.")
         color: Theme.muted
         font.pixelSize: 18
     }

@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 
-// Kopfzeile „‹ Zurück | Titel“ für Detail- und Einstellungsseite
+// Header "‹ Back | Title" for the detail and settings pages
 RowLayout {
     id: root
 
@@ -14,11 +14,12 @@ RowLayout {
     spacing: 14
 
     Item {
+        objectName: "backButton"
         Layout.preferredWidth: backRow.implicitWidth + 12
         Layout.preferredHeight: 48
         activeFocusOnTab: true
         Accessible.role: Accessible.Button
-        Accessible.name: qsTr("Zurück zu %1").arg(root.backText)
+        Accessible.name: qsTr("Back to %1").arg(root.backText)
         Keys.onReturnPressed: root.back()
 
         Row {
@@ -60,6 +61,7 @@ RowLayout {
     }
 
     Text {
+        objectName: "headerTitle"
         Layout.fillWidth: true
         text: root.title
         color: Theme.ink
@@ -70,6 +72,7 @@ RowLayout {
     }
 
     Text {
+        objectName: "headerNote"
         text: root.note
         visible: text !== ""
         color: root.noteColor

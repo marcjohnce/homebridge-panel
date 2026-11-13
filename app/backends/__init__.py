@@ -18,5 +18,5 @@ def create_backends(cfg: AppConfig) -> list[Backend]:
     names = [b.name for b in backends]
     dupes = {n for n in names if names.count(n) > 1}
     if dupes:
-        raise ValueError(f"Backend-Namen müssen eindeutig sein, doppelt: {sorted(dupes)}")
+        raise ValueError(f"Backend names must be unique, duplicates: {sorted(dupes)}")
     return backends

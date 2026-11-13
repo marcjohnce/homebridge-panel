@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
 
-// Ziffernblock für Port, PIN und IP-Adresse; eine angeschlossene Tastatur funktioniert ebenfalls
+// Keypad for port, PIN and IP address; a connected keyboard works as well
 Popup {
     id: root
 
@@ -89,6 +89,7 @@ Popup {
         }
 
         Rectangle {
+            objectName: "keypadDisplay"
             width: parent.width
             height: 58
             radius: 10
@@ -120,6 +121,7 @@ Popup {
         }
 
         Text {
+            objectName: "keypadHint"
             width: parent.width
             text: root.error !== "" ? root.error : (root.field.help || "")
             color: root.error !== "" ? Theme.err : Theme.muted
@@ -128,6 +130,7 @@ Popup {
         }
 
         Grid {
+            objectName: "keypadKeys"
             columns: 3
             spacing: 8
             Repeater {
@@ -140,7 +143,7 @@ Popup {
                     color: keyMouse.pressed ? Theme.tilePress : Theme.page
                     visible: modelData !== ""
                     Accessible.role: Accessible.Button
-                    Accessible.name: modelData === "⌫" ? qsTr("Löschen") : modelData
+                    Accessible.name: modelData === "⌫" ? qsTr("Delete") : modelData
 
                     Text {
                         anchors.centerIn: parent
@@ -172,12 +175,13 @@ Popup {
             anchors.right: parent.right
             spacing: 10
             PillButton {
-                text: qsTr("Abbrechen")
+                text: qsTr("Cancel")
                 onClicked: root.close()
             }
             PillButton {
+                objectName: "keypadDone"
                 primary: true
-                text: qsTr("Fertig")
+                text: qsTr("Done")
                 onClicked: root.done()
             }
         }

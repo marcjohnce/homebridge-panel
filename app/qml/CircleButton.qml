@@ -1,6 +1,6 @@
 import QtQuick
 
-// Runder Knopf mit Linien-Symbol (−/+, Ein/Aus)
+// Round button with a line icon (−/+, power)
 Rectangle {
     id: root
 

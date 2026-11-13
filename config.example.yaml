@@ -1,89 +1,89 @@
-# Smart Home Panel – Beispielkonfiguration
-# Kopieren nach config.yaml und anpassen.
-# ${VARIABLE} wird durch Umgebungsvariablen ersetzt (z. B. aus /etc/smarthome-panel.env).
+# Smart Home Panel – example configuration
+# Copy to config.yaml and adjust.
+# ${VARIABLE} is replaced with environment variables (e.g. from /etc/smarthome-panel.env).
 
-# Verbindung zu Homebridge (Adresse, Port, PIN), Darstellung und Ruhebildschirm
-# werden in der App unter „Einstellungen“ festgelegt (~/.config/smarthome-panel/settings.json).
-# Diese Datei enthält Räume, Symbole, Szenen und Zeitpläne.
+# The Homebridge connection (address, port, PIN), appearance and screen saver are set
+# in the app under "Settings" (~/.config/smarthome-panel/settings.json).
+# This file contains rooms, icons, scenes and schedules.
 
 server:
-  poll_interval: 5       # Sekunden zwischen zwei Abfragen der Geräte
+  poll_interval: 5       # seconds between two device polls
   timezone: Europe/Berlin
 
 panel:
-  title: Unser Zuhause
-  default_room: Allgemein
-  show_cooling: false    # Modus "Kühlen" bei Thermostaten anzeigen (z. B. Klimaanlage)
+  title: Our Home
+  default_room: General
+  show_cooling: false    # show the "Cool" mode on thermostats (e.g. air conditioning)
 
-# --- Weitere Homebridge-Bridges (optional) ----------------------------------------
-# Die Haupt-Bridge („homebridge“) wird in der App eingestellt. Child-Bridges haben
-# eigene Ports/PINs und können hier zusätzlich eingetragen werden:
+# --- Additional Homebridge bridges (optional) --------------------------------------
+# The main bridge ("homebridge") is set in the app. Child bridges have their own
+# ports and PINs and can be added here as well:
 hap: []
 #  - name: hue-bridge
 #    host: 127.0.0.1
 #    port: 53412
 #    pin: "123-45-678"
 
-# --- Variante B: über die Homebridge-Weboberfläche (homebridge-config-ui-x) -------
-# Ebenfalls Insecure-Modus nötig. Ohne username wird /api/auth/noauth genutzt.
+# --- Alternative: via the Homebridge web UI (homebridge-config-ui-x) ---------------
+# Also requires insecure mode. Without username, /api/auth/noauth is used.
 homebridge_ui: []
 #  - name: homebridge-ui
 #    url: http://127.0.0.1:8581
 #    username: admin
 #    password: ${HOMEBRIDGE_PASSWORD}
 
-# --- Demo-Geräte zum Ausprobieren ohne Homebridge ----------------------------------
+# --- Demo devices for trying the panel without Homebridge --------------------------
 demo:
   enabled: false
 
-# --- Geräte anpassen: Schlüssel = Geräte-ID (siehe /api/devices) oder Originalname --
+# --- Customize devices: key = device ID (see Settings → Info) or original name ------
 devices:
-  # Symbole (icon): light, ceiling, strip, plug, switch, thermostat, radiator, floor, fan, coffee, tv
-  "Deckenlicht Wohnzimmer": { room: Wohnzimmer, order: 1, icon: ceiling }
-  "LED-Streifen":           { room: Wohnzimmer, name: TV-Licht, icon: strip }
-  "Heizung Wohnzimmer":     { room: Wohnzimmer, icon: radiator }
-  "Küchenlicht":            { room: Küche }
-  "Kaffeemaschine":         { room: Küche, icon: coffee }
-  "Heizung Bad":            { room: Bad, icon: floor }
-  "TV-Steckdose":           { room: Wohnzimmer, icon: tv }
-  # "homebridge:12.10":     { hidden: true }
+  # Icons (icon): light, ceiling, strip, plug, switch, thermostat, radiator, floor, fan, coffee, tv
+  "Living Room Ceiling Light": { room: Living Room, order: 1, icon: ceiling }
+  "LED Strip":                 { room: Living Room, name: TV Light, icon: strip }
+  "Living Room Heating":       { room: Living Room, icon: radiator }
+  "Kitchen Light":             { room: Kitchen }
+  "Coffee Maker":              { room: Kitchen, icon: coffee }
+  "Bathroom Heating":          { room: Bathroom, icon: floor }
+  "TV Plug":                   { room: Living Room, icon: tv }
+  # "homebridge:12.10":        { hidden: true }
 
-# --- Szenen (icon: moon, sun, film, leaf, home, power) ----------------------------
-# Attribute: on, brightness (0–100), hue (0–360), saturation (0–100),
-#            color_temp (Mired 140–500), speed (0–100),
-#            target_temp (°C), mode (off | heat | cool | auto)
+# --- Scenes (icon: moon, sun, film, leaf, home, power) -----------------------------
+# Attributes: on, brightness (0–100), hue (0–360), saturation (0–100),
+#             color_temp (mired 140–500), speed (0–100),
+#             target_temp (°C), mode (off | heat | cool | auto)
 scenes:
-  - id: alles-aus
-    name: Alles aus
+  - id: all-off
+    name: All off
     icon: moon
     actions:
-      - { device: Deckenlicht Wohnzimmer, set: { on: false } }
-      - { device: LED-Streifen,           set: { on: false } }
-      - { device: Küchenlicht,            set: { on: false } }
-      - { device: Kaffeemaschine,         set: { on: false } }
-  - id: fernsehen
-    name: Fernsehen
+      - { device: Living Room Ceiling Light, set: { on: false } }
+      - { device: LED Strip,                 set: { on: false } }
+      - { device: Kitchen Light,             set: { on: false } }
+      - { device: Coffee Maker,              set: { on: false } }
+  - id: movie
+    name: Movie night
     icon: film
     actions:
-      - { device: Deckenlicht Wohnzimmer, set: { on: true, brightness: 20 } }
-      - { device: LED-Streifen,           set: { on: true, brightness: 60, hue: 260, saturation: 80 } }
-      - { device: TV-Steckdose,           set: { on: true } }
-  - id: heizen-komfort
-    name: Komfort
+      - { device: Living Room Ceiling Light, set: { on: true, brightness: 20 } }
+      - { device: LED Strip,                 set: { on: true, brightness: 60, hue: 260, saturation: 80 } }
+      - { device: TV Plug,                   set: { on: true } }
+  - id: heating-comfort
+    name: Comfort
     icon: sun
     actions:
-      - { device: Heizung Wohnzimmer, set: { mode: heat, target_temp: 21.5 } }
-      - { device: Heizung Bad,        set: { mode: heat, target_temp: 22.5 } }
-  - id: heizen-eco
+      - { device: Living Room Heating, set: { mode: heat, target_temp: 21.5 } }
+      - { device: Bathroom Heating,    set: { mode: heat, target_temp: 22.5 } }
+  - id: heating-eco
     name: Eco
     icon: leaf
     actions:
-      - { device: Heizung Wohnzimmer, set: { mode: heat, target_temp: 18 } }
-      - { device: Heizung Bad,        set: { mode: heat, target_temp: 18 } }
+      - { device: Living Room Heating, set: { mode: heat, target_temp: 18 } }
+      - { device: Bathroom Heating,    set: { mode: heat, target_temp: 18 } }
 
-# --- Zeitpläne: Szene zu einer Uhrzeit an bestimmten Wochentagen ausführen ----------
-# Wochentage: mo di mi do fr sa so (Standard: alle)
+# --- Schedules: run a scene at a time of day on selected weekdays ------------------
+# Weekdays: mo tu we th fr sa su (default: every day)
 schedules:
-  - { time: "06:30", days: [mo, di, mi, do, fr], scene: heizen-komfort }
-  - { time: "08:00", days: [sa, so],             scene: heizen-komfort }
-  - { time: "22:30",                             scene: heizen-eco }
+  - { time: "06:30", days: [mo, tu, we, th, fr], scene: heating-comfort }
+  - { time: "08:00", days: [sa, su],             scene: heating-comfort }
+  - { time: "22:30",                             scene: heating-eco }
