@@ -4,7 +4,7 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 **Homebridge** using the **HomeKit Accessory Protocol (HAP)**. The UI is built with Qt Quick
 (QML), the logic in Python with **PySide6**.
 
-![Home screen](docs/images/home-1024x600.png)
+![Home screen at 1280 × 800](docs/images/home-1280x800.png)
 
 **[User interface guide with annotated screenshots for all screen sizes →](docs/user-interface.md)**
 
@@ -31,7 +31,7 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 - **Light / dark / automatic** appearance and a **screen saver** with a large clock
 - **Settings page** for appearance, screen saver and the Homebridge connection (address, port, PIN)
   with keypad, connection test and apply without restart
-- Layouts for 800×480, 1024×600, 1280×720, 1280×800, square 720×720 and portrait displays
+- Optimized for **1280×800** and **720×720**; also works on 800×480, 1024×600, 1280×720 and portrait displays
 
 ## Requirements
 

@@ -35,7 +35,7 @@ Rectangle {
         width: Math.min(implicitWidth, root.parent.width * 0.88 - 40)
         wrapMode: Text.WordWrap
         color: Theme.page
-        font.pixelSize: 16
+        font.pixelSize: Theme.s(16)
     }
     Timer {
         id: hideTimer

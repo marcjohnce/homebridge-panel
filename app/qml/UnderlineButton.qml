@@ -6,12 +6,12 @@ Item {
 
     property string text
     property bool selected: false
-    property int pixelSize: 18
+    property int pixelSize: Theme.s(18)
     property bool centered: false
     signal clicked
 
     implicitWidth: label.implicitWidth
-    implicitHeight: label.implicitHeight + 18
+    implicitHeight: label.implicitHeight + Theme.s(18)
     activeFocusOnTab: true
     Accessible.role: Accessible.Button
     Accessible.name: text

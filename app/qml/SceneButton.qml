@@ -13,10 +13,10 @@ Item {
     property bool running: false
 
     readonly property real iconX: chip ? 14 : 2
-    readonly property real textX: chip ? 44 : 38
+    readonly property real textX: chip ? 44 : Theme.s(38)
 
     implicitWidth: textX + labelText.implicitWidth + (chip ? 18 : 0)
-    implicitHeight: chip ? 44 : (compact ? 42 : 48)
+    implicitHeight: chip ? 44 : (compact ? 42 : Theme.s(48))
     activeFocusOnTab: true
     Accessible.role: Accessible.Button
     Accessible.name: qsTr("Run scene %1").arg(label)
@@ -56,8 +56,8 @@ Item {
     LineIcon {
         anchors.verticalCenter: parent.verticalCenter
         x: root.iconX
-        width: 22
-        height: 22
+        width: Theme.s(22)
+        height: Theme.s(22)
         name: Icons.has(root.iconName) ? root.iconName : "power"
         color: root.running || mouse.pressed ? Theme.gold : Theme.muted
     }
@@ -67,7 +67,7 @@ Item {
         x: root.textX
         text: root.label
         color: Theme.ink
-        font.pixelSize: root.chip ? 16 : 17
+        font.pixelSize: root.chip ? Theme.s(16) : Theme.s(17)
     }
     Rectangle {
         visible: !root.chip

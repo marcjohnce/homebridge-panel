@@ -22,7 +22,7 @@ ColumnLayout {
         Layout.topMargin: 14
         text: root.section.title
         color: Theme.muted
-        font.pixelSize: 15
+        font.pixelSize: Theme.s(15)
         Accessible.role: Accessible.Heading
     }
 

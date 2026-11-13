@@ -9,6 +9,7 @@ Column {
     property string label
     property string iconName: "sun"
     property real barHeight: 300
+    property real barWidth: 104
     signal committed(int value)
     signal interacting(bool active)
 
@@ -41,7 +42,7 @@ Column {
 
     Rectangle {
         id: bar
-        width: 104
+        width: root.barWidth
         height: root.barHeight
         radius: 18
         color: Theme.tile
@@ -85,13 +86,13 @@ Column {
         anchors.horizontalCenter: parent.horizontalCenter
         text: qsTr("%1%").arg(Math.round(root.shown))
         color: Theme.ink
-        font.pixelSize: 22
+        font.pixelSize: Theme.s(22)
         font.weight: Font.Light
     }
     Text {
         anchors.horizontalCenter: parent.horizontalCenter
         text: root.label
         color: Theme.muted
-        font.pixelSize: 14
+        font.pixelSize: Theme.s(14)
     }
 }

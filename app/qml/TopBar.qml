@@ -27,7 +27,7 @@ ColumnLayout {
             objectName: "clock"
             text: Qt.formatTime(root.now, "hh:mm")
             color: Theme.ink
-            font.pixelSize: 52
+            font.pixelSize: Theme.s(52)
             font.weight: Font.ExtraLight
         }
 
@@ -40,7 +40,7 @@ ColumnLayout {
                 Layout.fillWidth: true
                 text: root.now.toLocaleDateString(Qt.locale("en_GB"), "dddd, d MMMM")
                 color: Theme.muted
-                font.pixelSize: 15
+                font.pixelSize: Theme.s(15)
                 elide: Text.ElideRight
             }
             RowLayout {
@@ -56,7 +56,7 @@ ColumnLayout {
                 Text {
                     text: qsTr("%1 °C indoors").arg(panel.indoorTemp)
                     color: Theme.ink
-                    font.pixelSize: 17
+                    font.pixelSize: Theme.s(17)
                     font.weight: Font.Light
                 }
             }
@@ -74,7 +74,7 @@ ColumnLayout {
             Layout.maximumWidth: 150
             text: panel.statusText
             color: Theme.muted
-            font.pixelSize: 14
+            font.pixelSize: Theme.s(14)
             elide: Text.ElideRight
         }
         Item {

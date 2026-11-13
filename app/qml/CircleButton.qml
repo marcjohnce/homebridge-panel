@@ -10,8 +10,8 @@ Rectangle {
     property real iconSize: 26
     signal clicked
 
-    implicitWidth: 64
-    implicitHeight: 64
+    implicitWidth: Theme.s(64)
+    implicitHeight: Theme.s(64)
     radius: width / 2
     color: mouse.pressed ? Theme.tilePress : Theme.tile
     border.color: highlighted ? Theme.gold : (activeFocus ? Theme.gold : "transparent")

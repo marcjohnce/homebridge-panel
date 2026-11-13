@@ -49,7 +49,7 @@ Popup {
     }
 
     anchors.centerIn: Overlay.overlay
-    width: 372
+    width: Theme.s(372)
     padding: 22
     modal: true
     focus: true
@@ -84,14 +84,14 @@ Popup {
         Text {
             text: root.field.label || ""
             color: Theme.ink
-            font.pixelSize: 19
+            font.pixelSize: Theme.s(19)
             font.weight: Font.Medium
         }
 
         Rectangle {
             objectName: "keypadDisplay"
             width: parent.width
-            height: 58
+            height: Theme.s(58)
             radius: 10
             color: Theme.page
             border.color: root.error !== "" ? Theme.err : Theme.line
@@ -113,7 +113,7 @@ Popup {
                 text: root.display
                 elide: Text.ElideLeft
                 color: Theme.ink
-                font.pixelSize: 28
+                font.pixelSize: Theme.s(28)
                 font.weight: Font.Light
                 Accessible.role: Accessible.EditableText
                 Accessible.name: root.field.label || ""
@@ -125,7 +125,7 @@ Popup {
             width: parent.width
             text: root.error !== "" ? root.error : (root.field.help || "")
             color: root.error !== "" ? Theme.err : Theme.muted
-            font.pixelSize: 13
+            font.pixelSize: Theme.s(13)
             wrapMode: Text.WordWrap
         }
 
@@ -138,7 +138,7 @@ Popup {
                 Rectangle {
                     required property string modelData
                     width: (root.availableWidth - 16) / 3
-                    height: 56
+                    height: Theme.s(56)
                     radius: 12
                     color: keyMouse.pressed ? Theme.tilePress : Theme.page
                     visible: modelData !== ""
@@ -150,7 +150,7 @@ Popup {
                         visible: parent.modelData !== "⌫"
                         text: parent.modelData
                         color: Theme.ink
-                        font.pixelSize: 24
+                        font.pixelSize: Theme.s(24)
                         font.weight: Font.Light
                     }
                     LineIcon {

@@ -63,10 +63,10 @@ Rectangle {
     }
 
     LineIcon {
-        x: 18
-        y: 18
-        width: 34
-        height: 34
+        x: Theme.s(18)
+        y: Theme.s(18)
+        width: Theme.s(34)
+        height: Theme.s(34)
         lineWidth: 1.15
         visible: !root.thermostat
         name: root.icon
@@ -75,9 +75,9 @@ Rectangle {
 
     Item {
         visible: root.thermostat
-        x: 12
-        y: 12
-        width: root.height < 136 ? 52 : 58
+        x: Theme.s(12)
+        y: Theme.s(12)
+        width: root.height < Theme.s(136) ? Theme.s(52) : Theme.s(58)
         height: width
 
         ArcGauge {
@@ -92,7 +92,7 @@ Rectangle {
             anchors.centerIn: parent
             text: Theme.fmt(root.targetTemp)
             color: Theme.ink
-            font.pixelSize: parent.width < 56 ? 15 : 17
+            font.pixelSize: parent.width < Theme.s(56) ? Theme.s(15) : Theme.s(17)
             font.weight: Font.Light
         }
     }
@@ -101,8 +101,8 @@ Rectangle {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.margins: 18
-        anchors.bottomMargin: 16
+        anchors.margins: Theme.s(18)
+        anchors.bottomMargin: Theme.s(16)
         spacing: 2
 
         Text {
@@ -110,7 +110,7 @@ Rectangle {
             width: parent.width
             text: root.room
             elide: Text.ElideRight
-            font.pixelSize: 13
+            font.pixelSize: Theme.s(13)
             color: root.isOn ? Theme.goldInk : Theme.muted
             opacity: root.isOn ? 0.65 : 1
         }
@@ -120,7 +120,7 @@ Rectangle {
             elide: Text.ElideRight
             maximumLineCount: 2
             wrapMode: Text.Wrap
-            font.pixelSize: 17
+            font.pixelSize: Theme.s(17)
             font.weight: Font.Medium
             color: root.isOn ? Theme.goldInk : Theme.ink
         }
@@ -128,7 +128,7 @@ Rectangle {
             width: parent.width
             text: root.stateText
             elide: Text.ElideRight
-            font.pixelSize: 14
+            font.pixelSize: Theme.s(14)
             color: root.isOn ? Theme.goldInk : (root.heating ? Theme.heat2 : Theme.muted)
             opacity: root.isOn ? 0.72 : 1
         }
@@ -140,15 +140,15 @@ Rectangle {
         anchors.top: parent.top
         anchors.right: parent.right
         anchors.margins: 6
-        width: 44
-        height: 44
+        width: Theme.s(44)
+        height: Theme.s(44)
         Accessible.role: Accessible.Button
         Accessible.name: qsTr("Open controls for %1").arg(root.shortName)
 
         LineIcon {
             anchors.centerIn: parent
-            width: 20
-            height: 20
+            width: Theme.s(20)
+            height: Theme.s(20)
             name: "chevron"
             color: root.isOn ? Theme.goldInk : Theme.muted
         }

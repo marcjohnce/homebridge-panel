@@ -19,7 +19,7 @@ ColumnLayout {
         Layout.topMargin: 14
         text: qsTr("Info")
         color: Theme.muted
-        font.pixelSize: 15
+        font.pixelSize: Theme.s(15)
         Accessible.role: Accessible.Heading
     }
 
@@ -49,13 +49,13 @@ ColumnLayout {
                     }
                     RowLayout {
                         width: parent.width
-                        height: Math.max(52, valueText.implicitHeight + 24)
+                        height: Math.max(Theme.s(52), valueText.implicitHeight + 24)
                         spacing: 16
                         Text {
                             Layout.leftMargin: 18
                             text: infoRow.modelData.label
                             color: Theme.ink
-                            font.pixelSize: 16
+                            font.pixelSize: Theme.s(16)
                         }
                         Text {
                             id: valueText
@@ -64,7 +64,7 @@ ColumnLayout {
                             horizontalAlignment: Text.AlignRight
                             text: infoRow.modelData.value
                             color: Theme.muted
-                            font.pixelSize: 14
+                            font.pixelSize: Theme.s(14)
                             wrapMode: Text.WrapAnywhere
                         }
                     }

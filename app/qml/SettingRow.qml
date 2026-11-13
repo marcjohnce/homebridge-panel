@@ -11,7 +11,7 @@ Item {
     signal edited(var value)
     signal editRequested
 
-    implicitHeight: Math.max(68, row.implicitHeight + 24)
+    implicitHeight: Math.max(Theme.s(68), row.implicitHeight + 24)
 
     RowLayout {
         id: row
@@ -27,7 +27,7 @@ Item {
                 Layout.fillWidth: true
                 text: root.field.label
                 color: Theme.ink
-                font.pixelSize: 17
+                font.pixelSize: Theme.s(17)
                 wrapMode: Text.WordWrap
             }
             Text {
@@ -35,7 +35,7 @@ Item {
                 visible: text !== ""
                 text: root.error !== "" ? root.error : root.field.help
                 color: root.error !== "" ? Theme.err : Theme.muted
-                font.pixelSize: 13
+                font.pixelSize: Theme.s(13)
                 wrapMode: Text.WordWrap
             }
         }
@@ -56,7 +56,7 @@ Item {
                 UnderlineButton {
                     required property var modelData
                     text: modelData.label
-                    pixelSize: 16
+                    pixelSize: Theme.s(16)
                     centered: true
                     selected: String(modelData.value) === String(root.value)
                     onClicked: root.edited(modelData.value)
@@ -68,8 +68,8 @@ Item {
     Component {
         id: toggleComponent
         Rectangle {
-            width: 54
-            height: 32
+            width: Theme.s(54)
+            height: Theme.s(32)
             radius: 16
             color: root.value ? Theme.gold : Theme.line
             border.color: activeFocus ? Theme.ink : "transparent"
@@ -83,9 +83,9 @@ Item {
             Behavior on color { ColorAnimation { duration: 150 } }
 
             Rectangle {
-                width: 26
-                height: 26
-                radius: 13
+                width: parent.height - 6
+                height: parent.height - 6
+                radius: height / 2
                 y: 3
                 x: root.value ? parent.width - width - 3 : 3
                 color: Theme.knob
@@ -103,7 +103,7 @@ Item {
         id: valueComponent
         Item {
             implicitWidth: valueRow.implicitWidth + 16
-            implicitHeight: 48
+            implicitHeight: Theme.s(48)
             activeFocusOnTab: true
             Accessible.role: Accessible.Button
             Accessible.name: qsTr("Change %1, currently %2").arg(root.field.label).arg(String(root.value))
@@ -118,7 +118,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     text: String(root.value)
                     color: Theme.ink
-                    font.pixelSize: 18
+                    font.pixelSize: Theme.s(18)
                     font.weight: Font.Light
                 }
                 LineIcon {

@@ -23,7 +23,7 @@ ColumnLayout {
         objectName: "clock"
         text: Qt.formatTime(root.now, "hh:mm")
         color: Theme.ink
-        font.pixelSize: root.compact ? 60 : 84
+        font.pixelSize: root.compact ? 60 : Theme.s(84)
         font.weight: Font.ExtraLight
         lineHeight: 0.95
     }
@@ -32,17 +32,17 @@ ColumnLayout {
         Layout.topMargin: 6
         text: root.now.toLocaleDateString(Qt.locale("en_GB"), "dddd, d MMMM")
         color: Theme.muted
-        font.pixelSize: 17
+        font.pixelSize: Theme.s(17)
     }
 
     RowLayout {
         objectName: "climate"
         visible: panel.indoorTemp !== ""
-        Layout.topMargin: root.compact ? 16 : 26
+        Layout.topMargin: root.compact ? 16 : Theme.s(26)
         spacing: 10
         LineIcon {
-            Layout.preferredWidth: 30
-            Layout.preferredHeight: 30
+            Layout.preferredWidth: Theme.s(30)
+            Layout.preferredHeight: Theme.s(30)
             name: "thermostat"
             color: Theme.gold
         }
@@ -50,24 +50,24 @@ ColumnLayout {
             Text {
                 text: qsTr("%1 °C").arg(panel.indoorTemp)
                 color: Theme.ink
-                font.pixelSize: 28
+                font.pixelSize: Theme.s(28)
                 font.weight: Font.Light
             }
             Text {
                 text: qsTr("indoors")
                 color: Theme.muted
-                font.pixelSize: 14
+                font.pixelSize: Theme.s(14)
             }
         }
     }
 
     Text {
         visible: panel.scenes.length > 0
-        Layout.topMargin: root.compact ? 16 : 28
+        Layout.topMargin: root.compact ? 16 : Theme.s(28)
         Layout.bottomMargin: 4
         text: qsTr("Scenes")
         color: Theme.muted
-        font.pixelSize: 14
+        font.pixelSize: Theme.s(14)
     }
 
     Flickable {
@@ -112,13 +112,13 @@ ColumnLayout {
             Layout.fillWidth: true
             text: panel.statusText
             color: Theme.muted
-            font.pixelSize: 14
+            font.pixelSize: Theme.s(14)
             elide: Text.ElideRight
         }
         Item {
             objectName: "settingsButton"
-            Layout.preferredWidth: 44
-            Layout.preferredHeight: 44
+            Layout.preferredWidth: Theme.s(44)
+            Layout.preferredHeight: Theme.s(44)
             activeFocusOnTab: true
             Accessible.role: Accessible.Button
             Accessible.name: qsTr("Settings")

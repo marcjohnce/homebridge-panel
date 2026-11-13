@@ -7,8 +7,8 @@ Rectangle {
     property bool primary: false
     signal clicked
 
-    implicitWidth: label.implicitWidth + 44
-    implicitHeight: 48
+    implicitWidth: label.implicitWidth + Theme.s(44)
+    implicitHeight: Theme.s(48)
     radius: 24
     color: primary ? (mouse.pressed ? Qt.darker(Theme.gold, 1.1) : Theme.gold) : (mouse.pressed ? Theme.tilePress : "transparent")
     border.color: activeFocus ? Theme.ink : (primary ? Theme.gold : Theme.line)
@@ -26,7 +26,7 @@ Rectangle {
         anchors.centerIn: parent
         text: root.text
         color: root.primary ? Theme.goldInk : Theme.ink
-        font.pixelSize: 16
+        font.pixelSize: Theme.s(16)
         font.weight: root.primary ? Font.Medium : Font.Normal
     }
     MouseArea {

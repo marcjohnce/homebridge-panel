@@ -14,6 +14,13 @@ ColumnLayout {
     readonly property string levelKey: caps.indexOf("brightness") >= 0 ? "brightness" : (caps.indexOf("speed") >= 0 ? "speed" : "")
     readonly property bool hasColor: caps.indexOf("color") >= 0
     readonly property bool hasCt: caps.indexOf("color_temp") >= 0
+    // Sizes follow the available space: bar and wheel grow on 1280×800 and 720×720
+    readonly property real barHeight: Math.max(180, Math.min(460, height - Theme.s(170)))
+    readonly property real barWidth: Math.max(104, Math.min(140, Math.round(barHeight * 0.3)))
+    readonly property real gap: Math.min(Theme.s(64), Math.round(width * 0.08))
+    readonly property real wheelSize: Math.max(180, Math.min(420,
+        height - Theme.s(68) - 50 - (hasCt ? 90 : 0),
+        width - (levelKey !== "" ? barWidth + gap : 0) - 56))
 
     spacing: 10
 
@@ -27,7 +34,7 @@ ColumnLayout {
     RowLayout {
         Layout.fillWidth: true
         Layout.fillHeight: true
-        spacing: 64
+        spacing: 0
 
         Item { Layout.fillWidth: true }
 
@@ -35,7 +42,8 @@ ColumnLayout {
             objectName: "brightnessBar"
             visible: root.levelKey !== ""
             Layout.alignment: Qt.AlignVCenter
-            barHeight: Math.min(300, root.height - 160)
+            barHeight: root.barHeight
+            barWidth: root.barWidth
             serverValue: root.st[root.levelKey] || 0
             off: !root.st.on
             label: root.levelKey === "speed" ? qsTr("Speed") : qsTr("Brightness")
@@ -48,6 +56,11 @@ ColumnLayout {
             }
         }
 
+        Item {
+            visible: root.levelKey !== "" && (root.hasColor || root.hasCt)
+            Layout.preferredWidth: root.gap
+        }
+
         ColumnLayout {
             visible: root.hasColor || root.hasCt
             Layout.alignment: Qt.AlignVCenter
@@ -56,7 +69,7 @@ ColumnLayout {
             ColorWheel {
                 objectName: "colorWheel"
                 visible: root.hasColor
-                readonly property real size: Math.min(250, root.height - 170)
+                readonly property real size: root.wheelSize
                 Layout.preferredWidth: size
                 Layout.preferredHeight: size
                 Layout.alignment: Qt.AlignHCenter
@@ -70,7 +83,7 @@ ColumnLayout {
             ColorTempSlider {
                 objectName: "colorTemp"
                 visible: root.hasCt
-                Layout.preferredWidth: 250
+                Layout.preferredWidth: root.hasColor ? root.wheelSize : Theme.s(320)
                 Layout.alignment: Qt.AlignHCenter
                 serverValue: root.st.color_temp || 300
                 minMired: root.meta.min_mired || 140
@@ -86,10 +99,10 @@ ColumnLayout {
     CircleButton {
         objectName: "powerButton"
         Layout.alignment: Qt.AlignHCenter
-        implicitWidth: 68
-        implicitHeight: 68
+        implicitWidth: Theme.s(68)
+        implicitHeight: Theme.s(68)
         iconName: "power"
-        iconSize: 30
+        iconSize: Theme.s(30)
         highlighted: !!root.st.on
         label: root.st.on ? qsTr("Turn off %1").arg(root.dev.name) : qsTr("Turn on %1").arg(root.dev.name)
         onClicked: panel.toggle(root.dev.id)

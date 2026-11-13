@@ -95,11 +95,12 @@ Item {
 
     Rectangle {
         readonly property real a: root.h * Math.PI / 180
-        width: 28
-        height: 28
-        radius: 14
-        x: root.r + Math.cos(a) * root.s / 100 * root.r - 14
-        y: root.r - Math.sin(a) * root.s / 100 * root.r - 14
+        readonly property real size: Math.max(28, Math.round(root.width / 12))
+        width: size
+        height: size
+        radius: size / 2
+        x: root.r + Math.cos(a) * root.s / 100 * root.r - size / 2
+        y: root.r - Math.sin(a) * root.s / 100 * root.r - size / 2
         color: Qt.hsla(root.h / 360, root.s / 100, 1 - root.s / 200, 1)
         border.color: "white"
         border.width: 3

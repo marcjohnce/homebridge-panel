@@ -14,9 +14,10 @@ Item {
     property bool knob: false
     property int ticks: 0
     property bool labels: false
+    property real knobSize: 28
 
     readonly property real frac: Math.max(0, Math.min(1, (value - from) / (to - from)))
-    readonly property real margin: (knob ? 16 : lineWidth / 2) + (labels ? 30 : 0) + 1
+    readonly property real margin: (knob ? knobSize / 2 + 2 : lineWidth / 2) + (labels ? 30 : 0) + 1
     readonly property real radius: Math.min(width, height) / 2 - margin
     readonly property real cx: width / 2
     readonly property real cy: height / 2
@@ -58,7 +59,7 @@ Item {
         Rectangle {
             required property int index
             readonly property bool major: index % 5 === 0
-            readonly property var p: Geo.polar(root.cx, root.cy, root.radius + (root.knob ? 18 : 8),
+            readonly property var p: Geo.polar(root.cx, root.cy, root.radius + (root.knob ? root.knobSize / 2 + 4 : 8),
                                               Geo.ARC_START + Geo.ARC_SWEEP * index / root.ticks)
             width: major ? 3.2 : 1.8
             height: width
@@ -74,12 +75,12 @@ Item {
         model: root.labels ? [0, 0.5, 1] : []
         Text {
             required property real modelData
-            readonly property var p: Geo.polar(root.cx, root.cy, root.radius + 34, Geo.ARC_START + Geo.ARC_SWEEP * modelData)
+            readonly property var p: Geo.polar(root.cx, root.cy, root.radius + (root.knob ? root.knobSize / 2 + 20 : 34), Geo.ARC_START + Geo.ARC_SWEEP * modelData)
             x: p.x - width / 2
             y: p.y - height / 2
             text: Math.round(root.from + (root.to - root.from) * modelData)
             color: Theme.muted
-            font.pixelSize: 13
+            font.pixelSize: Theme.s(13)
             font.weight: Font.Light
         }
     }
@@ -87,11 +88,11 @@ Item {
     Rectangle {
         readonly property var p: Geo.polar(root.cx, root.cy, root.radius, root.endAngle)
         visible: root.knob
-        width: 28
-        height: 28
-        radius: 14
-        x: p.x - 14
-        y: p.y - 14
+        width: root.knobSize
+        height: root.knobSize
+        radius: root.knobSize / 2
+        x: p.x - root.knobSize / 2
+        y: p.y - root.knobSize / 2
         color: Theme.knob
         border.color: Theme.line
         border.width: 1

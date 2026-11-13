@@ -111,7 +111,7 @@ Rectangle {
 
             ColumnLayout {
                 id: content
-                width: Math.min(parent.width, 760)
+                width: Math.min(parent.width, Theme.s(760))
                 x: (parent.width - width) / 2
                 spacing: 8
 
@@ -143,7 +143,7 @@ Rectangle {
 
         RowLayout {
             Layout.fillWidth: true
-            Layout.preferredHeight: 72
+            Layout.preferredHeight: Theme.s(72)
             spacing: 12
 
             Text {
@@ -154,7 +154,7 @@ Rectangle {
                     : qsTr("Display settings are saved immediately.")
                 color: root.testing || (root.message === "" && !root.dirty) ? Theme.muted
                      : root.message === "" ? Theme.ink : (root.messageOk ? Theme.ok : Theme.err)
-                font.pixelSize: 14
+                font.pixelSize: Theme.s(14)
                 wrapMode: Text.WordWrap
                 maximumLineCount: 2
                 elide: Text.ElideRight

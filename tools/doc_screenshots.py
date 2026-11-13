@@ -34,7 +34,8 @@ from app.settings import SettingsStore  # noqa: E402
 
 # Screen sizes documented: (width, height, file suffix)
 SIZES = [(800, 480), (1024, 600), (1280, 720), (1280, 800), (720, 720), (720, 1280)]
-DETAIL_SIZE = (1024, 600)
+DETAIL_SIZE = (1280, 800)          # primary display; detail views also at 720×720
+SQUARE_SIZE = (720, 720)
 
 CALLOUT = (37, 99, 235)          # blue: clearly separate from the gold UI accent
 BADGE_R = 13
@@ -189,6 +190,38 @@ def home_callouts(p: Panel, top_layout: bool) -> list[tuple]:
     ]
 
 
+def detail_views(p: Panel, out: Path, suffix: str) -> None:
+    p.win.setProperty("openDevice", p.device_id("Living Room Heating"))
+    save(annotate(p.grab(), [
+        (1, [p.rect("backButton")]),
+        (2, [p.rect("headerNote")], "left"),
+        (3, [p.rect("dial")]),
+        (4, [p.rect("minusButton"), p.rect("plusButton")]),
+        (5, [p.rect("modes")], "left"),
+    ]), out, f"heating{suffix}")
+
+    tv = p.device_id("TV Light")
+    p.ctl.setAttrs(tv, {"on": True, "brightness": 60, "hue": 200, "saturation": 70})
+    wait(800)
+    p.win.setProperty("openDevice", tv)
+    save(annotate(p.grab(), [
+        (1, [p.rect("brightnessBar")]),
+        (2, [p.rect("colorWheel")]),
+        (3, [p.rect("powerButton")]),
+    ]), out, f"light{suffix}")
+
+    kitchen = p.device_id("Kitchen Light")
+    p.ctl.setAttrs(kitchen, {"on": True, "brightness": 80, "color_temp": 330})
+    wait(800)
+    p.win.setProperty("openDevice", kitchen)
+    save(annotate(p.grab(), [
+        (1, [p.rect("brightnessBar")]),
+        (4, [p.rect("colorTemp")]),
+        (3, [p.rect("powerButton")]),
+    ]), out, f"light-white-tone{suffix}")
+    p.win.setProperty("openDevice", "")
+
+
 def main() -> int:
     out = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "docs" / "images"
     out.mkdir(parents=True, exist_ok=True)
@@ -203,36 +236,14 @@ def main() -> int:
         save(annotate(p.grab(), home_callouts(p, w / h < 1.4)), out, f"home-{w}x{h}")
         p.close()
 
-    # Detail views, settings and keypad at the reference size
+    # Detail views at the primary size (1280×800) and at 720×720
+    square = Panel(SQUARE_SIZE)
+    detail_views(square, out, "-720x720")
+    square.close()
     p = Panel(DETAIL_SIZE)
-    p.win.setProperty("openDevice", p.device_id("Living Room Heating"))
-    save(annotate(p.grab(), [
-        (1, [p.rect("backButton")]),
-        (2, [p.rect("headerNote")], "left"),
-        (3, [p.rect("dial")]),
-        (4, [p.rect("minusButton"), p.rect("plusButton")]),
-        (5, [p.rect("modes")], "left"),
-    ]), out, "heating")
+    detail_views(p, out, "")
 
-    tv = p.device_id("TV Light")
-    p.ctl.setAttrs(tv, {"on": True, "brightness": 60, "hue": 200, "saturation": 70})
-    wait(800)
-    p.win.setProperty("openDevice", tv)
-    save(annotate(p.grab(), [
-        (1, [p.rect("brightnessBar")]),
-        (2, [p.rect("colorWheel")]),
-        (3, [p.rect("powerButton")]),
-    ]), out, "light")
-
-    kitchen = p.device_id("Kitchen Light")
-    p.ctl.setAttrs(kitchen, {"on": True, "brightness": 80, "color_temp": 330})
-    wait(800)
-    p.win.setProperty("openDevice", kitchen)
-    save(annotate(p.grab(), [
-        (1, [p.rect("brightnessBar")]),
-        (4, [p.rect("colorTemp")]),
-        (3, [p.rect("powerButton")]),
-    ]), out, "light-white-tone")
+    # Settings, keypad and screen saver at the primary size
 
     p.win.setProperty("openDevice", "")
     p.win.setProperty("settingsOpen", True)

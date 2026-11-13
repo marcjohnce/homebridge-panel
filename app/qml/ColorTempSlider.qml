@@ -19,14 +19,14 @@ Column {
             width: parent.width / 2
             text: qsTr("White tone")
             color: Theme.muted
-            font.pixelSize: 14
+            font.pixelSize: Theme.s(14)
         }
         Text {
             width: parent.width / 2
             horizontalAlignment: Text.AlignRight
             text: qsTr("%1 K").arg(Math.round(1e6 / slider.value / 50) * 50)
             color: Theme.muted
-            font.pixelSize: 14
+            font.pixelSize: Theme.s(14)
         }
     }
 

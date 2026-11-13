@@ -63,7 +63,10 @@ ColumnLayout {
         Item {
             id: dial
             objectName: "dial"
-            readonly property real size: Math.min(340, root.height - 64)
+            // as large as the space allows: limited by height (minus the mode row) and by the
+            // width left next to the −/+ buttons
+            readonly property real size: Math.max(200, Math.min(540, root.height - Theme.s(52) - 20,
+                                                          root.width - 2 * Theme.s(64) - 112))
             Layout.preferredWidth: size
             Layout.preferredHeight: size
             Layout.alignment: Qt.AlignVCenter
@@ -81,7 +84,8 @@ ColumnLayout {
                 to: root.maxT
                 value: root.shown
                 active: root.active
-                lineWidth: 6
+                lineWidth: Math.max(6, dial.size / 56)
+                knobSize: Math.max(28, Math.round(dial.size / 15))
                 knob: true
                 labels: true
                 ticks: (root.maxT - root.minT) / root.step <= 60 ? Math.round((root.maxT - root.minT) / root.step) : Math.round(root.maxT - root.minT)
@@ -94,21 +98,21 @@ ColumnLayout {
                     Text {
                         text: Theme.fmt(root.shown)
                         color: Theme.ink
-                        font.pixelSize: Math.min(88, dial.size * 0.26)
+                        font.pixelSize: Math.min(120, dial.size * 0.26)
                         font.weight: Font.ExtraLight
                     }
                     Text {
-                        y: 10
+                        y: Math.round(dial.size * 0.03)
                         text: "°C"
                         color: Theme.muted
-                        font.pixelSize: 20
+                        font.pixelSize: Theme.s(20)
                     }
                 }
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: qsTr("Now %1 °C").arg(Theme.fmt(root.st.current_temp))
                     color: Theme.muted
-                    font.pixelSize: 16
+                    font.pixelSize: Theme.s(16)
                 }
             }
 
@@ -150,8 +154,8 @@ ColumnLayout {
     Row {
         objectName: "modes"
         Layout.alignment: Qt.AlignHCenter
-        Layout.preferredHeight: 52
-        spacing: 26
+        Layout.preferredHeight: Theme.s(52)
+        spacing: Theme.s(26)
         Repeater {
             model: root.meta.modes || ["off", "heat", "auto"]
             UnderlineButton {

@@ -3,6 +3,12 @@ import QtQuick
 
 QtObject {
     property bool dark: false
+    // UI scale for fonts, spacing and touch targets; set from the window size in Main.qml
+    property real scale: 1.0
+
+    function s(v) {
+        return Math.round(v * scale);
+    }
 
     readonly property color page: dark ? "#1C1D1F" : "#E6E7EA"
     readonly property color tile: dark ? "#26272A" : "#F6F6F7"

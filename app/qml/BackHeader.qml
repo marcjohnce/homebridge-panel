@@ -16,7 +16,7 @@ RowLayout {
     Item {
         objectName: "backButton"
         Layout.preferredWidth: backRow.implicitWidth + 12
-        Layout.preferredHeight: 48
+        Layout.preferredHeight: Theme.s(48)
         activeFocusOnTab: true
         Accessible.role: Accessible.Button
         Accessible.name: qsTr("Back to %1").arg(root.backText)
@@ -28,8 +28,8 @@ RowLayout {
             spacing: 4
             LineIcon {
                 anchors.verticalCenter: parent.verticalCenter
-                width: 22
-                height: 22
+                width: Theme.s(22)
+                height: Theme.s(22)
                 name: "back"
                 color: Theme.muted
             }
@@ -37,7 +37,7 @@ RowLayout {
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.backText
                 color: Theme.muted
-                font.pixelSize: 17
+                font.pixelSize: Theme.s(17)
             }
         }
         Rectangle {
@@ -65,7 +65,7 @@ RowLayout {
         Layout.fillWidth: true
         text: root.title
         color: Theme.ink
-        font.pixelSize: 20
+        font.pixelSize: Theme.s(20)
         font.weight: Font.Medium
         elide: Text.ElideRight
         Accessible.role: Accessible.Heading
@@ -76,6 +76,6 @@ RowLayout {
         text: root.note
         visible: text !== ""
         color: root.noteColor
-        font.pixelSize: 15
+        font.pixelSize: Theme.s(15)
     }
 }

@@ -22,6 +22,13 @@ ApplicationWindow {
         property: "dark"
         value: panel.theme === "dark"
     }
+    // 1.0 up to 1024×600 and on square/portrait screens; grows on larger landscape
+    // screens (1280×800 → 1.25), capped at 1.3
+    Binding {
+        target: Theme
+        property: "scale"
+        value: Math.max(1, Math.min(1.3, window.width / 1024, window.height / 600))
+    }
 
     HomeScreen {
         anchors.fill: parent

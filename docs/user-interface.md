@@ -14,13 +14,22 @@ indoor temperature and scenes. Square and portrait screens (width less than 1.4 
 switch to a **top bar** with the same elements in one row and the scenes as a horizontal strip,
 so the tiles get the full width. The callout numbers below are the same for both layouts.
 
+The panel is optimized for **1280 × 800** and **720 × 720**:
+
+- Fonts, spacing and touch targets grow with the screen: 1.0× up to 1024 × 600 and on square
+  or portrait screens, 1.2× at 1280 × 720, 1.25× at 1280 × 800 (at most 1.3×).
+- The thermostat dial, brightness bar and color wheel use the space that is available instead
+  of a fixed size (dial: 540 px at 1280 × 800, 424 px at 720 × 720).
+- If the tile rows almost fit on the screen, tiles become slightly flatter (at most 15%) so only
+  whole rows are visible – three rows at 720 × 720.
+
 | Resolution | Typical display | Tile columns | Notes |
 |---|---|---|---|
 | 800 × 480 | Raspberry Pi Touch Display (7″, 1st generation) | 3 | compact sidebar and clock |
-| 1024 × 600 | common 7″ HDMI/DSI displays | 4 | reference size for this guide |
-| 1280 × 720 | Raspberry Pi Touch Display 2 (7″), rotated to landscape | 5 | |
-| 1280 × 800 | common 10.1″ displays | 5 | |
-| 720 × 720 | square displays, e.g. Pimoroni HyperPixel 4.0 Square (4″) | 3 | top bar layout |
+| 1024 × 600 | common 7″ HDMI/DSI displays | 4 | |
+| 1280 × 720 | Raspberry Pi Touch Display 2 (7″), rotated to landscape | 4 | 1.2× scale |
+| **1280 × 800** | common 10.1″ displays | 4 | **optimized**, 1.25× scale, used for the detail screenshots |
+| **720 × 720** | square displays, e.g. Pimoroni HyperPixel 4.0 Square (4″) | 3 | **optimized**, top bar layout |
 | 720 × 1280 | Raspberry Pi Touch Display 2 in its native portrait orientation | 3 | top bar layout |
 
 Start the app at a given size in a window with `.venv/bin/python -m app --size 800x480`.
@@ -42,6 +51,14 @@ Start the app at a given size in a window with `.venv/bin/python -m app --size 8
 Tiles leave out the room from the device name when the room is shown anyway
 ("Living Room Heating" → "Heating"). The detail view shows the full name.
 
+### 1280 × 800 – 10.1″ displays
+
+![Home screen at 1280 × 800](images/home-1280x800.png)
+
+### 720 × 720 – square displays (top bar)
+
+![Home screen at 720 × 720](images/home-720x720.png)
+
 ### 1024 × 600
 
 ![Home screen at 1024 × 600](images/home-1024x600.png)
@@ -54,24 +71,15 @@ Tiles leave out the room from the device name when the room is shown anyway
 
 ![Home screen at 1280 × 720](images/home-1280x720.png)
 
-### 1280 × 800 – 10.1″ displays
-
-![Home screen at 1280 × 800](images/home-1280x800.png)
-
-### 720 × 720 – square displays (top bar)
-
-![Home screen at 720 × 720](images/home-720x720.png)
-
-The detail views, settings and keypad need no changes at this size; they center their
-controls in the available space.
-
 ### 720 × 1280 – portrait (top bar)
 
 <img src="images/home-720x1280.png" alt="Home screen at 720 × 1280 in portrait" width="360">
 
 ## Thermostat
 
-![Thermostat detail view](images/heating.png)
+![Thermostat at 1280 × 800](images/heating.png)
+
+<img src="images/heating-720x720.png" alt="Thermostat at 720 × 720" width="480">
 
 | # | Element | What it does |
 |---|---|---|
@@ -86,13 +94,17 @@ results in one command.
 
 ## Lights and fans
 
-**Color light**
+**Color light** – 1280 × 800 and 720 × 720
 
-![Light with color wheel](images/light.png)
+![Light with color wheel at 1280 × 800](images/light.png)
 
-**White light with adjustable white tone**
+<img src="images/light-720x720.png" alt="Light with color wheel at 720 × 720" width="480">
 
-![Light with white tone](images/light-white-tone.png)
+**White light with adjustable white tone** – 1280 × 800 and 720 × 720
+
+![Light with white tone at 1280 × 800](images/light-white-tone.png)
+
+<img src="images/light-white-tone-720x720.png" alt="Light with white tone at 720 × 720" width="480">
 
 | # | Element | What it does |
 |---|---|---|

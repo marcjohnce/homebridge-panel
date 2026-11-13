@@ -5,8 +5,8 @@ ListView {
     objectName: "roomTabs"
 
     orientation: ListView.Horizontal
-    spacing: 28
-    implicitHeight: 44
+    spacing: Theme.s(28)
+    implicitHeight: Theme.s(44)
     boundsBehavior: Flickable.StopAtBounds
     model: [""].concat(panel.rooms)
 
