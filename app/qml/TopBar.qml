@@ -101,7 +101,19 @@ ColumnLayout {
     }
 
     ListView {
+        id: sceneList
         objectName: "scenes"
+        layer.enabled: GraphicsInfo.api === GraphicsInfo.Software   // see TileGrid.qml
+
+        // opaque background for the layer above (transparent layers render black in software mode)
+        Rectangle {
+            parent: sceneList
+            anchors.fill: parent
+            z: -1
+            visible: sceneList.layer.enabled
+            color: Theme.page
+        }
+
         visible: panel.scenes.length > 0
         Layout.fillWidth: true
         Layout.preferredHeight: 44

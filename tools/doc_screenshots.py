@@ -270,6 +270,25 @@ def main() -> int:
         (4, [p.rect("keypadDone")]),
     ]), out, "keypad")
     p.key(Qt.Key.Key_Escape)
+    wait(300)
+
+    flick = p.item("settingsFlick")
+    flick.setProperty("contentY", max(0, flick.property("contentHeight") - flick.height()))
+    wait(300)
+    save(annotate(p.grab(), [
+        (1, [p.rect("section:system")], "left"),
+        (2, [p.rect("action:restart_app")]),
+        (3, [p.rect("action:reboot")]),
+    ]), out, "settings-system")
+
+    reboot = p.rect("action:reboot")
+    p.click(reboot.center().x(), reboot.center().y())
+    wait(400)
+    save(annotate(p.grab(), [
+        (1, [p.rect("confirmCancel")]),
+        (2, [p.rect("confirmOk")]),
+    ]), out, "confirm-restart")
+    p.key(Qt.Key.Key_Escape)
     p.win.setProperty("settingsOpen", False)
 
     p.win.setProperty("idle", True)

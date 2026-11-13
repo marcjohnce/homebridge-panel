@@ -71,7 +71,19 @@ ColumnLayout {
     }
 
     Flickable {
+        id: sceneFlick
         objectName: "scenes"
+        layer.enabled: GraphicsInfo.api === GraphicsInfo.Software   // see TileGrid.qml
+
+        // opaque background for the layer above (transparent layers render black in software mode)
+        Rectangle {
+            parent: sceneFlick
+            anchors.fill: parent
+            z: -1
+            visible: sceneFlick.layer.enabled
+            color: Theme.page
+        }
+
         Layout.fillWidth: true
         Layout.fillHeight: true
         contentHeight: sceneColumn.height

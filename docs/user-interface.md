@@ -144,6 +144,31 @@ Tapping *Address*, *Port* or *PIN* opens a keypad.
 
 A connected keyboard works as well, including letters for host names.
 
+### System: restart
+
+At the bottom of the settings page, above *Info*.
+
+![System section](images/settings-system.png)
+
+| # | Element | What it does |
+|---|---|---|
+| 1 | System | Actions that act on the app or the device |
+| 2 | Restart app | Closes and starts the panel again with the same options and reconnects to Homebridge – useful after editing `config.yaml` |
+| 3 | Restart Raspberry Pi | Reboots the device; the panel is back after about a minute |
+
+Both ask before they run. While restarting, the panel shows *Restarting …*.
+
+![Confirmation before restarting](images/confirm-restart.png)
+
+| # | Element | What it does |
+|---|---|---|
+| 1 | Cancel | Closes the dialog without restarting (Esc or tapping outside does the same) |
+| 2 | Restart | Restarts now (Enter does the same) |
+
+Rebooting needs permission. `deploy/install.sh` installs a rule that allows the panel user to
+reboot, also without a desktop session. If it is missing, the panel shows
+*Restart not allowed* – run the install script again.
+
 ## Screen saver
 
 After the time set under *Screen saver after*, the panel shows a large clock with the

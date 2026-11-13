@@ -10,6 +10,7 @@ ColumnLayout {
     property var errors: ({})
     signal edit(string key, var value)
     signal editRequested(var field, var value)
+    signal actionRequested(var field)
 
     spacing: 10
 
@@ -59,6 +60,7 @@ ColumnLayout {
                         error: root.errors[fieldItem.modelData.key] || ""
                         onEdited: value => root.edit(fieldItem.modelData.key, value)
                         onEditRequested: root.editRequested(fieldItem.modelData, root.current(fieldItem.modelData))
+                        onActionRequested: root.actionRequested(fieldItem.modelData)
                     }
                 }
             }

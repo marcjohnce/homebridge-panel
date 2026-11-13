@@ -61,7 +61,8 @@ def main(argv: list[str] | None = None) -> int:
         cfg.demo.enabled = True
     store = SettingsStore(args.settings)
     controller = Controller(cfg, store, cfg_file.resolve() if cfg_file.exists() else None,
-                            fullscreen=args.fullscreen)
+                            fullscreen=args.fullscreen,
+                            restart_argv=[sys.executable, "-m", "app", *argv[1:]])
     app.installEventFilter(ActivityFilter(controller))
 
     engine = QQmlApplicationEngine()

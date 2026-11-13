@@ -34,17 +34,20 @@ class Field:
     key: str
     section: str
     label: str
-    kind: str              # choice | toggle | number | host | pin
+    kind: str              # choice | toggle | number | host | pin | action
     default: Any
     help: str = ""
     options: tuple[tuple[Any, str], ...] = field(default_factory=tuple)
     min: int | None = None
     max: int | None = None
+    button: str = ""       # action: button text
+    confirm: str = ""      # action: question in the confirmation dialog (empty = no dialog)
 
 
 SECTIONS = [
     Section("display", "Display", instant=True),
     Section("homebridge", "Homebridge", instant=False),
+    Section("system", "System", instant=True),
 ]
 
 FIELDS = [
@@ -60,7 +63,15 @@ FIELDS = [
           help="Found in the Homebridge config under \"bridge\" → \"port\""),
     Field("hap_pin", "homebridge", "PIN", "pin", "031-45-154",
           help="Format 123-45-678, found under \"bridge\" → \"pin\""),
+    # Actions are buttons, not stored values. The controller runs them (Controller.run_action).
+    Field("restart_app", "system", "Restart app", "action", None,
+          help="Reloads the panel and reconnects to Homebridge",
+          button="Restart", confirm="Restart the panel app now?"),
+    Field("reboot", "system", "Restart Raspberry Pi", "action", None,
+          help="Reboots the whole device; the panel is back after about a minute",
+          button="Restart", confirm="Restart the Raspberry Pi now? The panel is unavailable for about a minute."),
 ]
+ACTIONS = {f.key for f in FIELDS if f.kind == "action"}
 FIELDS_BY_KEY = {f.key: f for f in FIELDS}
 
 _HOST_RE = re.compile(r"^(?=.{1,253}$)[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*$")
@@ -74,6 +85,8 @@ def validate(key: str, value: Any) -> tuple[Any, str | None]:
         value = int(value)
     if f is None:
         return value, f"Unknown setting \"{key}\""
+    if f.kind == "action":
+        return value, f"\"{key}\" is an action, not a setting"
     if f.kind == "choice":
         for opt, _ in f.options:
             if str(opt) == str(value):
@@ -120,7 +133,7 @@ def default_path() -> Path:
 class SettingsStore:
     def __init__(self, path: str | os.PathLike | None = None):
         self.path = Path(path) if path else default_path()
-        self.values: dict[str, Any] = {f.key: f.default for f in FIELDS}
+        self.values: dict[str, Any] = {f.key: f.default for f in FIELDS if f.kind != "action"}
         self.load()
 
     def load(self) -> None:
@@ -166,7 +179,8 @@ class SettingsStore:
             fields = [{
                 "key": f.key, "label": f.label, "kind": f.kind, "help": f.help,
                 "options": [{"value": v, "label": l} for v, l in f.options],
-                "min": f.min, "max": f.max, "value": self.values[f.key],
+                "min": f.min, "max": f.max, "value": self.values.get(f.key),
+                "button": f.button, "confirm": f.confirm,
             } for f in FIELDS if f.section == s.id]
             out.append({"id": s.id, "title": s.title, "instant": s.instant, "fields": fields})
         return out

@@ -28,6 +28,17 @@ if [ ! -f "$DIR/config.yaml" ]; then
 fi
 chmod +x "$DIR/deploy/start.sh"
 
+# Allow this user to reboot from the panel (Settings → System), also without a desktop session
+sudo tee /etc/polkit-1/rules.d/50-smarthome-panel.rules >/dev/null <<EOF
+polkit.addRule(function(action, subject) {
+    if ((action.id == "org.freedesktop.login1.reboot" ||
+         action.id == "org.freedesktop.login1.reboot-multiple-sessions") &&
+        subject.user == "$USER_NAME") {
+        return polkit.Result.YES;
+    }
+});
+EOF
+
 # Application menu entry
 APPS="$HOME_DIR/.local/share/applications"
 mkdir -p "$APPS"

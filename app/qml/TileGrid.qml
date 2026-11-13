@@ -20,6 +20,19 @@ GridView {
     cellHeight: Math.max(118, fitRows ? Math.floor(height / rowsFit) : naturalHeight)
     boundsBehavior: Flickable.StopAtBounds
     clip: true
+    // The software renderer does not clip vector icons (Shape) at the edge of a scroll area;
+    // rendering into a layer cuts them off. Not needed with GPU rendering.
+    layer.enabled: GraphicsInfo.api === GraphicsInfo.Software
+
+    // opaque background for the layer above (transparent layers render black in software mode)
+    Rectangle {
+        parent: grid
+        anchors.fill: parent
+        z: -1
+        visible: grid.layer.enabled
+        color: Theme.page
+    }
+
     keyNavigationEnabled: true
 
     delegate: DeviceTile {

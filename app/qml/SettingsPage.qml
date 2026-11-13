@@ -102,7 +102,19 @@ Rectangle {
         }
 
         Flickable {
+            id: settingsFlickable
             objectName: "settingsFlick"
+            layer.enabled: GraphicsInfo.api === GraphicsInfo.Software   // see TileGrid.qml
+
+            // opaque background for the layer above (transparent layers render black in software mode)
+            Rectangle {
+                parent: settingsFlickable
+                anchors.fill: parent
+                z: -1
+                visible: settingsFlickable.layer.enabled
+                color: Theme.page
+            }
+
             Layout.fillWidth: true
             Layout.fillHeight: true
             contentHeight: content.implicitHeight + 20
@@ -125,6 +137,7 @@ Rectangle {
                         errors: root.errors
                         onEdit: (key, value) => section.instant ? root.saveInstant(key, value) : root.setDraft(key, value)
                         onEditRequested: (field, value) => keypad.edit(field, value, v => root.setDraft(field.key, v))
+                        onActionRequested: field => field.confirm ? confirm.ask(field) : panel.settings.runAction(field.key)
                     }
                 }
 
@@ -178,5 +191,11 @@ Rectangle {
     Keypad {
         id: keypad
         objectName: "keypad"
+    }
+
+    ConfirmDialog {
+        id: confirm
+        objectName: "confirmDialog"
+        onConfirmed: key => panel.settings.runAction(key)
     }
 }

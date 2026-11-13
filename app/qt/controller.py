@@ -4,6 +4,8 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 import logging
+import os
+import sys
 import threading
 import time
 from datetime import datetime
@@ -19,7 +21,7 @@ from ..backends import BackendError, HapBackend, create_backends
 from ..config import AppConfig, HapBackendConfig
 from ..manager import DeviceManager, DeviceNotFound
 from ..scheduler import Scheduler
-from ..settings import SettingsStore, apply_to_config, validate
+from ..settings import ACTIONS, SettingsStore, apply_to_config, validate
 from .format import fmt_temp, has_detail, short_name, state_text
 
 log = logging.getLogger(__name__)
@@ -175,6 +177,10 @@ class SettingsBridge(QObject):
             self._ctl.settings_saved(set(changes))
         return errors
 
+    @Slot(str)
+    def runAction(self, key: str) -> None:
+        self._ctl.run_action(key)
+
     @Slot(str, "QVariant", str)
     def testConnection(self, host: str, port: Any, pin: str) -> None:
         for key, value in (("hap_host", host), ("hap_port", port), ("hap_pin", pin)):
@@ -232,10 +238,17 @@ class Controller(QObject):
     climateChanged = Signal()
     themeChanged = Signal()
     idleChanged = Signal()
+    restarting = Signal(str)
+
+    # Command used to reboot the device; overridable for tests
+    reboot_command = ["systemctl", "reboot"]
 
     def __init__(self, base_cfg: AppConfig, store: SettingsStore, config_file: Path | None = None,
-                 fullscreen: bool = False):
+                 fullscreen: bool = False, restart_argv: list[str] | None = None):
         super().__init__()
+        # Command line for restarting the app: same interpreter, module and options
+        self.restart_argv = restart_argv or [sys.executable, "-m", "app"]
+        self._exec = os.execv   # replaced in tests
         self.base_cfg = base_cfg
         self.store = store
         self.runner = AsyncRunner()
@@ -297,6 +310,43 @@ class Controller(QObject):
     async def _pump_loop(self, queue: asyncio.Queue) -> None:
         while True:
             self._message.emit(await queue.get())
+
+    # ---------- system actions ----------
+    def run_action(self, key: str) -> None:
+        if key not in ACTIONS:
+            self.toast.emit(f"Unknown action: {key}")
+        elif key == "restart_app":
+            self.restarting.emit("Restarting the app …")
+            QTimer.singleShot(600, self._restart_app)
+        elif key == "reboot":
+            self.restarting.emit("Restarting the Raspberry Pi …")
+            self.runner.submit(self._reboot())
+
+    def _restart_app(self) -> None:
+        """Replaces the running process with a fresh start of the app."""
+        log.info("Restarting app: %s", " ".join(self.restart_argv))
+        self.shutdown()
+        try:
+            self._exec(self.restart_argv[0], self.restart_argv)
+        except OSError as e:
+            self.restarting.emit("")
+            self.toast.emit(f"Could not restart the app: {e}")
+
+    async def _reboot(self) -> None:
+        log.info("Rebooting: %s", " ".join(self.reboot_command))
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *self.reboot_command, stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE)
+            _, err = await asyncio.wait_for(proc.communicate(), timeout=15)
+        except (OSError, asyncio.TimeoutError) as e:
+            self.restarting.emit("")
+            self.toast.emit(f"Could not restart the Raspberry Pi: {e}")
+            return
+        if proc.returncode != 0:
+            detail = err.decode(errors="replace").strip().splitlines()[-1:] or [f"exit code {proc.returncode}"]
+            self.restarting.emit("")
+            self.toast.emit("Restart not allowed. Run deploy/install.sh again to allow it. "
+                            f"({detail[0]})")
 
     def settings_saved(self, keys: set[str]) -> None:
         if any(k.startswith("hap_") for k in keys):

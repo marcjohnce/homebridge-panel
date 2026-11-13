@@ -10,6 +10,7 @@ Item {
     property string error
     signal edited(var value)
     signal editRequested
+    signal actionRequested
 
     implicitHeight: Math.max(Theme.s(68), row.implicitHeight + 24)
 
@@ -43,7 +44,8 @@ Item {
         Loader {
             Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
             sourceComponent: root.field.kind === "choice" ? choiceComponent
-                           : root.field.kind === "toggle" ? toggleComponent : valueComponent
+                           : root.field.kind === "toggle" ? toggleComponent
+                           : root.field.kind === "action" ? actionComponent : valueComponent
         }
     }
 
@@ -96,6 +98,15 @@ Item {
                 anchors.margins: -8
                 onClicked: root.edited(!root.value)
             }
+        }
+    }
+
+    Component {
+        id: actionComponent
+        PillButton {
+            objectName: "action:" + root.field.key
+            text: root.field.button || root.field.label
+            onClicked: root.actionRequested()
         }
     }
 

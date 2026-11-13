@@ -30,7 +30,7 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 - **Rooms, scenes, schedules** (e.g. weekdays 06:30 "Comfort", daily 22:30 "Eco")
 - **Light / dark / automatic** appearance and a **screen saver** with a large clock
 - **Settings page** for appearance, screen saver and the Homebridge connection (address, port, PIN)
-  with keypad, connection test and apply without restart
+  with keypad, connection test and apply without restart; **restart** the app or the Raspberry Pi
 - Optimized for **1280×800** and **720×720**; also works on 800×480, 1024×600, 1280×720 and portrait displays
 
 ## Requirements
@@ -80,6 +80,7 @@ In the app (icon at the bottom left), stored in `~/.config/smarthome-panel/setti
 | Display | Screen saver after: never, 1, 2, 5, 15 minutes | saved immediately |
 | Homebridge | Connect to Homebridge (on/off) | saved with **Apply** |
 | Homebridge | Address (IP or host name), port, PIN | saved with **Apply**, try **Test connection** first |
+| System | Restart app, Restart Raspberry Pi | buttons with a confirmation dialog |
 
 Entries are validated (port 1–65535, PIN as 123-45-678, valid IP address or host name).
 After **Apply** the app reconnects without restarting.
@@ -90,7 +91,8 @@ The settings page is generated from a schema in `app/settings.py`:
 
 1. Add an entry to `FIELDS`, e.g.
    `Field("poll_interval", "homebridge", "Polling interval", "choice", 5, options=((2, "2 s"), (5, "5 s"), (10, "10 s")))`.
-   Kinds: `choice`, `toggle`, `number`, `host`, `pin`. For a new section add an entry to
+   Kinds: `choice`, `toggle`, `number`, `host`, `pin`, and `action` for buttons such as the restart
+   actions (handled in `Controller.run_action()`). For a new section add an entry to
    `SECTIONS` (`instant=True` saves immediately, `False` saves with "Apply").
 2. Wire up the effect: if it affects the connection, evaluate it in `apply_to_config()`;
    if it affects the UI, expose it as a property in the `Controller` (`app/qt/controller.py`)

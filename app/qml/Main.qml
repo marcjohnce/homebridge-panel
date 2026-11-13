@@ -65,6 +65,28 @@ ApplicationWindow {
         id: toast
     }
 
+    // Shown while the app or the device restarts
+    Rectangle {
+        id: restartOverlay
+        property string message
+        anchors.fill: parent
+        visible: message !== ""
+        color: Theme.page
+        Accessible.role: Accessible.AlertMessage
+        Accessible.name: message
+
+        Text {
+            anchors.centerIn: parent
+            text: restartOverlay.message
+            color: Theme.ink
+            font.pixelSize: Theme.s(24)
+            font.weight: Font.Light
+        }
+        MouseArea {
+            anchors.fill: parent
+        }
+    }
+
     Timer {
         id: idleTimer
         interval: Math.max(1, panel.idleSeconds) * 1000
@@ -83,6 +105,9 @@ ApplicationWindow {
         }
         function onToast(message) {
             toast.show(message);
+        }
+        function onRestarting(message) {
+            restartOverlay.message = message;
         }
     }
 }

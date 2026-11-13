@@ -150,3 +150,38 @@ def test_qml_loads_without_warnings(tmp_path, size):
                         "--theme", "dark", "--size", size], capture_output=True, text=True, timeout=180)
     assert r.returncode == 0, r.stdout + r.stderr
     assert (tmp_path / "dark-settings.png").stat().st_size > 10_000
+
+
+def test_restart_app_action(qapp, tmp_path):
+    ctl = make_controller(tmp_path)
+    ctl.restart_argv = ["/usr/bin/python3", "-m", "app", "--fullscreen"]
+    calls, messages = [], []
+    ctl._exec = lambda path, argv: calls.append((path, argv))
+    ctl.restarting.connect(messages.append)
+    ctl.start()
+    ctl.settings.runAction("restart_app")
+    assert pump_until(lambda: calls)
+    assert calls == [("/usr/bin/python3", ["/usr/bin/python3", "-m", "app", "--fullscreen"])]
+    assert messages == ["Restarting the app …"]
+
+
+def test_reboot_action(qapp, tmp_path):
+    ctl = make_controller(tmp_path)
+    toasts, messages = [], []
+    ctl.toast.connect(toasts.append)
+    ctl.restarting.connect(messages.append)
+    ctl.reboot_command = ["true"]
+    ctl.settings.runAction("reboot")
+    assert pump_until(lambda: messages) and messages == ["Restarting the Raspberry Pi …"]
+    time.sleep(0.5)
+    QCoreApplication.processEvents()
+    assert toasts == []
+
+    ctl.reboot_command = ["sh", "-c", "echo 'Access denied' >&2; exit 1"]
+    ctl.settings.runAction("reboot")
+    assert pump_until(lambda: toasts)
+    assert toasts[0].startswith("Restart not allowed") and "Access denied" in toasts[0]
+    assert messages[-1] == ""       # overlay hidden again
+    ctl.settings.runAction("nonsense")
+    assert pump_until(lambda: len(toasts) == 2) and "Unknown action" in toasts[1]
+    ctl.shutdown()
