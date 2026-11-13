@@ -43,6 +43,7 @@ devices:
   # Sensors: outdoor: true shows the temperature as "outdoors" instead of indoors
   # Contact/motion sensors: security: window | door | contact | glassbreak | motion (also selectable on the panel)
   # Switches/plugs: appliance: switch | plug | tv | coffee | washer | dishwasher | fan (fan: shown under Climate)
+  # Lights: lamp: bulb | ceiling | spot | wall | table (icon)
   # Any device: area: light | climate | security moves it to another menu entry
   "Living Room Ceiling Light": { room: Living Room, order: 1, icon: ceiling }
   "LED Strip":                 { room: Living Room, name: TV Light, icon: strip }

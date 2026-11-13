@@ -9,7 +9,7 @@ from typing import Any
 from .backends import Backend
 from .config import AppConfig
 from .hap_types import ServiceSnapshot, command_to_writes, snapshot_to_state
-from .models import APPLIANCE_ICONS, DEFAULT_ICONS, SECURITY_ICONS, Device, DeviceType
+from .models import APPLIANCE_ICONS, DEFAULT_ICONS, LAMP_ICONS, SECURITY_ICONS, Device, DeviceType
 
 log = logging.getLogger(__name__)
 MOVING_POLL = 1.0   # seconds between polls while a blind is moving
@@ -136,6 +136,8 @@ class DeviceManager:
             meta["security"] = ov.security
         if ov and ov.appliance and "appliance" in meta:
             meta["appliance"] = ov.appliance
+        if ov and ov.lamp and "lamp" in meta:
+            meta["lamp"] = ov.lamp
         if ov and ov.area:
             meta["area"] = ov.area
         icon_hint = meta.pop("icon_hint", None)
@@ -143,6 +145,8 @@ class DeviceManager:
             icon_hint = SECURITY_ICONS[meta["security"]]
         elif "appliance" in meta and meta["appliance"] not in ("switch", "plug"):
             icon_hint = APPLIANCE_ICONS[meta["appliance"]]
+        elif meta.get("lamp", "bulb") != "bulb":
+            icon_hint = LAMP_ICONS[meta["lamp"]]
         if "modes" in meta and not self.cfg.panel.show_cooling:
             meta["modes"] = [m for m in meta["modes"] if m != "cool"]
         return Device(

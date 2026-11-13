@@ -44,7 +44,11 @@ ALARM_KINDS = {"glassbreak", "leak"}
 # show "Running" while their plug reports power use.
 APPLIANCE_KINDS = ("switch", "plug", "tv", "coffee", "washer", "dishwasher", "fan")
 APPLIANCE_ICONS = {k: k for k in APPLIANCE_KINDS}
-KIND_ICONS = {**SECURITY_ICONS, **APPLIANCE_ICONS}
+# Lamp kinds of lights; only the icon changes (lamp: in config.yaml)
+LAMP_KINDS = ("bulb", "ceiling", "spot", "wall", "table")
+LAMP_ICONS = {"bulb": "light", "ceiling": "ceiling", "spot": "spot", "wall": "wall", "table": "table"}
+KIND_ICONS = {**SECURITY_ICONS, **APPLIANCE_ICONS, **LAMP_ICONS}
+KIND_KEYS = ("security", "appliance", "lamp")     # meta keys that hold a device's kind
 AREAS = ("light", "climate", "security")      # menu areas a device can be moved to     # triggered = alarm; the others are only "open" / "motion"
 
 

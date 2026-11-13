@@ -477,3 +477,18 @@ def test_appliance_from_config_and_back_to_automatic(qapp, tmp_path):
     assert ed.saveDevice(coffee["id"], {"kind": "tv"}) == ""
     assert ctl.device(coffee["id"])["icon"] == "coffee"                # an icon from config.yaml stays
     ctl.shutdown()
+
+
+def test_lamp_kind_changes_icon(qapp, tmp_path):
+    ctl = make_controller(tmp_path)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 18)
+    ed = ctl.roomEditor
+    lamp = next(d for d in ed.devices if d["name"] == "Kitchen Light")
+    assert lamp["kind"] == "bulb" and [k["value"] for k in lamp["kinds"]] == ["bulb", "ceiling", "spot", "wall", "table"]
+    assert lamp["icon"] == "light"
+    assert ed.saveDevice(lamp["id"], {"kind": "wall"}) == ""
+    assert ctl.device(lamp["id"])["icon"] == "wall" and ctl.device(lamp["id"])["meta"]["lamp"] == "wall"
+    assert ed.saveDevice(lamp["id"], {"kind": "bulb"}) == ""
+    assert ctl.device(lamp["id"])["icon"] == "light" and lamp["id"] not in ed._layout.kinds
+    ctl.shutdown()

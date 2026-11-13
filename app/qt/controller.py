@@ -25,7 +25,7 @@ from ..manager import DeviceManager, DeviceNotFound
 from ..rooms import BUILTIN_DEFAULT, RoomLayout
 from ..scheduler import Scheduler
 from ..settings import ACTIONS, SettingsStore, apply_to_config, validate
-from ..models import AREAS, KIND_ICONS
+from ..models import AREAS, KIND_ICONS, KIND_KEYS
 from .format import alert_level, category, fmt_temp, has_detail, short_name, state_text
 
 log = logging.getLogger(__name__)
@@ -133,7 +133,7 @@ class DeviceModel(QAbstractListModel):
         area = self.layout.areas.get(d["id"], base_area).replace("auto", "")
         meta = {**meta, "area": area} if area else {k: v for k, v in meta.items() if k != "area"}
         out.update(baseArea=base_area, meta=meta)
-        key = "security" if "security" in meta else "appliance" if "appliance" in meta else None
+        key = next((k for k in KIND_KEYS if k in meta), None)
         if key:
             base_kind = d.get("baseKind", meta[key])
             kind = self.layout.kinds.get(d["id"], base_kind)
@@ -141,7 +141,7 @@ class DeviceModel(QAbstractListModel):
                 kind = base_kind
             base_icon = d.get("baseIcon", d["icon"])
             # follow the kind unless config.yaml set an icon of its own
-            follows = base_icon == KIND_ICONS.get(base_kind) or base_icon in ("switch", "plug")
+            follows = base_icon == KIND_ICONS.get(base_kind) or base_icon in ("switch", "plug", "light")
             icon = KIND_ICONS[kind] if follows else base_icon
             out.update(baseKind=base_kind, baseIcon=base_icon, icon=icon, meta={**meta, key: kind})
         return out
@@ -323,7 +323,9 @@ class RoomsBridge(QObject):
     KIND_LABELS = {"window": "Window", "door": "Door", "contact": "Contact", "glassbreak": "Glass break",
                    "leak": "Leak", "motion": "Motion",
                    "switch": "Switch", "plug": "Plug", "tv": "TV", "coffee": "Coffee machine",
-                   "washer": "Washing machine", "dishwasher": "Dishwasher", "fan": "Fan"}
+                   "washer": "Washing machine", "dishwasher": "Dishwasher", "fan": "Fan",
+                   "bulb": "Bulb", "ceiling": "Ceiling lamp", "spot": "Spotlight", "wall": "Wall lamp",
+                   "table": "Table lamp"}
     AREA_LABELS = {"": "Automatic", "light": "Lights", "climate": "Climate", "security": "Security"}
 
     @Property("QVariantList", notify=changed)
@@ -334,7 +336,7 @@ class RoomsBridge(QObject):
             kinds = d.get("meta", {}).get("kinds", [])
             out.append({"id": d["id"], "name": d["name"], "baseName": d["baseName"], "icon": d["icon"],
                         "room": d["room"], "reachable": d["reachable"],
-                        "kind": d.get("meta", {}).get("security") or d.get("meta", {}).get("appliance", ""),
+                        "kind": next((d["meta"][k] for k in KIND_KEYS if k in d.get("meta", {})), ""),
                         "hidden": bool(d.get("hidden")),
                         "area": d.get("meta", {}).get("area", ""),
                         "areas": [{"value": a, "label": tr(self.AREA_LABELS[a])} for a in ("", *AREAS)],
