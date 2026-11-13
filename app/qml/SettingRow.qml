@@ -45,7 +45,8 @@ Item {
             Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
             sourceComponent: root.field.kind === "choice" ? choiceComponent
                            : root.field.kind === "toggle" ? toggleComponent
-                           : root.field.kind === "action" ? actionComponent : valueComponent
+                           : root.field.kind === "action" ? actionComponent
+                           : root.field.kind === "page" ? pageComponent : valueComponent
         }
     }
 
@@ -109,6 +110,37 @@ Item {
             onClicked: root.actionRequested()
         }
     }
+
+    Component {
+        id: pageComponent
+        Row {
+            spacing: 6
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: root.field.key === "rooms_page" ? panel.roomEditor.summary : ""
+                color: Theme.muted
+                font.pixelSize: Theme.s(16)
+            }
+            LineIcon {
+                anchors.verticalCenter: parent.verticalCenter
+                width: 20
+                height: 20
+                name: "chevron"
+                color: Theme.muted
+            }
+        }
+    }
+
+    // a page row opens its sub-page wherever it is tapped
+    MouseArea {
+        anchors.fill: parent
+        enabled: root.field.kind === "page"
+        onClicked: root.actionRequested()
+    }
+    activeFocusOnTab: root.field.kind === "page"
+    Accessible.role: root.field.kind === "page" ? Accessible.Button : Accessible.NoRole
+    Accessible.name: root.field.kind === "page" ? root.field.label : ""
+    Keys.onReturnPressed: if (root.field.kind === "page") root.actionRequested()
 
     Component {
         id: valueComponent

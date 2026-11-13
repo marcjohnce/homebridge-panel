@@ -30,6 +30,7 @@ from shiboken6 import Shiboken  # noqa: E402
 from app.config import load_config  # noqa: E402
 from app.qt.controller import Controller  # noqa: E402
 from app.qt.main import FONT_DIR, QML_DIR, load_fonts  # noqa: E402
+from app.qt.translator import CatalogTranslator
 from app.settings import SettingsStore  # noqa: E402
 
 # Screen sizes documented: (width, height, file suffix)
@@ -64,12 +65,14 @@ def wait(ms: int) -> None:
 class Panel:
     """A headless panel window with demo devices."""
 
-    def __init__(self, size: tuple[int, int], theme: str = "light"):
+    def __init__(self, size: tuple[int, int], theme: str = "light", lang: str = "en"):
         cfg = load_config(ROOT / "config.example.yaml")
         cfg.demo.enabled = True
         self.store = SettingsStore(Path(tempfile.mkdtemp()) / "settings.json")
-        self.store.update({"hap_enabled": False, "theme": theme})
+        self.store.update({"hap_enabled": False, "theme": theme, "language": lang})
         self.ctl = Controller(cfg, self.store, ROOT / "config.example.yaml")
+        self.translator = CatalogTranslator()
+        QGuiApplication.instance().installTranslator(self.translator)
         self.engine = QQmlApplicationEngine()
         ctx = self.engine.rootContext()
         ctx.setContextProperty("panel", self.ctl)
@@ -139,6 +142,7 @@ class Panel:
     def close(self) -> None:
         self.ctl.shutdown()
         self.win.close()
+        QGuiApplication.instance().removeTranslator(self.translator)
         self.engine.deleteLater()
         wait(100)
 
@@ -321,12 +325,51 @@ def main() -> int:
     p.item("settingsFlick").setProperty("contentY", 0)
     save(annotate(p.grab(), [
         (1, [p.rect("section:display")], "Display settings (saved immediately)", "left"),
-        (2, [p.rect("section:homebridge")], "Homebridge connection", "left"),
-        (3, [p.rect("testButton")], "Test connection", "bottom"),
-        (4, [p.rect("applyButton")], "Apply", "bottom"),
+        (2, [p.rect("section:rooms")], "Rooms and devices", "left"),
+        (3, [p.rect("section:homebridge")], "Homebridge connection", "left"),
+        (4, [p.rect("testButton")], "Test connection", "bottom"),
+        (5, [p.rect("applyButton")], "Apply", "bottom"),
     ], "Settings"), out, "settings")
 
-    p.item("settingsFlick").setProperty("contentY", 200)
+    rooms_row = p.rect("row:rooms_page")
+    p.click(rooms_row.center().x(), rooms_row.center().y())
+    wait(400)
+    rooms_flick = p.item("roomsFlick")
+    rooms_flick.setProperty("contentY", max(0, rooms_flick.property("contentHeight") - rooms_flick.height()))
+    save(annotate(p.grab(), [
+        (1, [p.rect("tab:rooms"), p.rect("tab:devices")], "Rooms / Devices", "top"),
+        (2, [p.rect("room:Hall")], "Room with number of devices", "left"),
+        (3, [p.rect("rename:Kitchen")], "Move up/down, rename, delete", "right"),
+        (4, [p.rect("addRoom")], "Add room", "bottom"),
+    ], "Rooms and devices"), out, "rooms")
+    rename = p.rect("rename:Kitchen")
+    p.click(rename.center().x(), rename.center().y())
+    wait(400)
+    save(annotate(p.grab(), [
+        (1, [p.rect("keyboardInput")], "Name (first key replaces it)", "left"),
+        (2, [p.rect("keyboardKeys")], "Keys in the panel language; ?123 for digits and accents", "left"),
+        (3, [p.rect("keyboardDone")], "Done", "bottom"),
+    ], "Keyboard for names"), out, "keyboard")
+    p.key(Qt.Key.Key_Escape)
+    wait(300)
+    devices_tab = p.rect("tab:devices")
+    p.click(devices_tab.center().x(), devices_tab.center().y())
+    wait(400)
+    fan = p.rect("device:" + p.device_id("Fan"))
+    p.click(fan.center().x(), fan.center().y())
+    wait(400)
+    save(annotate(p.grab(), [
+        (1, [p.rect("roomChoices")], "Current room highlighted; tap another to move the device", "left"),
+        (2, [p.rect("newRoomChoice")], "Create a room and move the device there", "bottom"),
+    ], "Choose a room"), out, "room-picker")
+    p.key(Qt.Key.Key_Escape)
+    wait(300)
+    p.win.setProperty("settingsOpen", False)
+    wait(300)
+    p.win.setProperty("settingsOpen", True)
+    wait(300)
+
+    p.item("settingsFlick").setProperty("contentY", 350)
     wait(300)
     pin_row = p.rect("row:hap_pin")
     p.click(pin_row.right() - 60, pin_row.center().y())
@@ -371,6 +414,15 @@ def main() -> int:
     save(annotate(p.grab(), [], "Home screen, dark"), out, "home-dark")
     p.win.setProperty("openDevice", p.device_id("Living Room Heating"))
     save(annotate(p.grab(), [], "Thermostat, dark"), out, "heating-dark")
+    p.close()
+
+    # Another language
+    p = Panel(DETAIL_SIZE, lang="de")
+    save(annotate(p.grab(), [], "Home screen in German"), out, "home-de")
+    p.win.setProperty("settingsOpen", True)
+    wait(300)
+    save(annotate(p.grab(), [(1, [p.rect("row:language")], "Language", "left")], "Settings in German"),
+         out, "settings-de")
     p.close()
 
     if warnings:

@@ -11,6 +11,7 @@ Rectangle {
     property string message
     property bool messageOk: false
     property bool testing: false
+    property string subPage: ""
     signal closed
 
     readonly property var sections: panel.settings.sections
@@ -137,7 +138,8 @@ Rectangle {
                         errors: root.errors
                         onEdit: (key, value) => section.instant ? root.saveInstant(key, value) : root.setDraft(key, value)
                         onEditRequested: (field, value) => keypad.edit(field, value, v => root.setDraft(field.key, v))
-                        onActionRequested: field => field.confirm ? confirm.ask(field) : panel.settings.runAction(field.key)
+                        onActionRequested: field => field.kind === "page" ? root.subPage = field.key
+                                                 : field.confirm ? confirm.ask(field) : panel.settings.runAction(field.key)
                     }
                 }
 
@@ -184,6 +186,18 @@ Rectangle {
                 text: qsTr("Apply")
                 enabled: root.dirty
                 onClicked: root.apply()
+            }
+        }
+    }
+
+    Loader {
+        anchors.fill: parent
+        active: root.subPage === "rooms_page"
+        sourceComponent: RoomsPage {
+            objectName: "roomsPage"
+            onClosed: {
+                root.subPage = "";
+                root.forceActiveFocus();
             }
         }
     }

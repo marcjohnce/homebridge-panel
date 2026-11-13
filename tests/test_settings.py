@@ -42,7 +42,7 @@ def test_schema_contains_all_fields(tmp_path):
     schema = SettingsStore(tmp_path / "s.json").schema()
     keys = [f["key"] for sec in schema for f in sec["fields"]]
     assert keys == [f.key for f in FIELDS]
-    assert {sec["id"]: sec["instant"] for sec in schema} == {"display": True, "homebridge": False, "system": True}
+    assert {sec["id"]: sec["instant"] for sec in schema} == {"display": True, "rooms": True, "homebridge": False, "system": True}
     system = next(sec for sec in schema if sec["id"] == "system")
     assert [(f["key"], f["kind"], f["button"]) for f in system["fields"]] == [
         ("restart_app", "action", "Restart"), ("reboot", "action", "Restart")]

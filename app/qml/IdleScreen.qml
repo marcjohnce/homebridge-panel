@@ -37,7 +37,7 @@ Rectangle {
         }
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: root.now.toLocaleDateString(Qt.locale("en_GB"), "dddd, d MMMM")
+            text: Theme.date(root.now)
             color: Theme.muted
             font.pixelSize: 22
         }

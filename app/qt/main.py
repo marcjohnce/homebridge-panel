@@ -47,6 +47,7 @@ def main(argv: list[str] | None = None) -> int:
     from ..config import config_path, load_config
     from ..settings import SettingsStore
     from .controller import ActivityFilter, Controller
+    from .translator import CatalogTranslator
 
     app = QGuiApplication(argv)
     app.setApplicationName("Smart Home Panel")
@@ -64,12 +65,15 @@ def main(argv: list[str] | None = None) -> int:
                             fullscreen=args.fullscreen,
                             restart_argv=[sys.executable, "-m", "app", *argv[1:]])
     app.installEventFilter(ActivityFilter(controller))
+    translator = CatalogTranslator(app)
+    app.installTranslator(translator)
 
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextProperty("panel", controller)
     w, _, h = args.size.partition("x")
     engine.rootContext().setContextProperty("initialWidth", int(w or 1024))
     engine.rootContext().setContextProperty("initialHeight", int(h or 600))
+    controller.languageChanged.connect(engine.retranslate)
     engine.load(QML_DIR / "Main.qml")
     if not engine.rootObjects():
         logging.error("Could not load the user interface")

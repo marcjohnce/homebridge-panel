@@ -184,13 +184,64 @@ devices:
 
 | # | Element | What it does |
 |---|---|---|
-| 1 | Display | *Appearance* (Automatic, Light, Dark) and *Screen saver after*. Saved immediately |
-| 2 | Homebridge | *Connect to Homebridge*, *Address*, *Port* and *PIN*. Changes are collected until you apply them |
-| 3 | Test connection | Tries the entered address, port and PIN without saving and reports how many devices were found |
-| 4 | Apply | Saves the Homebridge settings and reconnects without restarting the app. Enabled only when something changed |
+| 1 | Display | *Appearance* (Automatic, Light, Dark), *Language* and *Screen saver after*. Saved immediately |
+| 2 | Rooms and devices | Opens the room management (see below); shows the number of rooms |
+| 3 | Homebridge | *Connect to Homebridge*, *Address*, *Port* and *PIN*. Changes are collected until you apply them |
+| 4 | Test connection | Tries the entered address, port and PIN without saving and reports how many devices were found |
+| 5 | Apply | Saves the Homebridge settings and reconnects without restarting the app. Enabled only when something changed |
 
 *Automatic* switches to dark from 7 pm to 7 am. Scroll down for the **Info** section with
 connection details, number of devices, file locations and version.
+
+### Language
+
+The panel speaks English, German, French, Italian and Spanish. *System* follows the language of
+the operating system (English if it is none of these). The language switches immediately,
+including dates, decimal separators and messages, and also applies to the on-screen keyboard
+layout (QWERTZ for German, AZERTY for French).
+
+![Settings in German](images/settings-de.png)
+
+![Home screen in German](images/home-de.png)
+
+### Rooms and devices
+
+*Settings → Rooms and devices* manages the rooms shown as tabs on the home screen. Every
+change is saved at once and the home screen follows immediately.
+
+![Rooms](images/rooms.png)
+
+| # | Element | What it does |
+|---|---|---|
+| 1 | Rooms / Devices | Switches between the list of rooms and the list of devices |
+| 2 | Room | Name and number of devices. The default room (*General*) collects devices that have no room yet |
+| 3 | Buttons | Move the room up or down (this is the order of the room tabs), rename it, delete it |
+| 4 | Add room | Creates a room. Empty rooms are kept here but do not appear on the home screen until a device is in them |
+
+Deleting a room moves its devices to the default room. The default room itself can only be
+deleted when it is empty.
+
+Names are entered with an on-screen keyboard; a connected keyboard works as well.
+
+![Keyboard for names](images/keyboard.png)
+
+| # | Element | What it does |
+|---|---|---|
+| 1 | Name | The current name is selected when the keyboard opens; the first key replaces it |
+| 2 | Keys | Letter layout of the panel language. *?123* switches to digits, punctuation and accented letters; hold delete to clear |
+| 3 | Done | Saves the name, or shows why it cannot be used (empty, longer than 24 characters, name already taken) |
+
+The *Devices* tab lists all devices grouped by room. Tap a device to move it:
+
+![Choose a room](images/room-picker.png)
+
+| # | Element | What it does |
+|---|---|---|
+| 1 | Rooms | The current room is highlighted; tap another one to move the device there |
+| 2 | New room … | Creates a room with the keyboard and moves the device into it |
+
+Rooms set here take precedence over `room:` in `config.yaml`. Moving a device back to its room from
+`config.yaml` removes the override again.
 
 ### Keypad
 

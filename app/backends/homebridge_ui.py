@@ -21,6 +21,7 @@ import httpx
 from ..config import HomebridgeUiBackendConfig
 from ..hap_types import (CHAR_TYPES, DEVICE_TYPE_BY_SERVICE, SENSOR_SERVICES, SERVICE_TYPES, Char, ServiceSnapshot,
                          merge_sensors, short_uuid)
+from ..i18n import tr
 from .base import Backend, BackendError
 
 log = logging.getLogger(__name__)
@@ -50,9 +51,10 @@ class HomebridgeUiBackend(Backend):
             else:
                 r = await self.client.post("/api/auth/noauth")
         except httpx.HTTPError as e:
-            raise BackendError(f"Homebridge UI {self.cfg.url} not reachable: {e}") from e
+            raise BackendError(tr("Homebridge UI {url} not reachable: {error}").format(url=self.cfg.url, error=e)) from e
         if r.status_code not in (200, 201):
-            raise BackendError(f"Homebridge UI login failed ({r.status_code}) – check username and password")
+            raise BackendError(tr("Homebridge UI login failed ({status}) – check username and password")
+                               .format(status=r.status_code))
         data = r.json()
         self._token = data["access_token"]
         self._token_expiry = time.monotonic() + float(data.get("expires_in", 3600)) - 60
@@ -66,7 +68,7 @@ class HomebridgeUiBackend(Backend):
                     method, path, headers={"Authorization": f"Bearer {self._token}"}, **kw
                 )
             except httpx.HTTPError as e:
-                raise BackendError(f"Homebridge UI request failed: {e}") from e
+                raise BackendError(tr("Homebridge UI request failed: {error}").format(error=e)) from e
             if r.status_code == 401 and attempt == 1:
                 self._token = None
                 continue
@@ -76,7 +78,8 @@ class HomebridgeUiBackend(Backend):
     async def fetch(self) -> list[ServiceSnapshot]:
         r = await self._request("GET", "/api/accessories")
         if r.status_code != 200:
-            raise BackendError(f"Homebridge-UI: /api/accessories -> {r.status_code}")
+            raise BackendError(tr("Homebridge UI request failed: {error}").format(
+                error=f"/api/accessories -> {r.status_code}"))
         return self.parse_accessories(r.json())
 
     @staticmethod
@@ -122,4 +125,4 @@ class HomebridgeUiBackend(Backend):
             r = await self._request("PUT", f"/api/accessories/{uid}",
                                     json={"characteristicType": ctype, "value": value})
             if r.status_code not in (200, 204):
-                raise BackendError(f"Homebridge UI write failed {r.status_code}: {r.text[:200]}")
+                raise BackendError(tr("Homebridge UI write failed: {error}").format(error=f"{r.status_code} {r.text[:200]}"))

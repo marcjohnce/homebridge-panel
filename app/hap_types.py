@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from .i18n import tr
 from .models import DeviceType
 
 HAP_BASE_SUFFIX = "-0000-1000-8000-0026BB765291"
@@ -271,7 +272,7 @@ def command_to_writes(s: ServiceSnapshot, attrs: dict[str, Any]) -> list[tuple[C
 
     def need(name: str) -> Char:
         if name not in c:
-            raise ValueError(f"Device '{s.name}' does not support '{name}'")
+            raise ValueError(tr("Device '{name}' does not support '{feature}'").format(name=s.name, feature=name))
         return c[name]
 
     for key, value in attrs.items():
@@ -287,7 +288,7 @@ def command_to_writes(s: ServiceSnapshot, attrs: dict[str, Any]) -> list[tuple[C
             elif "Active" in c:
                 writes.append((c["Active"], 1 if on else 0))
             else:
-                raise ValueError(f"Device '{s.name}' cannot be switched on or off")
+                raise ValueError(tr("Device '{name}' cannot be switched on or off").format(name=s.name))
         elif key == "brightness":
             writes.append((need("Brightness"), int(_clamp(value, need("Brightness"), 0, 100))))
         elif key == "hue":
@@ -309,7 +310,7 @@ def command_to_writes(s: ServiceSnapshot, attrs: dict[str, Any]) -> list[tuple[C
         elif key == "tilt":
             ch = c.get("TargetHorizontalTiltAngle") or c.get("TargetVerticalTiltAngle")
             if ch is None:
-                raise ValueError(f"Device '{s.name}' does not support 'tilt'")
+                raise ValueError(tr("Device '{name}' does not support '{feature}'").format(name=s.name, feature="tilt"))
             writes.append((ch, int(_clamp(value, ch, -90, 90))))
         elif key == "speed":
             writes.append((need("RotationSpeed"), _clamp(value, need("RotationSpeed"), 0, 100)))
@@ -321,7 +322,7 @@ def command_to_writes(s: ServiceSnapshot, attrs: dict[str, Any]) -> list[tuple[C
             mode = str(value)
             if s.service_type == "Thermostat":
                 if mode not in THERMOSTAT_MODES_REV:
-                    raise ValueError(f"Unknown mode '{mode}'")
+                    raise ValueError(tr("Unknown mode '{mode}'").format(mode=mode))
                 writes.append((need("TargetHeatingCoolingState"), THERMOSTAT_MODES_REV[mode]))
             elif s.service_type == "HeaterCooler":
                 if mode == "off":
@@ -330,13 +331,13 @@ def command_to_writes(s: ServiceSnapshot, attrs: dict[str, Any]) -> list[tuple[C
                     writes.append((need("Active"), 1))
                     writes.append((need("TargetHeaterCoolerState"), HEATERCOOLER_MODES_REV[mode]))
                 else:
-                    raise ValueError(f"Unknown mode '{mode}'")
+                    raise ValueError(tr("Unknown mode '{mode}'").format(mode=mode))
             else:
-                raise ValueError(f"Device '{s.name}' has no operating modes")
+                raise ValueError(tr("Device '{name}' has no operating modes").format(name=s.name))
         else:
-            raise ValueError(f"Unknown attribute '{key}'")
+            raise ValueError(tr("Unknown attribute '{key}'").format(key=key))
 
     for ch, _ in writes:
         if not ch.writable:
-            raise ValueError(f"'{ch.name}' of '{s.name}' is read-only")
+            raise ValueError(tr("'{feature}' of '{name}' is read-only").format(feature=ch.name, name=s.name))
     return writes

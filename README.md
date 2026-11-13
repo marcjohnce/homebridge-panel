@@ -30,7 +30,9 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 - **Blinds**: open, close, stop, position by dragging, slat angle; smooth position updates while moving
 - **Sensors**: temperature, humidity, air pressure (Eve) and light level; sensors of one device
   combined into one tile; outdoor sensors shown as outdoor temperature
-- **Rooms, scenes, schedules** (e.g. weekdays 06:30 "Comfort", daily 22:30 "Eco")
+- **Rooms** managed on the panel: add, rename, reorder and delete rooms, move devices between them
+- **Scenes and schedules** (e.g. weekdays 06:30 "Comfort", daily 22:30 "Eco")
+- **Languages**: English, German, French, Italian, Spanish – selectable in the settings
 - **Light / dark / automatic** appearance and a **screen saver** with a large clock
 - **Settings page** for appearance, screen saver and the Homebridge connection (address, port, PIN)
   with keypad, connection test and apply without restart; **restart** the app or the Raspberry Pi
@@ -80,7 +82,9 @@ In the app (icon at the bottom left), stored in `~/.config/smarthome-panel/setti
 | Section | Setting | Behavior |
 |---|---|---|
 | Display | Appearance: Automatic (dark 7 pm – 7 am), Light, Dark | saved immediately |
+| Display | Language: System, English, Deutsch, Français, Italiano, Español | saved immediately |
 | Display | Screen saver after: never, 1, 2, 5, 15 minutes | saved immediately |
+| Rooms | Rooms and devices: rooms and which device is in which room | saved immediately |
 | Homebridge | Connect to Homebridge (on/off) | saved with **Apply** |
 | Homebridge | Address (IP or host name), port, PIN | saved with **Apply**, try **Test connection** first |
 | System | Restart app, Restart Raspberry Pi | buttons with a confirmation dialog |
@@ -94,14 +98,25 @@ The settings page is generated from a schema in `app/settings.py`:
 
 1. Add an entry to `FIELDS`, e.g.
    `Field("poll_interval", "homebridge", "Polling interval", "choice", 5, options=((2, "2 s"), (5, "5 s"), (10, "10 s")))`.
-   Kinds: `choice`, `toggle`, `number`, `host`, `pin`, and `action` for buttons such as the restart
-   actions (handled in `Controller.run_action()`). For a new section add an entry to
+   Kinds: `choice`, `toggle`, `number`, `host`, `pin`, `action` for buttons such as the restart
+   actions (handled in `Controller.run_action()`), and `page` for a row that opens a sub-page
+   (see `SettingsPage.qml`). For a new section add an entry to
    `SECTIONS` (`instant=True` saves immediately, `False` saves with "Apply").
 2. Wire up the effect: if it affects the connection, evaluate it in `apply_to_config()`;
    if it affects the UI, expose it as a property in the `Controller` (`app/qt/controller.py`)
    and emit the matching signal in `settings_saved()`.
 
-Validation and storage are handled by `validate()` and `SettingsStore`.
+Validation and storage are handled by `validate()` and `SettingsStore`. Labels and help texts
+are written in English and translated through the catalog (see below).
+
+### Translations
+
+Texts are written in English in the code – `qsTr("…")` in QML, `tr("…")` in Python – and
+translated from `app/i18n_catalog.py` (one line per text: English, German, French, Italian,
+Spanish). A `QTranslator` feeds the same catalog to QML, so no `.qm` files are needed.
+`tests/test_i18n.py` fails if a text has no translation or a translation loses a placeholder
+(`{name}`, `%1`). To add a language, add it to `LANGUAGES` and `FORMATS` in `app/i18n.py` and a
+column to the catalog.
 
 ## Rooms, scenes, schedules (`config.yaml`)
 
@@ -112,7 +127,7 @@ Validation and storage are handled by `validate()` and `SettingsStore`.
 | `hap` | additional bridges (child bridges); the main bridge comes from the settings |
 | `homebridge_ui` | alternatively access via the Homebridge web UI (username/password) |
 | `demo` | simulated devices |
-| `devices` | per device (ID or name): `room`, `name`, `icon`, `order`, `hidden`, `outdoor` (sensors) |
+| `devices` | per device (ID or name): `room`, `name`, `icon`, `order`, `hidden`, `outdoor` (sensors); rooms set on the panel take precedence |
 | `scenes` | scenes with actions `{device: …, set: {…}}` |
 | `schedules` | run a scene at a time on weekdays (`mo tu we th fr sa su`) |
 
@@ -130,6 +145,9 @@ See [docs/user-interface.md](docs/user-interface.md) for how each screen works.
 app/
   __main__.py          entry point: python -m app
   settings.py          settings schema, validation, storage, effect on the configuration
+  rooms.py             rooms edited on the panel: order and device assignment
+  i18n.py              language selection, number and date formats
+  i18n_catalog.py      translations (German, French, Italian, Spanish)
   config.py            config.yaml (Pydantic)
   manager.py           device management: polling, commands, scenes
   scheduler.py         schedules
@@ -137,6 +155,7 @@ app/
   backends/            HAP, Homebridge UI, demo
   qt/
     main.py            Qt application, fonts, QML engine
+    translator.py      feeds qsTr() from the translation catalog
     controller.py      bridge to QML: device model, settings, background thread
     format.py          tile texts
   qml/                 UI (Main.qml, theme, tiles, detail views, settings …)

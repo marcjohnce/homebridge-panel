@@ -16,10 +16,12 @@ from zoneinfo import ZoneInfo
 from PySide6.QtCore import (QAbstractListModel, QByteArray, QEvent, QModelIndex, QObject, Qt, QTimer,
                             Property, Signal, Slot)
 
-from .. import __version__
+from .. import __version__, i18n
+from ..i18n import tr
 from ..backends import BackendError, HapBackend, create_backends
 from ..config import AppConfig, HapBackendConfig
 from ..manager import DeviceManager, DeviceNotFound
+from ..rooms import BUILTIN_DEFAULT, RoomLayout
 from ..scheduler import Scheduler
 from ..settings import ACTIONS, SettingsStore, apply_to_config, validate
 from .format import fmt_temp, has_detail, short_name, state_text
@@ -55,8 +57,9 @@ class DeviceModel(QAbstractListModel):
     ROLES = ("deviceId", "name", "shortName", "room", "type", "icon", "isOn", "reachable", "heating",
              "stateText", "hasDetail", "targetTemp", "minTemp", "maxTemp", "modeOff")
 
-    def __init__(self, parent: QObject | None = None):
+    def __init__(self, parent: QObject | None = None, layout: RoomLayout | None = None):
         super().__init__(parent)
+        self.layout = layout or RoomLayout()
         self._all: dict[str, dict[str, Any]] = {}
         self._rows: list[str] = []
         self._room = ALL_ROOMS
@@ -97,12 +100,36 @@ class DeviceModel(QAbstractListModel):
 
     # --- maintenance ---
     def rooms(self) -> list[str]:
-        return sorted({d["room"] for d in self._all.values()}, key=str.casefold)
+        """Rooms with devices, in the order set in the settings."""
+        return self.layout.sort({d["room"] for d in self._all.values()})
+
+    def device_rooms(self) -> dict[str, str]:
+        return {d["id"]: d["room"] for d in self._all.values()}
+
+    def base_rooms(self) -> dict[str, str]:
+        return {d["id"]: d["baseRoom"] for d in self._all.values()}
+
+    def _place(self, d: dict[str, Any]) -> dict[str, Any]:
+        """Applies the room chosen on the panel; "baseRoom" keeps the one from config.yaml."""
+        base = d.get("baseRoom", d["room"])
+        return {**d, "baseRoom": base, "room": self.layout.room_of(d["id"], base)}
+
+    def reassign(self) -> None:
+        """Re-applies the room layout after it was edited (or the language changed)."""
+        self._all = {k: self._place(d) for k, d in self._all.items()}
+        rows = self._visible()
+        if rows != self._rows:
+            self.beginResetModel()
+            self._rows = rows
+            self.endResetModel()
+        else:
+            self.refresh_texts()
 
     def _visible(self) -> list[str]:
         devs = [d for d in self._all.values() if self._room in (ALL_ROOMS, d["room"])]
+        room_rank = {r: i for i, r in enumerate(self.rooms())}
         rank = {"thermostat": 1, "sensor": 2}   # switchable devices first, then heating, then sensors
-        devs.sort(key=lambda d: (d["room"].casefold(), rank.get(d["type"], 0), d.get("order", 100),
+        devs.sort(key=lambda d: (room_rank.get(d["room"], 0), rank.get(d["type"], 0), d.get("order", 100),
                                  d["name"].casefold()))
         return [d["id"] for d in devs]
 
@@ -119,13 +146,14 @@ class DeviceModel(QAbstractListModel):
 
     def set_all(self, devices: list[dict[str, Any]]) -> None:
         self.beginResetModel()
-        self._all = {d["id"]: d for d in devices}
+        self._all = {d["id"]: self._place(d) for d in devices}
         self._rows = self._visible()
         self.endResetModel()
 
     def upsert(self, d: dict[str, Any]) -> bool:
         """Returns True if the structure (room, name, order) changed."""
         old = self._all.get(d["id"])
+        d = self._place(d)
         self._all[d["id"]] = d
         structural = old is None or any(old.get(k) != d.get(k) for k in ("room", "name", "order"))
         if structural:
@@ -141,6 +169,11 @@ class DeviceModel(QAbstractListModel):
 
     def get(self, dev_id: str) -> dict[str, Any] | None:
         return self._all.get(dev_id)
+
+    def refresh_texts(self) -> None:
+        """Re-reads all roles, e.g. after a language change (state texts are translated)."""
+        if self._rows:
+            self.dataChanged.emit(self.index(0), self.index(len(self._rows) - 1))
 
     def all(self) -> list[dict[str, Any]]:
         return list(self._all.values())
@@ -199,16 +232,95 @@ class SettingsBridge(QObject):
             backend = HapBackend(HapBackendConfig(name="test", host=host.strip(), port=port, pin=pin, timeout=4))
             try:
                 snaps = await backend.fetch()
-                return True, f"Connected: found {len(snaps)} controllable devices"
+                return True, tr("Connected: found {n} controllable devices").format(n=len(snaps))
             except BackendError as e:
                 return False, str(e)
             except Exception as e:  # pragma: no cover - surface unexpected errors
-                return False, f"Connection failed: {e}"
+                return False, tr("Connection failed: {error}").format(error=e)
             finally:
                 await backend.stop()
 
         fut = self._ctl.runner.submit(probe())
         fut.add_done_callback(lambda f: self.testFinished.emit(*f.result()))
+
+
+class RoomsBridge(QObject):
+    """Room management in the settings (RoomsPage.qml). Changes apply and save immediately."""
+    changed = Signal()
+
+    def __init__(self, store: SettingsStore, controller: "Controller"):
+        super().__init__(controller)
+        self._store = store
+        self._ctl = controller
+
+    @property
+    def _layout(self) -> RoomLayout:
+        return self._ctl._model.layout
+
+    def _commit(self) -> None:
+        self._store.rooms = self._layout.to_dict()
+        self._store.save()
+        self._ctl._model.reassign()
+        self._ctl._refresh_rooms()
+
+    @Property("QVariantList", notify=changed)
+    def rooms(self) -> list[dict[str, Any]]:
+        dev_rooms = self._ctl._model.device_rooms()
+        counts: dict[str, int] = {}
+        for r in dev_rooms.values():
+            counts[r] = counts.get(r, 0) + 1
+        default = self._layout.default_room
+        return [{"name": r, "count": counts.get(r, 0), "isDefault": r == default}
+                for r in self._layout.all_rooms(dev_rooms.values())]
+
+    @Property("QVariantList", notify=changed)
+    def devices(self) -> list[dict[str, Any]]:
+        devs = sorted(self._ctl._model.all(), key=lambda d: d["name"].casefold())
+        return [{"id": d["id"], "name": d["name"], "icon": d["icon"], "room": d["room"],
+                 "reachable": d["reachable"]} for d in devs]
+
+    @Property(str, notify=changed)
+    def summary(self) -> str:
+        n = len(self.rooms)
+        return tr("1 room") if n == 1 else tr("{n} rooms").format(n=n)
+
+    @Slot(str, result=str)
+    def addRoom(self, name: str) -> str:
+        _, err = self._layout.add(name, self._ctl._model.device_rooms())
+        if not err:
+            self._commit()
+        return err or ""
+
+    @Slot(str, str, result=str)
+    def renameRoom(self, old: str, new: str) -> str:
+        _, err = self._layout.rename(old, new, self._ctl._model.device_rooms())
+        if not err:
+            self._commit()
+        return err or ""
+
+    @Slot(str, result=str)
+    def deleteRoom(self, name: str) -> str:
+        m = self._ctl._model
+        err = self._layout.delete(name, m.device_rooms(), m.base_rooms())
+        if not err:
+            self._commit()
+        return err or ""
+
+    @Slot(str, int)
+    def moveRoom(self, name: str, delta: int) -> None:
+        self._layout.move(name, delta, self._ctl._model.device_rooms())
+        self._commit()
+
+    @Slot(str, str, result=str)
+    def assign(self, dev_id: str, room: str) -> str:
+        m = self._ctl._model
+        d = m.get(dev_id)
+        if not d:
+            return tr("Device not found. It may have been removed from Homebridge.")
+        err = self._layout.set_room(dev_id, room, d["baseRoom"], m.device_rooms())
+        if not err:
+            self._commit()
+        return err or ""
 
 
 class ActivityFilter(QObject):
@@ -241,6 +353,7 @@ class Controller(QObject):
     themeChanged = Signal()
     idleChanged = Signal()
     restarting = Signal(str)
+    languageChanged = Signal()
 
     # Command used to reboot the device; overridable for tests
     reboot_command = ["systemctl", "reboot"]
@@ -256,13 +369,17 @@ class Controller(QObject):
         self.runner = AsyncRunner()
         self._config_file = str(config_file or "")
         self._fullscreen = fullscreen
-        self._model = DeviceModel(self)
+        default_room = base_cfg.panel.default_room
+        self._model = DeviceModel(self, RoomLayout(
+            store.rooms, lambda: tr(BUILTIN_DEFAULT) if default_room == BUILTIN_DEFAULT else default_room))
         self._settings = SettingsBridge(store, self)
+        self._room_editor = RoomsBridge(store, self)
         self._rooms: list[str] = []
         self._room = ALL_ROOMS
         self._scenes = [s.model_dump(include={"id", "name", "icon"}) for s in base_cfg.scenes]
         self._backends: dict[str, Any] = {}
         self._started = False
+        i18n.set_language(i18n.resolve(store.get("language")))
         self._theme = self._compute_theme()
         self._mgr: DeviceManager | None = None
         self._sched: Scheduler | None = None
@@ -316,12 +433,12 @@ class Controller(QObject):
     # ---------- system actions ----------
     def run_action(self, key: str) -> None:
         if key not in ACTIONS:
-            self.toast.emit(f"Unknown action: {key}")
+            self.toast.emit(tr("Unknown action: {key}").format(key=key))
         elif key == "restart_app":
-            self.restarting.emit("Restarting the app …")
+            self.restarting.emit(tr("Restarting the app …"))
             QTimer.singleShot(600, self._restart_app)
         elif key == "reboot":
-            self.restarting.emit("Restarting the Raspberry Pi …")
+            self.restarting.emit(tr("Restarting the Raspberry Pi …"))
             self.runner.submit(self._reboot())
 
     def _restart_app(self) -> None:
@@ -332,7 +449,7 @@ class Controller(QObject):
             self._exec(self.restart_argv[0], self.restart_argv)
         except OSError as e:
             self.restarting.emit("")
-            self.toast.emit(f"Could not restart the app: {e}")
+            self.toast.emit(tr("Could not restart the app: {error}").format(error=e))
 
     async def _reboot(self) -> None:
         log.info("Rebooting: %s", " ".join(self.reboot_command))
@@ -342,13 +459,13 @@ class Controller(QObject):
             _, err = await asyncio.wait_for(proc.communicate(), timeout=15)
         except (OSError, asyncio.TimeoutError) as e:
             self.restarting.emit("")
-            self.toast.emit(f"Could not restart the Raspberry Pi: {e}")
+            self.toast.emit(tr("Could not restart the Raspberry Pi: {error}").format(error=e))
             return
         if proc.returncode != 0:
             detail = err.decode(errors="replace").strip().splitlines()[-1:] or [f"exit code {proc.returncode}"]
             self.restarting.emit("")
-            self.toast.emit("Restart not allowed. Run deploy/install.sh again to allow it. "
-                            f"({detail[0]})")
+            self.toast.emit(tr("Restart not allowed. Run deploy/install.sh again to allow it. ({detail})")
+                            .format(detail=detail[0]))
 
     def settings_saved(self, keys: set[str]) -> None:
         if any(k.startswith("hap_") for k in keys):
@@ -357,6 +474,8 @@ class Controller(QObject):
             self.runner.submit(self._restart(self.effective_config()))
         if "theme" in keys:
             self._update_theme()
+        if "language" in keys:
+            self.apply_language()
         if "idle_seconds" in keys:
             self.idleChanged.emit()
 
@@ -385,7 +504,7 @@ class Controller(QObject):
             self._backends = msg["backends"]
             self.statusChanged.emit()
         elif kind == "scene" and msg.get("errors"):
-            self.toast.emit("Scene only partly applied. Not reached: " + ", ".join(msg["errors"]))
+            self.toast.emit(tr("Scene only partly applied. Not reached: {names}").format(names=", ".join(msg["errors"])))
 
     def _refresh_rooms(self) -> None:
         rooms = self._model.rooms()
@@ -396,11 +515,12 @@ class Controller(QObject):
         if rooms != self._rooms:
             self._rooms = rooms
             self.roomsChanged.emit()
+        self._room_editor.changed.emit()    # device counts and assignments in the settings
 
     # ---------- commands from QML ----------
     def _command(self, coro_factory) -> None:
         if not self._mgr:
-            self.toast.emit("Not connected to Homebridge yet.")
+            self.toast.emit(tr("Not connected to Homebridge yet."))
             return
         fut = self.runner.submit(coro_factory(self._mgr))
 
@@ -409,11 +529,11 @@ class Controller(QObject):
             if e is None:
                 return
             if isinstance(e, DeviceNotFound):
-                self.toast.emit("Device not found. It may have been removed from Homebridge.")
+                self.toast.emit(tr("Device not found. It may have been removed from Homebridge."))
             elif isinstance(e, (ValueError, BackendError)):
                 self.toast.emit(str(e))
             else:
-                self.toast.emit(f"Command failed: {e}")
+                self.toast.emit(tr("Command failed: {error}").format(error=e))
         fut.add_done_callback(done)
 
     @Slot(str)
@@ -422,7 +542,7 @@ class Controller(QObject):
         if not d:
             return
         if not d["reachable"]:
-            self.toast.emit(f"{d['name']} is not reachable. Check the device and Homebridge.")
+            self.toast.emit(tr("{name} is not reachable. Check the device and Homebridge.").format(name=d["name"]))
             return
         self.setAttrs(dev_id, {"on": not d["state"].get("on")})
 
@@ -450,6 +570,32 @@ class Controller(QObject):
             self._model.set_room(room)
             self.currentRoomChanged.emit()
 
+    def apply_language(self) -> None:
+        """Switches the language at runtime: QML retranslates (see main.py), Python texts are rebuilt."""
+        i18n.set_language(i18n.resolve(self.store.get("language")))
+        self.languageChanged.emit()
+        self._model.reassign()          # the default room name is translated
+        self._refresh_rooms()
+        self._settings.sectionsChanged.emit()
+        self.statusChanged.emit()
+        self.climateChanged.emit()
+
+    @Property(str, notify=languageChanged)
+    def language(self) -> str:
+        return i18n.language()
+
+    @Property(str, notify=languageChanged)
+    def localeName(self) -> str:
+        return i18n.locale_name()
+
+    @Property(str, notify=languageChanged)
+    def decimalPoint(self) -> str:
+        return i18n.decimal_point()
+
+    @Property(str, notify=languageChanged)
+    def dateFormat(self) -> str:
+        return i18n.date_format()
+
     # ---------- properties ----------
     @Property(QObject, constant=True)
     def devices(self) -> QObject:
@@ -458,6 +604,10 @@ class Controller(QObject):
     @Property(QObject, constant=True)
     def settings(self) -> QObject:
         return self._settings
+
+    @Property(QObject, constant=True)
+    def roomEditor(self) -> QObject:
+        return self._room_editor
 
     @Property("QVariantList", notify=roomsChanged)
     def rooms(self) -> list[str]:
@@ -478,17 +628,20 @@ class Controller(QObject):
     @Property(str, notify=statusChanged)
     def statusText(self) -> str:
         if not self._backends:
-            return "No Homebridge set up"
+            return tr("No Homebridge set up")
         if not self._started:
-            return "Connecting …"
+            return tr("Connecting …")
         bad = [n for n, b in self._backends.items() if not b["ok"]]
         if bad:
-            return "Homebridge not reachable" if bad == ["homebridge"] else f"Not reachable: {', '.join(bad)}"
-        return "Connected"
+            if bad == ["homebridge"]:
+                return tr("Homebridge not reachable")
+            return tr("Not reachable: {names}").format(names=", ".join(bad))
+        return tr("Connected")
 
     @Property(str, notify=statusChanged)
     def statusDetail(self) -> str:
-        lines = [f"{n}: {'connected' if b['ok'] else b['error'] or 'disconnected'} ({b['devices']} devices)"
+        lines = [tr("{name}: {state} ({n} devices)").format(
+                     name=n, state=tr("connected") if b["ok"] else b["error"] or tr("disconnected"), n=b["devices"])
                  for n, b in self._backends.items()]
         return "\n".join(lines)
 

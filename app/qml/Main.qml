@@ -22,6 +22,16 @@ ApplicationWindow {
         property: "dark"
         value: panel.theme === "dark"
     }
+    Binding {
+        target: Theme
+        property: "localeName"
+        value: panel.localeName
+    }
+    Binding {
+        target: Theme
+        property: "dateFormat"
+        value: panel.dateFormat
+    }
     // 1.0 up to 1024×600 and on square/portrait screens; grows on larger landscape
     // screens (1280×800 → 1.25), capped at 1.3
     Binding {
@@ -49,6 +59,7 @@ ApplicationWindow {
         anchors.fill: parent
         active: window.settingsOpen
         sourceComponent: SettingsPage {
+            objectName: "settingsPage"
             onClosed: window.settingsOpen = false
         }
     }

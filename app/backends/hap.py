@@ -20,6 +20,7 @@ import httpx
 from ..config import HapBackendConfig
 from ..hap_types import (CHAR_TYPES, DEVICE_TYPE_BY_SERVICE, SENSOR_SERVICES, SERVICE_TYPES, Char, ServiceSnapshot,
                          merge_sensors, short_uuid)
+from ..i18n import tr
 from .base import Backend, BackendError
 
 log = logging.getLogger(__name__)
@@ -43,11 +44,12 @@ class HapBackend(Backend):
         try:
             r = await self.client.get("/accessories")
         except httpx.HTTPError as e:
-            raise BackendError(f"HAP {self.cfg.host}:{self.cfg.port} not reachable: {e}") from e
+            raise BackendError(tr("HAP {host}:{port} not reachable: {error}").format(
+                host=self.cfg.host, port=self.cfg.port, error=e)) from e
         if r.status_code in (401, 470):
-            raise BackendError("HAP: access denied – check the PIN and start Homebridge with -I (insecure mode)")
+            raise BackendError(tr("HAP: access denied – check the PIN and start Homebridge with -I (insecure mode)"))
         if r.status_code != 200:
-            raise BackendError(f"HAP: unexpected response {r.status_code}")
+            raise BackendError(tr("HAP: unexpected response {status}").format(status=r.status_code))
         return self.parse_accessories(r.json())
 
     @staticmethod
@@ -97,10 +99,10 @@ class HapBackend(Backend):
         try:
             r = await self.client.put("/characteristics", content=json.dumps(body))
         except httpx.HTTPError as e:
-            raise BackendError(f"HAP write failed: {e}") from e
+            raise BackendError(tr("HAP write failed: {error}").format(error=e)) from e
         if r.status_code == 207:  # multi-status: partial failure
             errors = [c for c in r.json().get("characteristics", []) if c.get("status", 0) != 0]
             if errors:
-                raise BackendError(f"HAP reported write errors: {errors}")
+                raise BackendError(tr("HAP reported write errors: {errors}").format(errors=errors))
         elif r.status_code not in (200, 204):
-            raise BackendError(f"HAP write failed: status {r.status_code} {r.text[:200]}")
+            raise BackendError(tr("HAP write failed: {error}").format(error=f"{r.status_code} {r.text[:200]}"))

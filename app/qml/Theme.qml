@@ -28,7 +28,18 @@ QtObject {
 
     readonly property string fontFamily: "Jost"
 
+    // number and date formats of the panel language; set from the controller in Main.qml
+    property string localeName: "en_GB"
+    property string dateFormat: "dddd, d MMMM"
+    readonly property var locale: Qt.locale(localeName)
+
+    function num(v, decimals) {
+        return Number(v).toLocaleString(locale, "f", decimals);
+    }
     function fmt(v) {
-        return (v === undefined || v === null) ? "–" : Number(v).toFixed(1);
+        return (v === undefined || v === null) ? "–" : num(v, 1);
+    }
+    function date(d) {
+        return d.toLocaleDateString(locale, dateFormat);
     }
 }

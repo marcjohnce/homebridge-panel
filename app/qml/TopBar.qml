@@ -38,7 +38,7 @@ ColumnLayout {
             Text {
                 objectName: "date"
                 Layout.fillWidth: true
-                text: root.now.toLocaleDateString(Qt.locale("en_GB"), "dddd, d MMMM")
+                text: Theme.date(root.now)
                 color: Theme.muted
                 font.pixelSize: Theme.s(15)
                 elide: Text.ElideRight

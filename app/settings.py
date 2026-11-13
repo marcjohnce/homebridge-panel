@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import AppConfig, HapBackendConfig
+from .i18n import LANGUAGES, tr
 
 
 PRIMARY_BRIDGE = "homebridge"
@@ -34,7 +35,7 @@ class Field:
     key: str
     section: str
     label: str
-    kind: str              # choice | toggle | number | host | pin | action
+    kind: str              # choice | toggle | number | host | pin | action | page
     default: Any
     help: str = ""
     options: tuple[tuple[Any, str], ...] = field(default_factory=tuple)
@@ -46,6 +47,7 @@ class Field:
 
 SECTIONS = [
     Section("display", "Display", instant=True),
+    Section("rooms", "Rooms", instant=True),
     Section("homebridge", "Homebridge", instant=False),
     Section("system", "System", instant=True),
 ]
@@ -54,8 +56,15 @@ FIELDS = [
     Field("theme", "display", "Appearance", "choice", "auto",
           help="Automatic: dark from 7 pm to 7 am",
           options=(("auto", "Automatic"), ("light", "Light"), ("dark", "Dark"))),
+    # language names stay in their own language; only "System" is translated
+    Field("language", "display", "Language", "choice", "auto",
+          help="System: language of the operating system",
+          options=(("auto", "System"), *LANGUAGES.items())),
     Field("idle_seconds", "display", "Screen saver after", "choice", 120,
           options=((0, "Never"), (60, "1 min"), (120, "2 min"), (300, "5 min"), (900, "15 min"))),
+    # Pages open a sub-page of the settings (SettingsPage.qml); their data is stored separately
+    Field("rooms_page", "rooms", "Rooms and devices", "page", None,
+          help="Create rooms and choose which room each device belongs to"),
     Field("hap_enabled", "homebridge", "Connect to Homebridge", "toggle", True),
     Field("hap_host", "homebridge", "Address", "host", "127.0.0.1",
           help="IP address or name of the computer running Homebridge"),
@@ -72,6 +81,7 @@ FIELDS = [
           button="Restart", confirm="Restart the Raspberry Pi now? The panel is unavailable for about a minute."),
 ]
 ACTIONS = {f.key for f in FIELDS if f.kind == "action"}
+NOT_STORED = {f.key for f in FIELDS if f.kind in ("action", "page")}
 FIELDS_BY_KEY = {f.key: f for f in FIELDS}
 
 _HOST_RE = re.compile(r"^(?=.{1,253}$)[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*$")
@@ -84,41 +94,41 @@ def validate(key: str, value: Any) -> tuple[Any, str | None]:
     if isinstance(value, float) and value.is_integer():   # numbers from QML arrive as float
         value = int(value)
     if f is None:
-        return value, f"Unknown setting \"{key}\""
-    if f.kind == "action":
-        return value, f"\"{key}\" is an action, not a setting"
+        return value, tr("Unknown setting \"{key}\"").format(key=key)
+    if f.kind in ("action", "page"):
+        return value, tr("\"{key}\" is an action, not a setting").format(key=key)
     if f.kind == "choice":
         for opt, _ in f.options:
             if str(opt) == str(value):
                 return opt, None
-        return value, "Choose one of the offered options"
+        return value, tr("Choose one of the offered options")
     if f.kind == "toggle":
         if isinstance(value, bool):
             return value, None
-        return value, "Expected on or off"
+        return value, tr("Expected on or off")
     if f.kind == "number":
         try:
             n = int(str(value).strip())
         except ValueError:
-            return value, "Enter a whole number"
+            return value, tr("Enter a whole number")
         if (f.min is not None and n < f.min) or (f.max is not None and n > f.max):
-            return n, f"Allowed range is {f.min} to {f.max}"
+            return n, tr("Allowed range is {min} to {max}").format(min=f.min, max=f.max)
         return n, None
     if f.kind == "host":
         v = str(value).strip()
         if not v:
-            return v, "Enter an address"
+            return v, tr("Enter an address")
         if _IPV4_RE.match(v):
             if any(int(p) > 255 for p in v.split(".")):
-                return v, "Invalid IP address: each number can be at most 255"
+                return v, tr("Invalid IP address: each number can be at most 255")
             return v, None
         if not _HOST_RE.match(v) or v.replace(".", "").isdigit():
-            return v, "Invalid address, e.g. 192.168.1.20 or homebridge.local"
+            return v, tr("Invalid address, e.g. 192.168.1.20 or homebridge.local")
         return v, None
     if f.kind == "pin":
         digits = re.sub(r"\D", "", str(value))
         if len(digits) != 8:
-            return value, "The PIN has 8 digits, format 123-45-678"
+            return value, tr("The PIN has 8 digits, format 123-45-678")
         return f"{digits[:3]}-{digits[3:5]}-{digits[5:]}", None
     return value, None
 
@@ -133,7 +143,8 @@ def default_path() -> Path:
 class SettingsStore:
     def __init__(self, path: str | os.PathLike | None = None):
         self.path = Path(path) if path else default_path()
-        self.values: dict[str, Any] = {f.key: f.default for f in FIELDS if f.kind != "action"}
+        self.values: dict[str, Any] = {f.key: f.default for f in FIELDS if f.key not in NOT_STORED}
+        self.rooms: dict[str, Any] = {}      # see app/rooms.py
         self.load()
 
     def load(self) -> None:
@@ -141,6 +152,10 @@ class SettingsStore:
             data = json.loads(self.path.read_text(encoding="utf-8"))
         except (FileNotFoundError, json.JSONDecodeError, OSError):
             return
+        if not isinstance(data, dict):
+            return
+        if isinstance(data.get("rooms"), dict):
+            self.rooms = data["rooms"]
         for key, value in data.items():
             if key in FIELDS_BY_KEY:
                 v, err = validate(key, value)
@@ -169,7 +184,7 @@ class SettingsStore:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         fd, tmp = tempfile.mkstemp(dir=self.path.parent, prefix=".settings-")
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            json.dump(self.values, fh, indent=2, ensure_ascii=False)
+            json.dump({**self.values, "rooms": self.rooms}, fh, indent=2, ensure_ascii=False)
         os.replace(tmp, self.path)
 
     def schema(self) -> list[dict[str, Any]]:
@@ -177,12 +192,13 @@ class SettingsStore:
         out = []
         for s in SECTIONS:
             fields = [{
-                "key": f.key, "label": f.label, "kind": f.kind, "help": f.help,
-                "options": [{"value": v, "label": l} for v, l in f.options],
+                "key": f.key, "label": tr(f.label), "kind": f.kind, "help": tr(f.help) if f.help else "",
+                "options": [{"value": v, "label": l if f.key == "language" and v != "auto" else tr(l)}
+                            for v, l in f.options],
                 "min": f.min, "max": f.max, "value": self.values.get(f.key),
-                "button": f.button, "confirm": f.confirm,
+                "button": tr(f.button) if f.button else "", "confirm": tr(f.confirm) if f.confirm else "",
             } for f in FIELDS if f.section == s.id]
-            out.append({"id": s.id, "title": s.title, "instant": s.instant, "fields": fields})
+            out.append({"id": s.id, "title": tr(s.title), "instant": s.instant, "fields": fields})
         return out
 
 

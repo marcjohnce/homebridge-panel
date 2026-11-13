@@ -79,7 +79,7 @@ def hap_server():
 
 def make_controller(tmp_path, **settings):
     store = SettingsStore(tmp_path / "settings.json")
-    store.update({"hap_enabled": False, **settings})
+    store.update({"hap_enabled": False, "language": "en", **settings})
     cfg = AppConfig.model_validate({"demo": {"enabled": True},
                                     "devices": {"Coffee Maker": {"room": "Kitchen"}}})
     return Controller(cfg, store)
@@ -240,3 +240,92 @@ def test_blind_detail_drag_sets_position(qapp, tmp_path):
                       and ctl.device(blind)["state"]["position"] == ctl.device(blind)["state"]["target"], timeout=8)
     ctl.shutdown()
     win.close()
+
+
+def test_room_editor_changes_rooms_and_persists(qapp, tmp_path):
+    ctl = make_controller(tmp_path)
+    ctl.start()
+    assert pump_until(lambda: ctl.devices.rowCount() == 13)
+    ed = ctl.roomEditor
+    coffee = next(d["id"] for d in ctl.devices.all() if d["name"] == "Coffee Maker")
+
+    assert ed.addRoom("Office") == "" and ed.addRoom("office") != ""
+    assert "Office" not in ctl.rooms                       # empty rooms are not on the home screen
+    assert ed.assign(coffee, "Office") == ""
+    assert "Office" in ctl.rooms and "Kitchen" not in ctl.rooms
+    assert ed.renameRoom("Office", "Büro") == "" and ctl.device(coffee)["room"] == "Büro"
+    ed.moveRoom("Büro", -99)
+    assert ctl.rooms[0] == "Büro"
+    assert ed.deleteRoom("Büro") == "" and ctl.device(coffee)["room"] == "General"
+    assert next(r for r in ed.rooms if r["name"] == "General")["isDefault"]
+    ctl.shutdown()
+
+    saved = json.loads((tmp_path / "settings.json").read_text())["rooms"]
+    assert "Büro" not in saved["order"] and saved["devices"][coffee] == "General"
+    ctl2 = Controller(AppConfig.model_validate({"demo": {"enabled": True}}), SettingsStore(tmp_path / "settings.json"))
+    ctl2.start()
+    assert pump_until(lambda: ctl2.devices.rowCount() == 13)
+    assert ctl2.device(coffee)["room"] == "General"
+    ctl2.shutdown()
+
+
+def test_rooms_page_rename_with_keyboard(qapp, tmp_path):
+    from PySide6.QtCore import QObject, QPointF, Qt
+    from PySide6.QtQml import QQmlApplicationEngine
+    from PySide6.QtQuick import QQuickItem, QQuickWindow
+    from PySide6.QtTest import QTest
+    from shiboken6 import Shiboken
+    from app.qt.main import QML_DIR
+    from app.qt.translator import CatalogTranslator
+
+    ctl = make_controller(tmp_path)
+    translator = CatalogTranslator()
+    qapp.installTranslator(translator)
+    engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty("panel", ctl)
+    engine.rootContext().setContextProperty("initialWidth", 720)
+    engine.rootContext().setContextProperty("initialHeight", 720)
+    engine.load(QML_DIR / "Main.qml")
+    win = Shiboken.wrapInstance(Shiboken.getCppPointer(engine.rootObjects()[0])[0], QQuickWindow)
+    ctl.start()
+    assert pump_until(lambda: ctl.devices.rowCount() == 13)
+
+    def find(name, root=None):
+        # Repeater delegates are not QObject children, so walk the visual item tree
+        for child in (root or win.contentItem()).childItems():
+            if child.objectName() == name and child.isVisible():
+                return child
+            if (hit := find(name, child)) is not None:
+                return hit
+        for popup in ([] if root else win.contentItem().findChildren(QQuickItem)):
+            if popup.objectName() == name and popup.isVisible():
+                return popup
+        return None
+
+    def item(name):
+        assert pump_until(lambda: find(name) is not None), name
+        pump_until(lambda: False, timeout=0.3)
+        return find(name)
+
+    def tap(name):
+        it = item(name)
+        p = it.mapToScene(QPointF(it.width() / 2, it.height() / 2))
+        QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, p.toPoint())
+
+    win.setProperty("settingsOpen", True)
+    tap("row:rooms_page")
+    assert item("roomsPage")
+    tap("rename:Kitchen")
+    assert pump_until(lambda: item("keyboardInput").property("text") == "Kitchen")
+    tap("key:backspace")                                   # clears the selected name
+    for k in ("k", "o", "c", "h", "space", "a", "r", "e", "a"):
+        tap("key:" + k)
+    assert item("keyboardInput").property("text") == "Koch area"
+    tap("keyboardDone")
+    assert pump_until(lambda: "Koch area" in ctl.rooms)
+    assert item("headerTitle").property("text") != ""                    # qsTr falls back to English
+    ctl.shutdown()
+    win.close()
+    qapp.removeTranslator(translator)
+    engine.deleteLater()          # before the controller it refers to is collected
+    pump_until(lambda: False, timeout=0.3)

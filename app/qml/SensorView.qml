@@ -18,7 +18,7 @@ Item {
             out.push({ key: "pressure", icon: "gauge", label: qsTr("Air pressure"), value: Math.round(st.pressure), unit: "hPa" });
         if (st.lux !== undefined && st.lux !== null)
             out.push({ key: "lux", icon: "sun", label: qsTr("Light level"),
-                       value: st.lux < 10 ? Number(st.lux).toFixed(1) : Math.round(st.lux).toLocaleString(Qt.locale("en_GB"), "f", 0),
+                       value: Theme.num(st.lux, st.lux < 10 ? 1 : 0),
                        unit: "lx" });
         return out;
     }
