@@ -1,0 +1,68 @@
+import QtQuick
+
+// Ruhebildschirm: große Uhr; die erste Berührung weckt nur auf
+Rectangle {
+    id: root
+
+    property date now: new Date()
+    signal woken
+
+    color: Theme.page
+
+    Timer {
+        interval: 5000
+        running: root.visible
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: root.now = new Date()
+    }
+
+    OpacityAnimator on opacity {
+        running: root.visible
+        from: 0
+        to: 1
+        duration: 800
+    }
+
+    Column {
+        anchors.centerIn: parent
+        spacing: 10
+
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: Qt.formatTime(root.now, "hh:mm")
+            color: Theme.dark ? "#BEB9B0" : Theme.ink
+            font.pixelSize: Math.min(200, root.height * 0.28)
+            font.weight: Font.ExtraLight
+        }
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: root.now.toLocaleDateString(Qt.locale("de_DE"), "dddd, d. MMMM")
+            color: Theme.muted
+            font.pixelSize: 22
+        }
+        Row {
+            anchors.horizontalCenter: parent.horizontalCenter
+            topPadding: 18
+            spacing: 10
+            visible: panel.indoorTemp !== ""
+            LineIcon {
+                width: 26
+                height: 26
+                name: "thermostat"
+                color: Theme.gold
+            }
+            Text {
+                text: qsTr("%1 °C innen").arg(panel.indoorTemp)
+                color: Theme.dark ? "#BEB9B0" : Theme.ink
+                font.pixelSize: 24
+                font.weight: Font.Light
+            }
+        }
+    }
+
+    MouseArea {
+        anchors.fill: parent
+        onPressed: root.woken()
+    }
+}

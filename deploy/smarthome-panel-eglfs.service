@@ -1,0 +1,23 @@
+# Vollbild direkt auf dem Display, ohne Desktop (z. B. Raspberry Pi OS Lite).
+[Unit]
+Description=Smart Home Panel (Vollbild ohne Desktop)
+After=network-online.target systemd-user-sessions.service
+Wants=network-online.target
+Conflicts=getty@tty1.service
+
+[Service]
+Type=simple
+User=__USER__
+SupplementaryGroups=video render input
+WorkingDirectory=__DIR__
+Environment=QT_QPA_PLATFORM=eglfs
+Environment=QT_QPA_EGLFS_HIDECURSOR=1
+Environment=SMARTHOME_CONFIG=__DIR__/config.yaml
+ExecStart=__DIR__/.venv/bin/python -m app --fullscreen --hide-cursor
+Restart=on-failure
+RestartSec=5
+TTYPath=/dev/tty1
+StandardInput=tty-fail
+
+[Install]
+WantedBy=multi-user.target
