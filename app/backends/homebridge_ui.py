@@ -19,7 +19,8 @@ from typing import Any
 import httpx
 
 from ..config import HomebridgeUiBackendConfig
-from ..hap_types import DEVICE_TYPE_BY_SERVICE, Char, ServiceSnapshot
+from ..hap_types import (CHAR_TYPES, DEVICE_TYPE_BY_SERVICE, SENSOR_SERVICES, SERVICE_TYPES, Char, ServiceSnapshot,
+                         merge_sensors, short_uuid)
 from .base import Backend, BackendError
 
 log = logging.getLogger(__name__)
@@ -81,14 +82,19 @@ class HomebridgeUiBackend(Backend):
     @staticmethod
     def parse_accessories(data: list[dict[str, Any]]) -> list[ServiceSnapshot]:
         result: list[ServiceSnapshot] = []
+        sensors: dict[str, list[ServiceSnapshot]] = {}
         for svc in data:
             stype = svc.get("type")
-            if stype not in DEVICE_TYPE_BY_SERVICE:
+            if stype not in DEVICE_TYPE_BY_SERVICE and stype not in SENSOR_SERVICES:
+                # custom services (e.g. Eve air pressure) are identified by their UUID
+                stype = SERVICE_TYPES.get(short_uuid(svc.get("uuid", "")), stype)
+            if stype not in DEVICE_TYPE_BY_SERVICE and stype not in SENSOR_SERVICES:
                 continue
             uid = svc["uniqueId"]
             chars: dict[str, Char] = {}
             for ch in svc.get("serviceCharacteristics", []):
-                ctype = ch.get("type")
+                ctype = (ch.get("type") or "").replace(" ", "")
+                ctype = CHAR_TYPES.get(short_uuid(ch.get("uuid", "")), ctype)
                 if not ctype:
                     continue
                 chars[ctype] = Char(
@@ -98,10 +104,16 @@ class HomebridgeUiBackend(Backend):
                 )
             info = svc.get("accessoryInformation") or {}
             name = svc.get("serviceName") or info.get("Name") or stype
-            result.append(ServiceSnapshot(
-                key=uid, service_type=stype, name=name, chars=chars,
-                accessory=info.get("Name", ""),
-            ))
+            snap = ServiceSnapshot(key=uid, service_type=stype, name=name, chars=chars,
+                                   accessory=info.get("Name", ""))
+            if stype in SENSOR_SERVICES:
+                instance = (svc.get("instance") or {}).get("username", "")
+                group = f"{instance}:{svc['aid']}" if svc.get("aid") is not None else uid
+                sensors.setdefault(group, []).append(snap)
+            else:
+                result.append(snap)
+        for group, snaps in sensors.items():
+            result.append(merge_sensors(group, snaps[0].accessory, snaps))
         return result
 
     async def write(self, writes: list[tuple[Char, Any]]) -> None:

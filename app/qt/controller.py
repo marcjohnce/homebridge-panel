@@ -100,7 +100,8 @@ class DeviceModel(QAbstractListModel):
 
     def _visible(self) -> list[str]:
         devs = [d for d in self._all.values() if self._room in (ALL_ROOMS, d["room"])]
-        devs.sort(key=lambda d: (d["room"].casefold(), d["type"] == "thermostat", d.get("order", 100),
+        rank = {"thermostat": 1, "sensor": 2}   # switchable devices first, then heating, then sensors
+        devs.sort(key=lambda d: (d["room"].casefold(), rank.get(d["type"], 0), d.get("order", 100),
                                  d["name"].casefold()))
         return [d["id"] for d in devs]
 
@@ -494,11 +495,21 @@ class Controller(QObject):
     def deviceCount(self) -> int:
         return len(self._model.all())
 
+    def _avg_temp(self, outdoor: bool) -> str:
+        temps = [d["state"]["current_temp"] for d in self._model.all()
+                 if d["reachable"] and d["state"].get("current_temp") is not None
+                 and bool(d.get("meta", {}).get("outdoor")) == outdoor]
+        return fmt_temp(sum(temps) / len(temps)) if temps else ""
+
     @Property(str, notify=climateChanged)
     def indoorTemp(self) -> str:
-        temps = [d["state"]["current_temp"] for d in self._model.all()
-                 if d["reachable"] and d["state"].get("current_temp") is not None]
-        return fmt_temp(sum(temps) / len(temps)) if temps else ""
+        """Average of all reachable thermostats and indoor sensors."""
+        return self._avg_temp(outdoor=False)
+
+    @Property(str, notify=climateChanged)
+    def outdoorTemp(self) -> str:
+        """Average of all reachable sensors marked `outdoor: true`; empty if there are none."""
+        return self._avg_temp(outdoor=True)
 
     def _compute_theme(self) -> str:
         mode = self.store.get("theme")

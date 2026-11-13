@@ -35,28 +35,40 @@ ColumnLayout {
         font.pixelSize: Theme.s(17)
     }
 
-    RowLayout {
+    ColumnLayout {
         objectName: "climate"
-        visible: panel.indoorTemp !== ""
+        visible: panel.indoorTemp !== "" || panel.outdoorTemp !== ""
         Layout.topMargin: root.compact ? 16 : Theme.s(26)
-        spacing: 10
-        LineIcon {
-            Layout.preferredWidth: Theme.s(30)
-            Layout.preferredHeight: Theme.s(30)
-            name: "thermostat"
-            color: Theme.gold
-        }
-        Column {
-            Text {
-                text: qsTr("%1 °C").arg(panel.indoorTemp)
-                color: Theme.ink
-                font.pixelSize: Theme.s(28)
-                font.weight: Font.Light
-            }
-            Text {
-                text: qsTr("indoors")
-                color: Theme.muted
-                font.pixelSize: Theme.s(14)
+        spacing: root.compact ? 6 : Theme.s(12)
+
+        Repeater {
+            model: [
+                { temp: panel.indoorTemp, label: qsTr("indoors"), icon: "thermostat" },
+                { temp: panel.outdoorTemp, label: qsTr("outdoors"), icon: "weather" }
+            ]
+            RowLayout {
+                required property var modelData
+                visible: modelData.temp !== ""
+                spacing: 10
+                LineIcon {
+                    Layout.preferredWidth: Theme.s(30)
+                    Layout.preferredHeight: Theme.s(30)
+                    name: parent.modelData.icon
+                    color: Theme.gold
+                }
+                Column {
+                    Text {
+                        text: qsTr("%1 °C").arg(parent.parent.modelData.temp)
+                        color: Theme.ink
+                        font.pixelSize: root.compact ? 22 : Theme.s(28)
+                        font.weight: Font.Light
+                    }
+                    Text {
+                        text: parent.parent.modelData.label
+                        color: Theme.muted
+                        font.pixelSize: Theme.s(14)
+                    }
+                }
             }
         }
     }

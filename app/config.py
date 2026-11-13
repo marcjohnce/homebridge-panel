@@ -56,6 +56,7 @@ class DeviceOverride(BaseModel):
     icon: str | None = None
     hidden: bool = False
     order: int = 100
+    outdoor: bool = Field(False, description="Outdoor sensor: shown as outdoor temperature, not indoors")
 
 
 class SceneAction(BaseModel):

@@ -103,6 +103,9 @@ class DeviceManager:
         if ov and ov.hidden:
             return None
         dtype, state, caps, meta = snapshot_to_state(snap)
+        if ov and ov.outdoor:
+            meta["outdoor"] = True
+        icon_hint = meta.pop("icon_hint", None)
         if "modes" in meta and not self.cfg.panel.show_cooling:
             meta["modes"] = [m for m in meta["modes"] if m != "cool"]
         return Device(
@@ -111,7 +114,7 @@ class DeviceManager:
             type=dtype,
             backend=backend.name,
             room=(ov.room if ov and ov.room else self.cfg.panel.default_room),
-            icon=(ov.icon if ov and ov.icon else DEFAULT_ICONS[dtype]),
+            icon=(ov.icon if ov and ov.icon else icon_hint or DEFAULT_ICONS[dtype]),
             state=state,
             capabilities=caps,
             meta=meta,

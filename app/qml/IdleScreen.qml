@@ -45,6 +45,24 @@ Rectangle {
             anchors.horizontalCenter: parent.horizontalCenter
             topPadding: 18
             spacing: 10
+            visible: panel.outdoorTemp !== ""
+            LineIcon {
+                width: 26
+                height: 26
+                name: "weather"
+                color: Theme.gold
+            }
+            Text {
+                text: qsTr("%1 °C outdoors").arg(panel.outdoorTemp)
+                color: Theme.dark ? "#BEB9B0" : Theme.ink
+                font.pixelSize: 24
+                font.weight: Font.Light
+            }
+        }
+        Row {
+            anchors.horizontalCenter: parent.horizontalCenter
+            topPadding: panel.outdoorTemp === "" ? 18 : 0
+            spacing: 10
             visible: panel.indoorTemp !== ""
             LineIcon {
                 width: 26

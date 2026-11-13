@@ -13,6 +13,10 @@ from typing import Any
 from .models import DeviceType
 
 HAP_BASE_SUFFIX = "-0000-1000-8000-0026BB765291"
+# Eve (Elgato) custom types: air pressure is not an Apple-defined characteristic
+EVE_WEATHER_SERVICE = "E863F001-079E-48FF-8F27-9C2605A29F52"
+EVE_AIR_PRESSURE_SERVICE = "E863F00A-079E-48FF-8F27-9C2605A29F52"
+EVE_AIR_PRESSURE = "E863F10F-079E-48FF-8F27-9C2605A29F52"      # hPa
 
 # Service UUIDs (short form) -> name
 SERVICE_TYPES: dict[str, str] = {
@@ -24,7 +28,15 @@ SERVICE_TYPES: dict[str, str] = {
     "49": "Switch",
     "4A": "Thermostat",
     "BC": "HeaterCooler",
+    "82": "HumiditySensor",
+    "84": "LightSensor",
+    "8A": "TemperatureSensor",
+    EVE_WEATHER_SERVICE: "EveWeather",
+    EVE_AIR_PRESSURE_SERVICE: "AirPressureSensor",
 }
+
+# Sensor services; all sensors of one accessory are merged into one "Sensor" device
+SENSOR_SERVICES = {"TemperatureSensor", "HumiditySensor", "LightSensor", "AirPressureSensor", "EveWeather"}
 
 # Characteristic UUIDs (short form) -> name
 CHAR_TYPES: dict[str, str] = {
@@ -48,7 +60,11 @@ CHAR_TYPES: dict[str, str] = {
     "B2": "TargetHeaterCoolerState",
     "CE": "ColorTemperature",
     "E3": "ConfiguredName",
+    "10": "CurrentRelativeHumidity",
+    "6B": "CurrentAmbientLightLevel",
+    EVE_AIR_PRESSURE: "AirPressure",
 }
+SENSOR_CHARS = {"CurrentTemperature", "CurrentRelativeHumidity", "CurrentAmbientLightLevel", "AirPressure"}
 
 DEVICE_TYPE_BY_SERVICE: dict[str, DeviceType] = {
     "Lightbulb": DeviceType.LIGHT,
@@ -58,6 +74,7 @@ DEVICE_TYPE_BY_SERVICE: dict[str, DeviceType] = {
     "HeaterCooler": DeviceType.THERMOSTAT,
     "Fan": DeviceType.FAN,
     "Fanv2": DeviceType.FAN,
+    "Sensor": DeviceType.SENSOR,
 }
 
 # Thermostat.TargetHeatingCoolingState
@@ -101,6 +118,19 @@ class ServiceSnapshot:
         return default if c is None or c.value is None else c.value
 
 
+def merge_sensors(group_key: str, accessory: str, services: list[ServiceSnapshot]) -> ServiceSnapshot:
+    """Merges the sensor services of one accessory (e.g. a weather station with temperature,
+    humidity and air pressure services) into a single "Sensor" device."""
+    chars: dict[str, Char] = {}
+    for svc in services:
+        for name, ch in svc.chars.items():
+            if name in SENSOR_CHARS and name not in chars:
+                chars[name] = ch
+    name = services[0].name if len(services) == 1 else (accessory or services[0].name)
+    return ServiceSnapshot(key=f"{group_key}.sensors", service_type="Sensor", name=name,
+                           chars=chars, accessory=accessory)
+
+
 def _num(v: Any) -> float | None:
     try:
         return float(v)
@@ -116,7 +146,20 @@ def snapshot_to_state(s: ServiceSnapshot) -> tuple[DeviceType, dict[str, Any], l
     meta: dict[str, Any] = {}
     c = s.chars
 
-    if s.service_type == "Thermostat":
+    if s.service_type == "Sensor":
+        if "CurrentRelativeHumidity" in c:
+            state["humidity"] = _num(s.get("CurrentRelativeHumidity"))
+            caps.append("humidity")
+        if "AirPressure" in c:
+            state["pressure"] = _num(s.get("AirPressure"))
+            caps.append("pressure")
+        if "CurrentAmbientLightLevel" in c:
+            state["lux"] = _num(s.get("CurrentAmbientLightLevel"))
+            caps.append("lux")
+        meta["icon_hint"] = ("weather" if "pressure" in caps else
+                             "thermostat" if "CurrentTemperature" in c else
+                             "drop" if "humidity" in caps else "sun")
+    elif s.service_type == "Thermostat":
         mode = THERMOSTAT_MODES.get(int(s.get("TargetHeatingCoolingState", 0)), "off")
         state["mode"] = mode
         state["on"] = mode != "off"

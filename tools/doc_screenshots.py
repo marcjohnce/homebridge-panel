@@ -150,6 +150,8 @@ def annotate(img: Image.Image, callouts: list[tuple]) -> Image.Image:
     badges: list[tuple[float, float]] = []
     for number, rects, *opt in callouts:
         for r in rects:
+            if r.width() <= 1 or r.height() <= 1:     # scrolled out of view: no callout
+                continue
             x0, y0 = max(2, r.left() - 4), max(2, r.top() - 4)
             x1, y1 = min(W - 3, r.right() + 4), min(H - 3, r.bottom() + 4)
             d.rounded_rectangle((x0, y0, x1, y1), radius=8, outline=CALLOUT, width=2)
@@ -176,7 +178,7 @@ def save(img: Image.Image, out: Path, name: str) -> None:
 
 def home_callouts(p: Panel, top_layout: bool) -> list[tuple]:
     lamp = p.device_id("Living Room Ceiling Light")
-    heating = p.device_id("Living Room Heating")
+    heating = p.device_id("Bathroom Heating")   # first tile, visible at every size
     return [
         (1, [p.rect("clock").united(p.rect("date"))]),
         (2, [p.rect("climate")], "bottom") if top_layout else (2, [p.rect("climate")]),
@@ -187,6 +189,7 @@ def home_callouts(p: Panel, top_layout: bool) -> list[tuple]:
         (7, [p.rect(f"tile:{lamp}")]),
         (8, [p.rect(f"more:{lamp}")]),
         (9, [p.rect(f"tile:{heating}")]),
+        (10, [p.rect(f"tile:{p.device_id('Weather Station')}")]),
     ]
 
 
@@ -219,6 +222,16 @@ def detail_views(p: Panel, out: Path, suffix: str) -> None:
         (4, [p.rect("colorTemp")]),
         (3, [p.rect("powerButton")]),
     ]), out, f"light-white-tone{suffix}")
+
+    p.win.setProperty("openDevice", p.device_id("Weather Station"))
+    save(annotate(p.grab(), [
+        (1, [p.rect("headerNote")], "left"),
+        (2, [p.rect("reading:temp")]),
+        (3, [p.rect("reading:humidity")]),
+        (4, [p.rect("reading:pressure")]),
+    ]), out, f"sensor{suffix}")
+    p.win.setProperty("openDevice", p.device_id("Hall Light Sensor"))
+    save(annotate(p.grab(), [(5, [p.rect("reading:lux")])]), out, f"sensor-light{suffix}")
     p.win.setProperty("openDevice", "")
 
 
@@ -292,6 +305,7 @@ def main() -> int:
     p.win.setProperty("settingsOpen", False)
 
     p.win.setProperty("idle", True)
+    wait(900)   # let the fade-in finish
     save(p.grab(), out, "screensaver")
     p.close()
 

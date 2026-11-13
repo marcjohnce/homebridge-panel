@@ -45,16 +45,33 @@ ColumnLayout {
             }
             RowLayout {
                 objectName: "climate"
-                visible: panel.indoorTemp !== ""
+                visible: panel.indoorTemp !== "" || panel.outdoorTemp !== ""
                 spacing: 6
                 LineIcon {
+                    visible: panel.indoorTemp !== ""
                     Layout.preferredWidth: 20
                     Layout.preferredHeight: 20
                     name: "thermostat"
                     color: Theme.gold
                 }
                 Text {
+                    visible: panel.indoorTemp !== ""
                     text: qsTr("%1 °C indoors").arg(panel.indoorTemp)
+                    color: Theme.ink
+                    font.pixelSize: Theme.s(17)
+                    font.weight: Font.Light
+                }
+                LineIcon {
+                    visible: panel.outdoorTemp !== ""
+                    Layout.leftMargin: panel.indoorTemp !== "" ? 10 : 0
+                    Layout.preferredWidth: 20
+                    Layout.preferredHeight: 20
+                    name: "weather"
+                    color: Theme.gold
+                }
+                Text {
+                    visible: panel.outdoorTemp !== ""
+                    text: qsTr("%1 °C outdoors").arg(panel.outdoorTemp)
                     color: Theme.ink
                     font.pixelSize: Theme.s(17)
                     font.weight: Font.Light

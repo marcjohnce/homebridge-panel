@@ -203,3 +203,75 @@ def test_scheduler_due():
     assert s.due(monday) == ["a", "b"]
     assert s.due(monday) == []                    # not twice
     assert s.due(datetime(2026, 11, 18, 6, 30)) == ["b"]  # Wednesday
+
+
+# ---------- sensors ----------
+EVE = lambda s: f"E863F{s}-079E-48FF-8F27-9C2605A29F52"  # noqa: E731
+
+
+def test_hap_sensors_are_merged_per_accessory():
+    data = {"accessories": [
+        {"aid": 4, "services": [
+            {"iid": 1, "type": U("3E"), "characteristics": [
+                {"iid": 2, "type": U("23"), "value": "Weather Station", "perms": ["pr"]}]},
+            {"iid": 10, "type": U("8A"), "characteristics": [
+                {"iid": 11, "type": U("23"), "value": "Temperature", "perms": ["pr"]},
+                {"iid": 12, "type": U("11"), "value": 6.4, "perms": ["pr", "ev"]}]},
+            {"iid": 20, "type": U("82"), "characteristics": [
+                {"iid": 21, "type": U("10"), "value": 81, "perms": ["pr", "ev"]}]},
+            {"iid": 30, "type": EVE("00A"), "characteristics": [
+                {"iid": 31, "type": EVE("10F"), "value": 1013.6, "perms": ["pr", "ev"]}]}]},
+        {"aid": 5, "services": [
+            {"iid": 1, "type": U("3E"), "characteristics": [
+                {"iid": 2, "type": U("23"), "value": "Hall Lux", "perms": ["pr"]}]},
+            {"iid": 8, "type": U("84"), "characteristics": [
+                {"iid": 9, "type": U("23"), "value": "Hall Lux", "perms": ["pr"]},
+                {"iid": 10, "type": U("6B"), "value": 245.5, "perms": ["pr", "ev"]}]}]},
+    ]}
+    snaps = HapBackend.parse_accessories(data)
+    assert [(s.key, s.service_type, s.name) for s in snaps] == [
+        ("4.sensors", "Sensor", "Weather Station"), ("5.sensors", "Sensor", "Hall Lux")]
+    dtype, state, caps, meta = snapshot_to_state(snaps[0])
+    assert dtype.value == "sensor"
+    assert state == {"current_temp": 6.4, "humidity": 81.0, "pressure": 1013.6}
+    assert meta["icon_hint"] == "weather"
+    _, state, _, meta = snapshot_to_state(snaps[1])
+    assert state == {"lux": 245.5} and meta["icon_hint"] == "sun"
+    with pytest.raises(ValueError):
+        command_to_writes(snaps[0], {"on": True})
+
+
+def test_ui_sensors_including_eve_air_pressure():
+    data = [
+        {"uniqueId": "t1", "aid": 7, "instance": {"username": "0E:AA"}, "type": "TemperatureSensor",
+         "serviceName": "Balcony", "accessoryInformation": {"Name": "Balcony Weather"},
+         "serviceCharacteristics": [{"type": "CurrentTemperature", "value": 3.5, "canWrite": False}]},
+        {"uniqueId": "p1", "aid": 7, "instance": {"username": "0E:AA"}, "type": "Unknown",
+         "uuid": EVE("00A"), "serviceName": "Air Pressure", "accessoryInformation": {"Name": "Balcony Weather"},
+         "serviceCharacteristics": [{"type": "Air Pressure", "uuid": EVE("10F"), "value": 998.2, "canWrite": False}]},
+        {"uniqueId": "h1", "aid": 8, "instance": {"username": "0E:AA"}, "type": "HumiditySensor",
+         "serviceName": "Bathroom Humidity", "accessoryInformation": {"Name": "Bath Sensor"},
+         "serviceCharacteristics": [{"type": "CurrentRelativeHumidity", "value": 64, "canWrite": False}]},
+    ]
+    snaps = HomebridgeUiBackend.parse_accessories(data)
+    assert [(s.key, s.name) for s in snaps] == [("0E:AA:7.sensors", "Balcony Weather"),
+                                                ("0E:AA:8.sensors", "Bathroom Humidity")]
+    assert snapshot_to_state(snaps[0])[1] == {"pressure": 998.2, "current_temp": 3.5}
+    _, state, _, meta = snapshot_to_state(snaps[1])
+    assert state == {"humidity": 64.0} and meta["icon_hint"] == "drop"
+
+
+def test_outdoor_override_and_icon_hint():
+    cfg = AppConfig.model_validate({"demo": {"enabled": True},
+                                    "devices": {"Weather Station": {"room": "Garden", "outdoor": True}}})
+
+    async def run():
+        m = DeviceManager(cfg, create_backends(cfg))
+        await m.start()
+        ws = m.devices[m.resolve("Weather Station")]
+        lux = m.devices[m.resolve("Hall Light Sensor")]
+        assert ws.type.value == "sensor" and ws.room == "Garden" and ws.meta["outdoor"] is True
+        assert ws.icon == "weather" and lux.icon == "sun" and "outdoor" not in lux.meta
+        assert "icon_hint" not in ws.meta
+        await m.stop()
+    asyncio.run(run())

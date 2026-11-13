@@ -38,7 +38,9 @@ demo:
 
 # --- Customize devices: key = device ID (see Settings → Info) or original name ------
 devices:
-  # Icons (icon): light, ceiling, strip, plug, switch, thermostat, radiator, floor, fan, coffee, tv
+  # Icons (icon): light, ceiling, strip, plug, switch, thermostat, radiator, floor, fan, coffee, tv,
+  #               weather, drop, sun
+  # Sensors: outdoor: true shows the temperature as "outdoors" instead of indoors
   "Living Room Ceiling Light": { room: Living Room, order: 1, icon: ceiling }
   "LED Strip":                 { room: Living Room, name: TV Light, icon: strip }
   "Living Room Heating":       { room: Living Room, icon: radiator }
@@ -46,6 +48,9 @@ devices:
   "Coffee Maker":              { room: Kitchen, icon: coffee }
   "Bathroom Heating":          { room: Bathroom, icon: floor }
   "TV Plug":                   { room: Living Room, icon: tv }
+  "Weather Station":           { room: Garden, outdoor: true }
+  "Living Room Climate":       { room: Living Room }
+  "Hall Light Sensor":         { room: Hall }
   # "homebridge:12.10":        { hidden: true }
 
 # --- Scenes (icon: moon, sun, film, leaf, home, power) -----------------------------

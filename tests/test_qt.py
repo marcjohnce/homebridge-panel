@@ -89,7 +89,7 @@ def test_controller_demo_model_and_commands(qapp, tmp_path):
     ctl = make_controller(tmp_path)
     ctl.start()
     model = ctl.devices
-    assert pump_until(lambda: model.rowCount() == 8)
+    assert pump_until(lambda: model.rowCount() == 11)
     assert ctl.statusOk and ctl.statusText == "Connected"
     assert "Kitchen" in ctl.rooms and ctl.indoorTemp != ""
 
@@ -99,7 +99,7 @@ def test_controller_demo_model_and_commands(qapp, tmp_path):
     ctl.toggle(coffee)
     assert pump_until(lambda: ctl.device(coffee)["state"]["on"] is True)
     ctl.selectRoom("")
-    assert model.rowCount() == 8
+    assert model.rowCount() == 11
 
     errors = []
     ctl.toast.connect(errors.append)
@@ -111,7 +111,7 @@ def test_controller_demo_model_and_commands(qapp, tmp_path):
 def test_settings_reconnect_and_test_connection(qapp, tmp_path, hap_server):
     ctl = make_controller(tmp_path)
     ctl.start()
-    assert pump_until(lambda: ctl.devices.rowCount() == 8)
+    assert pump_until(lambda: ctl.devices.rowCount() == 11)
 
     results = []
     ctl.settings.testFinished.connect(lambda ok, msg: results.append((ok, msg)))
@@ -127,7 +127,7 @@ def test_settings_reconnect_and_test_connection(qapp, tmp_path, hap_server):
                               "hap_port": hap_server, "hap_pin": "12345678"}) == {}
     lamp = "homebridge:2.9"
     assert pump_until(lambda: ctl.device(lamp).get("name") == "Hall Light")
-    assert pump_until(lambda: ctl.devices.rowCount() == 9 and ctl.statusOk)
+    assert pump_until(lambda: ctl.devices.rowCount() == 12 and ctl.statusOk)
     ctl.toggle(lamp)
     assert pump_until(lambda: FakeHap.lamp_on is True)
     assert json.loads((tmp_path / "settings.json").read_text())["hap_pin"] == "123-45-678"
@@ -184,4 +184,24 @@ def test_reboot_action(qapp, tmp_path):
     assert messages[-1] == ""       # overlay hidden again
     ctl.settings.runAction("nonsense")
     assert pump_until(lambda: len(toasts) == 2) and "Unknown action" in toasts[1]
+    ctl.shutdown()
+
+
+def test_indoor_and_outdoor_temperature(qapp, tmp_path):
+    store = SettingsStore(tmp_path / "settings.json")
+    store.update({"hap_enabled": False})
+    cfg = AppConfig.model_validate({"demo": {"enabled": True},
+                                    "devices": {"Weather Station": {"outdoor": True}}})
+    ctl = Controller(cfg, store)
+    ctl.start()
+    assert pump_until(lambda: ctl.devices.rowCount() == 11 and ctl.outdoorTemp != "")
+    devs = ctl.devices.all()
+    outdoor = [d["state"]["current_temp"] for d in devs if d.get("meta", {}).get("outdoor")]
+    indoor = [d["state"]["current_temp"] for d in devs
+              if d["state"].get("current_temp") is not None and not d.get("meta", {}).get("outdoor")]
+    assert len(outdoor) == 1 and len(indoor) == 3        # weather station / 2 thermostats + climate sensor
+    assert abs(float(ctl.outdoorTemp) - outdoor[0]) < 0.06
+    assert abs(float(ctl.indoorTemp) - sum(indoor) / len(indoor)) < 0.06
+    ws = next(d for d in devs if d["name"] == "Weather Station")
+    assert ctl.device(ws["id"])["stateText"].count(",") == 2      # temperature, humidity, pressure
     ctl.shutdown()

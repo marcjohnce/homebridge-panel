@@ -39,7 +39,7 @@ Start the app at a given size in a window with `.venv/bin/python -m app --size 8
 | # | Element | What it does |
 |---|---|---|
 | 1 | Clock and date | Current time and date (in the top bar: clock with date and temperature next to it) |
-| 2 | Indoor temperature | Average of all reachable thermostats |
+| 2 | Indoor and outdoor temperature | *indoors*: average of all reachable thermostats and indoor sensors. *outdoors*: sensors marked `outdoor: true` (shown only if there is one) |
 | 3 | Scenes | Tap to run a scene from `config.yaml`, e.g. *All off* or *Comfort* |
 | 4 | Connection status | Green: all bridges connected. Red: a bridge is not reachable (details under Settings → Info) |
 | 5 | Settings | Opens the [settings page](#settings) |
@@ -47,6 +47,7 @@ Start the app at a given size in a window with `.venv/bin/python -m app --size 8
 | 7 | Device that is on | Gold tiles are switched on. Tap a tile to switch it on or off |
 | 8 | Open controls | Opens brightness, color or speed controls. A long press on the tile does the same |
 | 9 | Heating tile | Small arc with the target temperature; the text turns orange while heating. Tap to open the thermostat |
+| 10 | Sensor tile | Current readings, e.g. temperature, humidity and air pressure of a weather station. Tap to open the [sensor view](#sensors) |
 
 Tiles leave out the room from the device name when the room is shown anyway
 ("Living Room Heating" → "Heating"). The detail view shows the full name.
@@ -114,6 +115,44 @@ results in one command.
 | 4 | White tone | From cool (left) to warm (right), shown in kelvin |
 
 Only the controls the device supports are shown.
+
+## Sensors
+
+Temperature, humidity, air pressure and light sensors from Homebridge appear as tiles with
+their readings. All sensors of one device are combined into one tile, so a weather station
+with three sensors shows up once. Tap the tile for large readings.
+
+![Weather station at 1280 × 800](images/sensor.png)
+
+<img src="images/sensor-720x720.png" alt="Weather station at 720 × 720" width="480">
+
+| # | Element | What it does |
+|---|---|---|
+| 1 | Outdoors | Shown for sensors marked `outdoor: true` in `config.yaml` |
+| 2 | Temperature | In °C |
+| 3 | Humidity | Relative humidity in % |
+| 4 | Air pressure | In hPa |
+| 5 | Light level | In lux (light sensors) |
+
+![Light sensor at 1280 × 800](images/sensor-light.png)
+
+| Reading | HomeKit service | Notes |
+|---|---|---|
+| Temperature | Temperature Sensor | |
+| Humidity | Humidity Sensor | |
+| Light level | Light Sensor | |
+| Air pressure | Eve Air Pressure Sensor or Eve Weather (custom Eve types) | HomeKit has no standard air pressure type; plugins such as Eve-compatible weather plugins expose it this way. Apple's Home app does not show it, the panel does |
+
+Readings update with every poll (5 seconds by default). Sensors are read-only; tapping a
+sensor tile never switches anything.
+
+Mark outdoor sensors in `config.yaml`, so their temperature is shown as *outdoors* in the
+sidebar, top bar and screen saver and is left out of the indoor average:
+
+```yaml
+devices:
+  "Weather Station": { room: Garden, outdoor: true }
+```
 
 ## Settings
 

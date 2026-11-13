@@ -27,6 +27,8 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 - **Smart plugs / switches**: on/off, "in use" indicator
 - **Heating**: thermostats and heater-coolers with a dial (drag or −/+), modes Off/Heat/Auto
 - **Fans**: on/off, speed
+- **Sensors**: temperature, humidity, air pressure (Eve) and light level; sensors of one device
+  combined into one tile; outdoor sensors shown as outdoor temperature
 - **Rooms, scenes, schedules** (e.g. weekdays 06:30 "Comfort", daily 22:30 "Eco")
 - **Light / dark / automatic** appearance and a **screen saver** with a large clock
 - **Settings page** for appearance, screen saver and the Homebridge connection (address, port, PIN)
@@ -109,7 +111,7 @@ Validation and storage are handled by `validate()` and `SettingsStore`.
 | `hap` | additional bridges (child bridges); the main bridge comes from the settings |
 | `homebridge_ui` | alternatively access via the Homebridge web UI (username/password) |
 | `demo` | simulated devices |
-| `devices` | per device (ID or name): `room`, `name`, `icon`, `order`, `hidden` |
+| `devices` | per device (ID or name): `room`, `name`, `icon`, `order`, `hidden`, `outdoor` (sensors) |
 | `scenes` | scenes with actions `{device: …, set: {…}}` |
 | `schedules` | run a scene at a time on weekdays (`mo tu we th fr sa su`) |
 
@@ -117,7 +119,7 @@ Validation and storage are handled by `validate()` and `SettingsStore`.
 `color_temp` (mired 140–500), `speed` (0–100), `target_temp` (°C), `mode` (`off|heat|cool|auto`).
 
 **Icons** (`icon:`): `light`, `ceiling`, `strip`, `plug`, `switch`, `thermostat`, `radiator`,
-`floor`, `fan`, `coffee`, `tv`; for scenes `moon`, `sun`, `film`, `leaf`, `home`, `power`.
+`floor`, `fan`, `coffee`, `tv`, `weather`, `drop`, `sun`; for scenes `moon`, `sun`, `film`, `leaf`, `home`, `power`.
 
 See [docs/user-interface.md](docs/user-interface.md) for how each screen works.
 

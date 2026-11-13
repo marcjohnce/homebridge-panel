@@ -93,11 +93,14 @@ def main() -> int:
         shot(f"{theme}-heating")
         win.setProperty("openDevice", devs["TV Light"])
         shot(f"{theme}-light")
+        win.setProperty("openDevice", devs["Weather Station"])
+        shot(f"{theme}-sensor")
         win.setProperty("openDevice", "")
         win.setProperty("settingsOpen", True)
         shot(f"{theme}-settings")
         win.setProperty("settingsOpen", False)
     win.setProperty("idle", True)
+    wait(900)   # let the fade-in finish
     shot("screensaver")
     win.setProperty("idle", False)
 

@@ -11,6 +11,25 @@ def fmt_temp(v: Any) -> str:
     return f"{float(v):.1f}"
 
 
+def fmt_lux(v: Any) -> str:
+    v = float(v)
+    return f"{v:.1f} lx" if v < 10 else f"{v:,.0f} lx"
+
+
+def sensor_parts(s: dict[str, Any]) -> list[str]:
+    """Readings of a sensor as short texts, e.g. ["6.5 °C", "82%", "1014 hPa"]."""
+    parts = []
+    if s.get("current_temp") is not None:
+        parts.append(f"{fmt_temp(s['current_temp'])} °C")
+    if s.get("humidity") is not None:
+        parts.append(f"{float(s['humidity']):.0f}%")
+    if s.get("pressure") is not None:
+        parts.append(f"{float(s['pressure']):.0f} hPa")
+    if s.get("lux") is not None:
+        parts.append(fmt_lux(s["lux"]))
+    return parts
+
+
 def short_name(name: str, room: str) -> str:
     """Tiles already show the room: "Living Room Heating" → "Heating"."""
     room = (room or "").strip()
@@ -26,6 +45,8 @@ def state_text(d: dict[str, Any]) -> str:
     if not d.get("reachable", True):
         return "Not reachable"
     s = d.get("state", {})
+    if d["type"] == "sensor":
+        return ", ".join(sensor_parts(s)) or "No reading"
     if d["type"] == "thermostat":
         if s.get("mode") == "off":
             return f"Off, {fmt_temp(s.get('current_temp'))} °C"
@@ -44,4 +65,4 @@ def state_text(d: dict[str, Any]) -> str:
 
 def has_detail(d: dict[str, Any]) -> bool:
     caps = d.get("capabilities", [])
-    return d["type"] == "thermostat" or any(c in caps for c in ("brightness", "color", "color_temp", "speed"))
+    return d["type"] in ("thermostat", "sensor") or any(c in caps for c in ("brightness", "color", "color_temp", "speed"))

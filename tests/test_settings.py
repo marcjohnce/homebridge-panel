@@ -81,3 +81,14 @@ def test_tile_texts():
     assert state_text({"type": "light", "reachable": True, "state": {"on": True, "brightness": 40}}) == "40%"
     assert state_text({"type": "plug", "reachable": True, "state": {"on": True, "in_use": True}}) == "On, in use"
     assert state_text({"type": "plug", "reachable": False, "state": {}}) == "Not reachable"
+
+
+def test_sensor_texts():
+    from app.qt.format import has_detail, sensor_parts
+    s = {"current_temp": 6.44, "humidity": 81.6, "pressure": 1013.6, "lux": 2.34}
+    assert sensor_parts(s) == ["6.4 °C", "82%", "1014 hPa", "2.3 lx"]
+    assert sensor_parts({"lux": 12345.6}) == ["12,346 lx"]
+    d = {"type": "sensor", "reachable": True, "state": {"current_temp": 21.2, "humidity": 46}}
+    assert state_text(d) == "21.2 °C, 46%"
+    assert state_text({"type": "sensor", "reachable": True, "state": {}}) == "No reading"
+    assert has_detail(d)

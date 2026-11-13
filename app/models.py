@@ -12,16 +12,19 @@ class DeviceType(str, Enum):
     SWITCH = "switch"
     THERMOSTAT = "thermostat"
     FAN = "fan"
+    SENSOR = "sensor"
 
 
 # Icon names used by the UI (see app/qml/Icons.js):
-# light, strip, ceiling, plug, switch, thermostat, radiator, floor, fan, coffee, tv
+# light, strip, ceiling, plug, switch, thermostat, radiator, floor, fan, coffee, tv,
+# weather, drop, sun
 DEFAULT_ICONS = {
     DeviceType.LIGHT: "light",
     DeviceType.PLUG: "plug",
     DeviceType.SWITCH: "switch",
     DeviceType.THERMOSTAT: "thermostat",
     DeviceType.FAN: "fan",
+    DeviceType.SENSOR: "thermostat",
 }
 
 

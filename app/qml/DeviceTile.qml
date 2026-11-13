@@ -26,6 +26,7 @@ Rectangle {
     signal openDetail(string id)
 
     readonly property bool thermostat: type === "thermostat"
+    readonly property bool sensor: type === "sensor"
 
     objectName: "tile:" + deviceId
     readonly property int lastRowStart: Math.floor((count - 1) / columns) * columns
@@ -41,7 +42,7 @@ Rectangle {
     activeFocusOnTab: true
     Accessible.role: Accessible.Button
     Accessible.name: qsTr("%1: %2").arg(shortName).arg(stateText)
-    Accessible.checkable: !thermostat
+    Accessible.checkable: !thermostat && !sensor
     Accessible.checked: isOn
     Keys.onSpacePressed: activate()
     Keys.onReturnPressed: activate()
@@ -49,7 +50,7 @@ Rectangle {
     Behavior on color { ColorAnimation { duration: 200 } }
 
     function activate() {
-        if (thermostat)
+        if (thermostat || sensor)
             root.openDetail(deviceId);
         else
             panel.toggle(deviceId);
@@ -136,7 +137,7 @@ Rectangle {
 
     Item {
         objectName: "more:" + root.deviceId
-        visible: root.hasDetail && !root.thermostat
+        visible: root.hasDetail && !root.thermostat && !root.sensor
         anchors.top: parent.top
         anchors.right: parent.right
         anchors.margins: 6

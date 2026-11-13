@@ -18,7 +18,8 @@ from typing import Any
 import httpx
 
 from ..config import HapBackendConfig
-from ..hap_types import CHAR_TYPES, DEVICE_TYPE_BY_SERVICE, SERVICE_TYPES, Char, ServiceSnapshot, short_uuid
+from ..hap_types import (CHAR_TYPES, DEVICE_TYPE_BY_SERVICE, SENSOR_SERVICES, SERVICE_TYPES, Char, ServiceSnapshot,
+                         merge_sensors, short_uuid)
 from .base import Backend, BackendError
 
 log = logging.getLogger(__name__)
@@ -61,9 +62,10 @@ class HapBackend(Backend):
                     for ch in svc.get("characteristics", []):
                         if CHAR_TYPES.get(short_uuid(ch.get("type", ""))) == "Name":
                             acc_name = ch.get("value") or ""
+            sensors: list[ServiceSnapshot] = []
             for svc in services:
                 stype = SERVICE_TYPES.get(short_uuid(svc.get("type", "")))
-                if stype not in DEVICE_TYPE_BY_SERVICE:
+                if stype not in DEVICE_TYPE_BY_SERVICE and stype not in SENSOR_SERVICES:
                     continue
                 chars: dict[str, Char] = {}
                 for ch in svc.get("characteristics", []):
@@ -81,10 +83,11 @@ class HapBackend(Backend):
                     )
                 name = (chars.get("ConfiguredName") and chars["ConfiguredName"].value) \
                     or (chars.get("Name") and chars["Name"].value) or acc_name or f"{stype} {aid}"
-                result.append(ServiceSnapshot(
-                    key=f"{aid}.{svc['iid']}", service_type=stype, name=name,
-                    chars=chars, accessory=acc_name,
-                ))
+                snap = ServiceSnapshot(key=f"{aid}.{svc['iid']}", service_type=stype, name=name,
+                                       chars=chars, accessory=acc_name)
+                (sensors if stype in SENSOR_SERVICES else result).append(snap)
+            if sensors:
+                result.append(merge_sensors(str(aid), acc_name, sensors))
         return result
 
     async def write(self, writes: list[tuple[Char, Any]]) -> None:
