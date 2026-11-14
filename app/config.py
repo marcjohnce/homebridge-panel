@@ -79,7 +79,7 @@ class DeviceOverride(BaseModel):
     hidden: bool = False
     order: int = 100
     outdoor: bool = Field(False, description="Outdoor sensor: shown as outdoor temperature, not indoors")
-    security: Literal["window", "door", "contact", "glassbreak", "leak", "motion", "smoke", "co"] | None = Field(
+    security: Literal["window", "door", "contact", "glassbreak", "leak", "motion", "presence", "smoke", "co"] | None = Field(
         None, description="Kind of a contact or motion sensor (e.g. glassbreak)")
     appliance: Literal["switch", "plug", "tv", "coffee", "washer", "dishwasher", "fan"] | None = Field(
         None, description="What a switch or plug powers (icon, washer/dishwasher state, fan under Climate)")

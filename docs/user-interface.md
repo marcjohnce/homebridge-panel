@@ -85,7 +85,7 @@ Tiles leave out the room from the device name when the room is shown anyway
 |---|---|
 | Lights | lights, switches, plugs and blinds |
 | Climate | heating, temperature, humidity, air pressure and light sensors, fans |
-| Security | window, door, glass break, leak, motion, smoke and CO sensors – alarms and open windows first |
+| Security | window, door, glass break, leak, motion, presence, smoke and CO sensors – alarms and open windows first |
 
 A dot before a room tab shows where something is going on: under *Lights* a dot in the accent
 colour marks rooms with at least one light, switch or plug on (blinds don't count); under
@@ -130,6 +130,11 @@ A window, door, contact or motion sensor that is only used for automations can b
 of the alerts: switch off *Security alerts* in [Settings → Rooms and devices](#rooms-and-devices).
 It is still shown under *Security*, but raises no alert, gets no red dot and is marked
 *No alerts* in the device list. Leak, smoke, CO and glass break sensors always alert.
+
+**Presence sensors** (HomeKit occupancy sensors, e.g. mmWave radar) show *Present* or *Nobody
+there*. They report presence for as long as someone is in the room, so their *Security alerts* are
+off by default; switched on, they count like motion sensors (only while the alarm system is
+armed). The kind can be switched between presence and motion in the device editor.
 
 ![Alarm system](images/alarm-system.png)
 

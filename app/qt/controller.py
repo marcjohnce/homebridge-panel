@@ -27,7 +27,7 @@ from ..backends.mqtt import MqttBackend, test_connection as test_mqtt
 from ..rooms import BUILTIN_DEFAULT, RoomLayout
 from ..scheduler import Scheduler
 from ..settings import ACTIONS, SettingsStore, apply_to_config, validate
-from ..models import AREAS, KIND_ICONS, KIND_KEYS
+from ..models import AREAS, KIND_ICONS, KIND_KEYS, QUIET_KINDS
 from . import format as fmt
 from .format import (air_warning, alert_level, battery_low, battery_text, category, fmt_temp, has_detail,
                      short_name, state_text)
@@ -151,7 +151,6 @@ class DeviceModel(QAbstractListModel):
         out = {**d, "baseRoom": base, "room": self.layout.room_of(d["id"], base),
                "baseName": base_name, "name": self.layout.names.get(d["id"]) or base_name,
                "hidden": d["id"] in self.layout.hidden,
-               "quiet": d["id"] in self.layout.quiet,
                "grouped": d["id"] in self.grouped}
         meta = d.get("meta", {})
         base_outdoor = d.get("baseOutdoor", bool(meta.get("outdoor")))
@@ -173,6 +172,9 @@ class DeviceModel(QAbstractListModel):
             follows = base_icon == KIND_ICONS.get(base_kind) or base_icon in ("switch", "plug", "light")
             icon = KIND_ICONS[kind] if follows else base_icon
             out.update(baseKind=base_kind, baseIcon=base_icon, icon=icon, meta={**meta, key: kind})
+        # security alerts off: set on the panel, by default for presence sensors
+        kind = out["meta"].get("security")
+        out["quiet"] = d["type"] == "security" and self.layout.quiet.get(d["id"], kind in QUIET_KINDS)
         return out
 
     def reassign(self) -> None:
@@ -370,7 +372,8 @@ class RoomsBridge(QObject):
                 for r in self._layout.all_rooms(dev_rooms.values())]
 
     KIND_LABELS = {"window": "Window", "door": "Door", "contact": "Contact", "glassbreak": "Glass break",
-                   "leak": "Leak", "motion": "Motion", "smoke": "Smoke detector", "co": "CO detector",
+                   "leak": "Leak", "motion": "Motion", "presence": "Presence",
+                   "smoke": "Smoke detector", "co": "CO detector",
                    "switch": "Switch", "plug": "Plug", "tv": "TV", "coffee": "Coffee machine",
                    "washer": "Washing machine", "dishwasher": "Dishwasher", "fan": "Fan",
                    "bulb": "Bulb", "ceiling": "Ceiling lamp", "spot": "Spotlight", "wall": "Wall lamp",
@@ -568,7 +571,8 @@ class RoomsBridge(QObject):
         self._layout.set_room(dev_id, room, d["baseRoom"], m.device_rooms())
         self._layout.set_hidden(dev_id, hidden)
         if d["type"] == "security":
-            self._layout.set_quiet(dev_id, quiet)
+            new_kind = kind if kind in meta.get("kinds", []) else meta.get("security", "")
+            self._layout.set_quiet(dev_id, quiet, new_kind in QUIET_KINDS)
         self._layout.set_area(dev_id, area, d.get("baseArea", ""))
         if d["type"] == "sensor":
             self._layout.set_outdoor(dev_id, outdoor, d.get("baseOutdoor", False))

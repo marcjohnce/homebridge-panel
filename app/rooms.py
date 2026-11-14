@@ -5,7 +5,7 @@ A device's room comes from config.yaml (`devices: <id>: room:`) or the default r
 The panel can override it; overrides and the room order are stored in settings.json:
 
     "rooms": {"order": ["Living Room", "Kitchen"], "devices": {"hap:...": "Kitchen"},
-              "names": {"hap:...": "Coffee"}, "kinds": {"hap:...": "window"}, "hidden": ["hap:..."], "quiet": ["hap:..."],
+              "names": {"hap:...": "Coffee"}, "kinds": {"hap:...": "window"}, "hidden": ["hap:..."], "quiet": {"hap:...": true},
               "outdoor": {"hap:...": true}, "areas": {"hap:...": "climate"},
               "device_order": {"Kitchen": ["hap:...", "hap:..."]}}
 
@@ -45,9 +45,12 @@ class RoomLayout:
             if isinstance(order, dict) else {})
         hidden = data.get("hidden", [])
         self.hidden: set[str] = {str(h) for h in hidden} if isinstance(hidden, list) else set()
-        quiet = data.get("quiet", [])
-        # security sensors that raise no alerts (e.g. a motion sensor only used for automations)
-        self.quiet: set[str] = {str(q) for q in quiet} if isinstance(quiet, list) else set()
+        quiet = data.get("quiet", {})
+        # security sensors with alerts switched off (True) or on (False) where that differs from
+        # their default (presence sensors are quiet by default); older files: a list of quiet ids
+        self.quiet: dict[str, bool] = ({str(q): True for q in quiet} if isinstance(quiet, list) else
+                                       {str(k): bool(v) for k, v in quiet.items() if isinstance(v, bool)}
+                                       if isinstance(quiet, dict) else {})
         outdoor = data.get("outdoor", {})
         # outdoor sensor or not, where it differs from config.yaml
         self.outdoor: dict[str, bool] = ({str(k): bool(v) for k, v in outdoor.items() if isinstance(v, bool)}
@@ -62,7 +65,7 @@ class RoomLayout:
     def to_dict(self) -> dict[str, Any]:
         return {"order": list(self.order), "devices": dict(self.assign),
                 "names": dict(self.names), "kinds": dict(self.kinds), "hidden": sorted(self.hidden),
-                "quiet": sorted(self.quiet),
+                "quiet": dict(self.quiet),
                 "outdoor": dict(self.outdoor), "areas": dict(self.areas),
                 "device_order": {r: list(ids) for r, ids in self.device_order.items()}}
 
@@ -195,8 +198,11 @@ class RoomLayout:
     def set_hidden(self, dev_id: str, hidden: bool) -> None:
         (self.hidden.add if hidden else self.hidden.discard)(dev_id)
 
-    def set_quiet(self, dev_id: str, quiet: bool) -> None:
-        (self.quiet.add if quiet else self.quiet.discard)(dev_id)
+    def set_quiet(self, dev_id: str, quiet: bool, default: bool = False) -> None:
+        if quiet == default:
+            self.quiet.pop(dev_id, None)
+        else:
+            self.quiet[dev_id] = quiet
 
     def set_kind(self, dev_id: str, kind: str, base: str) -> None:
         if not kind or kind == base:

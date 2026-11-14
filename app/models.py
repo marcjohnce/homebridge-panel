@@ -38,10 +38,14 @@ DEFAULT_ICONS = {
 # Kinds of security sensors. A contact sensor can be a window, a door, a plain contact
 # (e.g. a cupboard or a gate) or a glass break detector; HomeKit has no glass break type, so
 # plugins expose those as contact or motion sensors.
-SECURITY_KINDS = ("window", "door", "contact", "glassbreak", "leak", "motion", "smoke", "co")
+SECURITY_KINDS = ("window", "door", "contact", "glassbreak", "leak", "motion", "presence", "smoke", "co")
 SECURITY_ICONS = {"window": "window", "door": "door", "contact": "contact", "glassbreak": "glass",
-                  "leak": "leak", "motion": "motion", "smoke": "smoke", "co": "co"}
+                  "leak": "leak", "motion": "motion", "presence": "presence",
+                  "smoke": "smoke", "co": "co"}
 ALARM_KINDS = {"glassbreak", "leak", "smoke", "co"}
+# Presence (occupancy) sensors report "present" for as long as someone is in the room: no security
+# alerts unless switched on on the panel
+QUIET_KINDS = {"presence"}
 
 # What a switch or plug powers; chosen on the panel or with appliance: in config.yaml.
 # The kind sets the icon; "fan" puts the device under "Climate", washer and dishwasher
