@@ -211,6 +211,10 @@ python tools/doc_screenshots.py         # update the documentation screenshots
 - On the Pi, Qt draws lines and arcs with its GPU curve renderer. On very old models without
   OpenGL ES 3, set `QT_QUICK_BACKEND=software`.
 - Schedules also accept the German weekday abbreviations (`di mi do so`) for older configurations.
+- **A device does not show up?** `python tools/list_services.py` lists every accessory and HomeKit
+  service of the configured bridges and whether the panel supports it. A plugin running as a
+  **child bridge** has its own port and PIN and is not on the main bridge: add it under `hap:` in
+  `config.yaml`.
 
 ## License
 
