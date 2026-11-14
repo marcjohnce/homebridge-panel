@@ -65,7 +65,7 @@ p.sub{color:var(--muted)}
 .btn-ghost{border-color:var(--line);color:var(--ink)}
 .btn-ghost:hover{border-color:var(--muted)}
 .nav .btn{padding:8px 18px;font-size:.95rem}
-@media (max-width:900px){.nav ul{display:none}.nav .lang{margin-left:auto}}
+@media (max-width:1180px){.nav ul{display:none}.nav .lang{margin-left:auto}}
 @media (max-width:480px){.nav .btn span{display:none}.nav .wrap{gap:14px}}
 
 /* hero: the wall */
@@ -244,6 +244,20 @@ section{padding:clamp(80px,10vw,140px) 0}
 .faq details p{color:var(--muted);padding:0 0 24px;font-size:1.05rem}
 .faq code{font-size:.9em;background:var(--tile);padding:1px 6px;border-radius:4px}
 
+/* support */
+.support .wrap{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,5fr);gap:clamp(32px,6vw,90px);align-items:start}
+.support .lede{margin-bottom:1.6em}
+.support .btn-gold{font-size:1.08rem;padding:15px 28px}
+.support .btn svg{width:20px;height:20px}
+.support-note{color:var(--day-muted);font-size:.95rem;margin-top:16px}
+.ways{list-style:none;display:grid}
+.ways li{border-top:1px solid #cdd0d4;padding:22px 0}
+.ways li:last-child{border-bottom:1px solid #cdd0d4}
+.ways h3{font-size:1.2rem;margin-bottom:4px}
+.ways p{color:var(--day-muted);font-size:1rem}
+.ways a{color:var(--day-ink);text-decoration-color:var(--gold-deep);text-underline-offset:3px}
+@media (max-width:860px){.support .wrap{grid-template-columns:1fr}}
+
 /* final */
 .final{text-align:left;padding-bottom:clamp(60px,7vw,90px)}
 .final .big{font-size:clamp(4.5rem,13vw,11rem);font-weight:200;line-height:.9;letter-spacing:-.02em;color:var(--ink)}
@@ -283,6 +297,7 @@ footer a{color:var(--ink)}
         <li><a href="#how" data-i18n="nav.how">How it works</a></li>
         <li><a href="#install" data-i18n="nav.install">Install</a></li>
         <li><a href="#faq" data-i18n="nav.faq">FAQ</a></li>
+        <li><a href="#support" data-i18n="nav.support">Support</a></li>
       </ul>
     </nav>
     <div class="lang" role="group" aria-label="Language">
@@ -574,6 +589,23 @@ cd ~/homebridge-panel
   </div>
 </section>
 
+<!-- SUPPORT -->
+<section class="day support" id="support">
+  <div class="wrap">
+    <div>
+      <h2 data-i18n="sup.title">Enjoying the panel? Help it grow.</h2>
+      <p class="lede" data-i18n="sup.lede">Homebridge Panel is free and built in my spare time. If it has earned a place on your wall, a small contribution goes straight back into it: new device types, test displays and sensors, and the hours it takes to make every screen feel just right.</p>
+      <a class="btn btn-gold" href="https://ko-fi.com/marcjohnce"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h12v5a5 5 0 01-5 5H9a5 5 0 01-5-5z"/><path d="M16 10h1.5a2.5 2.5 0 010 5H16M8 3v3M12 3v3"/></svg><span data-i18n="sup.cta">Support on Ko-fi</span></a>
+      <p class="support-note" data-i18n="sup.note">Every coffee counts. Thank you!</p>
+    </div>
+    <ul class="ways">
+      <li><h3 data-i18n="sup.w1">Buy a coffee</h3><p data-i18n="sup.w1.p">A one-off thank-you on <a href="https://ko-fi.com/marcjohnce">Ko-fi</a> keeps development going.</p></li>
+      <li><h3 data-i18n="sup.w2">Star the repository</h3><p data-i18n="sup.w2.p">A star on <a href="https://github.com/marcjohnce/homebridge-panel">GitHub</a> helps other Homebridge users find the panel.</p></li>
+      <li><h3 data-i18n="sup.w3">Share your wall</h3><p data-i18n="sup.w3.p">Report a bug, suggest a device type or show your setup in the <a href="https://github.com/marcjohnce/homebridge-panel/issues">issues</a>.</p></li>
+    </ul>
+  </div>
+</section>
+
 <section class="final">
   <div class="wrap">
     <div class="big" aria-hidden="true">22<span>:</span>30</div>
@@ -590,7 +622,7 @@ cd ~/homebridge-panel
 <footer>
   <div class="wrap">
     <p data-i18n="foot.1">Homebridge Panel is an independent project and is not affiliated with Homebridge or Apple. HomeKit is a trademark of Apple Inc.</p>
-    <p><a href="https://github.com/marcjohnce/homebridge-panel">GitHub</a> &nbsp; <a href="https://github.com/marcjohnce/homebridge-panel/issues" data-i18n="foot.issues">Report an issue</a> &nbsp; <a href="https://github.com/marcjohnce/homebridge-panel/blob/main/LICENSE" data-i18n="foot.license">Apache 2.0 license</a></p>
+    <p><a href="https://github.com/marcjohnce/homebridge-panel">GitHub</a> &nbsp; <a href="https://github.com/marcjohnce/homebridge-panel/issues" data-i18n="foot.issues">Report an issue</a> &nbsp; <a href="https://ko-fi.com/marcjohnce" data-i18n="foot.support">Support on Ko-fi</a> &nbsp; <a href="https://github.com/marcjohnce/homebridge-panel/blob/main/LICENSE" data-i18n="foot.license">Apache 2.0 license</a></p>
   </div>
 </footer>
 
@@ -669,6 +701,13 @@ cd ~/homebridge-panel
     "q3":"Was passiert, wenn ich etwas in der Home-App ändere?","a3":"Das Panel übernimmt es innerhalb von fünf Sekunden. Deine eigenen Eingaben am Panel wirken sofort.",
     "q4":"Kann ich es ohne Hardware ausprobieren?","a4":"Ja. Starte es mit <code>python -m app --demo</code> auf einem beliebigen Linux-Rechner, dann bekommst du simulierte Geräte in einem Fenster.",
     "q5":"Läuft es auf älteren Raspberry Pis?","a5":"Ein Pi 3 funktioniert. Auf sehr alten Modellen ohne OpenGL ES 3 vor dem Start <code>QT_QUICK_BACKEND=software</code> setzen.",
+    "nav.support":"Unterstützen","foot.support":"Auf Ko-fi unterstützen",
+    "sup.title":"Gefällt dir das Panel? Hilf ihm zu wachsen.",
+    "sup.lede":"Homebridge Panel ist kostenlos und entsteht in meiner Freizeit. Wenn es sich einen Platz an deiner Wand verdient hat, fließt ein kleiner Beitrag direkt zurück ins Projekt: neue Gerätetypen, Testdisplays und Sensoren und die Stunden, bis sich jeder Bildschirm genau richtig anfühlt.",
+    "sup.cta":"Auf Ko-fi unterstützen","sup.note":"Jeder Kaffee zählt. Danke!",
+    "sup.w1":"Einen Kaffee spendieren","sup.w1.p":"Ein einmaliges Dankeschön auf <a href=\"https://ko-fi.com/marcjohnce\">Ko-fi</a> hält die Entwicklung am Laufen.",
+    "sup.w2":"Dem Repository einen Stern geben","sup.w2.p":"Ein Stern auf <a href=\"https://github.com/marcjohnce/homebridge-panel\">GitHub</a> hilft anderen Homebridge-Nutzern, das Panel zu finden.",
+    "sup.w3":"Deine Wand zeigen","sup.w3.p":"Melde einen Fehler, wünsch dir einen Gerätetyp oder zeig dein Setup in den <a href=\"https://github.com/marcjohnce/homebridge-panel/issues\">Issues</a>.",
     "final.title":"Licht aus. Von der Wand.","final.p":"Kostenlos und quelloffen unter der Apache-2.0-Lizenz. Gebaut mit Qt Quick und Python.","final.cta":"Auf GitHub holen","final.cta2":"Bedienungsanleitung lesen",
     "foot.1":"Homebridge Panel ist ein unabhängiges Projekt und steht in keiner Verbindung zu Homebridge oder Apple. HomeKit ist eine Marke von Apple Inc.","foot.issues":"Problem melden","foot.license":"Apache-2.0-Lizenz"
   };
