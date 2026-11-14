@@ -65,7 +65,7 @@ def test_translations_keep_placeholders(lang):
 def test_languages_offered_in_settings():
     assert set(LANGS) | {"en"} == set(i18n.LANGUAGES)
     options = [v for v, _ in settings.FIELDS_BY_KEY["language"].options]
-    assert options == ["auto", "en", "de", "fr", "it", "es"]
+    assert options == ["auto", "en", "de", "fr", "it", "es", "pt"]
 
 
 def test_lookup_and_formats():

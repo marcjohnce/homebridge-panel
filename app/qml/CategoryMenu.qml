@@ -2,12 +2,12 @@ import QtQuick
 import QtQuick.Layouts
 import "Categories.js" as Categories
 
-// Menu of the sidebar: Light, Climate, Scenes, Security with a short status on the right
+// Menu of the sidebar: Lights, Climate, Security with a short status on the right
 ColumnLayout {
     id: root
 
     property bool compact: false
-    readonly property var labels: ({ light: qsTr("Lights"), climate: qsTr("Climate"), scenes: qsTr("Scenes"),
+    readonly property var labels: ({ light: qsTr("Lights"), climate: qsTr("Climate"),
                                      security: qsTr("Security") })
 
     objectName: "categoryMenu"

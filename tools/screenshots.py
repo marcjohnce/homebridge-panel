@@ -93,7 +93,7 @@ def main() -> int:
     for theme in themes:
         store.update({"theme": theme})
         ctl.settings_saved({"theme"})
-        for cat in ("light", "climate", "scenes", "security"):
+        for cat in ("light", "climate", "security"):
             ctl.selectCategory(cat)
             shot(f"{theme}-home-{cat}")
         ctl.selectCategory("")

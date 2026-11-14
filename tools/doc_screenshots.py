@@ -242,7 +242,7 @@ def home_callouts(p: Panel, top_layout: bool) -> list[tuple]:
 
 
 def menu_views(p: Panel, out: Path, size: str, suffix: str = "") -> None:
-    """Climate, scenes and security as chosen in the menu."""
+    """Climate and security as chosen in the menu."""
     p.win.setProperty("openDevice", "")
     p.ctl.selectCategory("climate")
     p.ctl.selectRoom("")
@@ -251,13 +251,6 @@ def menu_views(p: Panel, out: Path, size: str, suffix: str = "") -> None:
         (2, [p.rect(f"tile:{p.device_id('Living Room Heating')}")], "Heating tile"),
         (3, [p.rect(f"tile:{p.device_id('Weather Station')}")], "Sensor tile"),
     ], f"Climate – {size}"), out, f"home-climate{suffix}")
-    p.ctl.selectCategory("scenes")
-    p.ctl.selectRoom("")
-    save(annotate(p.grab(), [
-        (1, [p.rect("category:scenes")], "Scenes", "left" if not suffix else "top"),
-        (2, [p.rect("scene:movie")], "Scene of a room (tap to run)"),
-        (3, [p.rect("scene:all-off")], "Scene for the whole house"),
-    ], f"Scenes – {size}"), out, f"home-scenes{suffix}")
     p.ctl.selectCategory("security")
     p.ctl.selectRoom("")
     save(annotate(p.grab(), [

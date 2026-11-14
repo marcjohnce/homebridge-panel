@@ -5,7 +5,7 @@ import "Categories.js" as Categories
 Row {
     id: root
 
-    readonly property var labels: ({ light: qsTr("Lights"), climate: qsTr("Climate"), scenes: qsTr("Scenes"),
+    readonly property var labels: ({ light: qsTr("Lights"), climate: qsTr("Climate"),
                                      security: qsTr("Security") })
 
     objectName: "categoryMenu"

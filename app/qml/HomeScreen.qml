@@ -49,15 +49,9 @@ Item {
                     Layout.preferredHeight: Theme.s(44)
                 }
                 TileGrid {
-                    visible: panel.category !== "scenes"
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     onOpenDetail: id => root.openDetail(id)
-                }
-                SceneGrid {
-                    visible: panel.category === "scenes"
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
                 }
             }
         }
@@ -84,19 +78,11 @@ Item {
                 Layout.rightMargin: 24
             }
             TileGrid {
-                visible: panel.category !== "scenes"
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 Layout.leftMargin: 24
                 Layout.rightMargin: 24
                 onOpenDetail: id => root.openDetail(id)
-            }
-            SceneGrid {
-                visible: panel.category === "scenes"
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                Layout.leftMargin: 24
-                Layout.rightMargin: 24
             }
         }
     }

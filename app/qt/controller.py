@@ -849,10 +849,7 @@ class Controller(QObject):
         self._alarms = set(alarms)
 
     def _tab_rooms(self) -> list[str]:
-        if self._category == "scenes":
-            rooms = self._model.layout.sort({s["room"] for s in self._scenes if s.get("room")})
-        else:
-            rooms = self._model.rooms(self._category)
+        rooms = self._model.rooms(self._category)
         if not self.store.get("show_general"):
             rooms = [r for r in rooms if r != self._model.layout.default_room]
         return rooms
@@ -1011,13 +1008,6 @@ class Controller(QObject):
     def scenes(self) -> list[dict[str, Any]]:
         return self._scenes
 
-    @Property("QVariantList", notify=scenesChanged)
-    def visibleScenes(self) -> list[dict[str, Any]]:
-        """Scenes of the selected room; "All" shows every scene, whole-house scenes first."""
-        if self._room != ALL_ROOMS:
-            return [s for s in self._scenes if s.get("room") == self._room]
-        return sorted(self._scenes, key=lambda s: s.get("room") is not None)
-
     @Property(str, notify=categoryChanged)
     def category(self) -> str:
         return self._category
@@ -1033,7 +1023,6 @@ class Controller(QObject):
         return {
             "light": tr("{n} on").format(n=on) if on else "",
             "climate": tr("{n} heating").format(n=heating) if heating else "",
-            "scenes": "",
             "security": (tr("1 alert") if alerts == 1 else tr("{n} alerts").format(n=alerts)) if alerts else "",
         }
 

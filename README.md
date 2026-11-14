@@ -33,13 +33,14 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
   combined into one tile; outdoor sensors shown as outdoor temperature
 - **Security**: window, door, glass break, leak and motion sensors; open windows and alarms first,
   a leak or glass break wakes the panel and shows a message
-- **Menu** Lights, Climate, Scenes, Security; room tabs per menu entry with "All" last
+- **Menu** Lights, Climate, Security; room tabs per menu entry with "All" last
 - **MQTT**: virtual devices show values of MQTT topics (e.g. boiler pressure in bar), broker set up in the settings
 - **Light groups**: several lights of a room as one tile
 - **Rooms** managed on the panel: add, rename, reorder and delete rooms, sort and move devices,
   change display names; optionally hide the "General" room
-- **Scenes per room and schedules** (e.g. weekdays 06:30 "Comfort", daily 22:30 "Eco")
-- **Languages**: English, German, French, Italian, Spanish – selectable in the settings
+- **Scenes and schedules** in `config.yaml` (e.g. weekdays 06:30 "Comfort", daily 22:30 "Eco");
+  the panel has no scenes view for now
+- **Languages**: English, German, French, Italian, Spanish, Portuguese – selectable in the settings
 - **Light / dark / automatic** appearance and a **screen saver** with a large clock
 - **Settings page** for appearance, screen saver and the Homebridge connection (address, port, PIN)
   with keypad, connection test and apply without restart; **restart** the app or the Raspberry Pi
@@ -93,7 +94,7 @@ In the app (icon at the bottom left), stored in `~/.config/smarthome-panel/setti
 | Section | Setting | Behavior |
 |---|---|---|
 | Display | Appearance: Automatic (dark 7 pm – 7 am), Light, Dark | saved immediately |
-| Display | Language: System, English, Deutsch, Français, Italiano, Español | saved immediately |
+| Display | Language: System, English, Deutsch, Français, Italiano, Español, Português | saved immediately |
 | Display | Screen saver after: never, 1, 2, 5, 15 minutes | saved immediately |
 | Rooms | Rooms and devices: rooms, display names, kind of sensors, switches and plugs (TV, washing machine …), menu entry, outdoor sensors, hidden devices, room of each device | saved immediately |
 | Rooms | Show the "General" room (on/off) | saved immediately |
@@ -126,7 +127,7 @@ are written in English and translated through the catalog (see below).
 
 Texts are written in English in the code – `qsTr("…")` in QML, `tr("…")` in Python – and
 translated from `app/i18n_catalog.py` (one line per text: English, German, French, Italian,
-Spanish). A `QTranslator` feeds the same catalog to QML, so no `.qm` files are needed.
+Spanish; Portuguese in `app/i18n_catalog_pt.py`). A `QTranslator` feeds the same catalog to QML, so no `.qm` files are needed.
 `tests/test_i18n.py` fails if a text has no translation or a translation loses a placeholder
 (`{name}`, `%1`). To add a language, add it to `LANGUAGES` and `FORMATS` in `app/i18n.py` and a
 column to the catalog.
@@ -141,7 +142,7 @@ column to the catalog.
 | `homebridge_ui` | alternatively access via the Homebridge web UI (username/password) |
 | `demo` | simulated devices |
 | `devices` | per device (ID or name): `room`, `name`, `icon`, `order`, `hidden`, `outdoor` (sensors), `security` (`window`, `door`, `contact`, `glassbreak`, `motion` for contact/motion sensors), `appliance` (`switch`, `plug`, `tv`, `coffee`, `washer`, `dishwasher`, `fan` for switches/plugs), `lamp` (`bulb`, `ceiling`, `spot`, `wall`, `table` for lights), `area` (`light`, `climate`, `security`); values set on the panel take precedence |
-| `scenes` | scenes with actions `{device: …, set: {…}}` and an optional `room` (without: whole house) |
+| `scenes` | scenes with actions `{device: …, set: {…}}`, run by schedules; `room` is kept for a later scenes view |
 | `schedules` | run a scene at a time on weekdays (`mo tu we th fr sa su`) |
 
 **Scene attributes**: `on`, `brightness` (0–100), `hue` (0–360), `saturation` (0–100),
@@ -160,7 +161,7 @@ app/
   settings.py          settings schema, validation, storage, effect on the configuration
   rooms.py             rooms edited on the panel: order and device assignment
   i18n.py              language selection, number and date formats
-  i18n_catalog.py      translations (German, French, Italian, Spanish)
+  i18n_catalog.py      translations (German, French, Italian, Spanish; Portuguese in i18n_catalog_pt.py)
   config.py            config.yaml (Pydantic)
   manager.py           device management: polling, commands, scenes
   scheduler.py         schedules

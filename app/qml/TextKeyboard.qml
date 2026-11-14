@@ -22,11 +22,13 @@ Popup {
         case "de": return ["qwertzuiopü", "asdfghjklöä", "yxcvbnmß"];
         case "fr": return ["azertyuiop", "qsdfghjklm", "wxcvbné"];
         case "es": return ["qwertyuiop", "asdfghjklñ", "zxcvbnm"];
+        case "pt": return ["qwertyuiop", "asdfghjklç", "zxcvbnm"];
         default: return ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
         }
     }
     // digits and the characters MQTT topics, host names, user names and passwords need, then accents
-    readonly property var symbolRows: ["1234567890", "-/_#+.:@&*", "()',!?$%=~", "éèêàçùòìíóá"]
+    readonly property var symbolRows: ["1234567890", "-/_#+.:@&*", "()',!?$%=~",
+        panel.language === "pt" ? "ãõâêôáéíóúà" : "éèêàçùòìíóá"]
     readonly property var rows: symbols ? symbolRows : letterRows
     readonly property real unit: (availableWidth - 10 * keySpacing) / 11
     readonly property int keySpacing: 6

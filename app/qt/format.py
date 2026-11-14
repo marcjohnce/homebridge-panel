@@ -9,7 +9,7 @@ from ..i18n import fmt_number, tr
 from ..models import ALARM_KINDS
 
 # Menu areas of the home screen and the device types shown in them
-CATEGORIES = ("light", "climate", "scenes", "security")
+CATEGORIES = ("light", "climate", "security")
 CATEGORY_OF_TYPE = {"light": "light", "plug": "light", "switch": "light", "blind": "light",
                     "thermostat": "climate", "sensor": "climate", "fan": "climate",
                     "security": "security", "value": "climate"}

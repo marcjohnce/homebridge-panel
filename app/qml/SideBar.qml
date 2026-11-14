@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 
-// Left column: clock, indoor temperature, menu (light, climate, scenes, security), status, settings
+// Left column: clock, indoor temperature, menu (lights, climate, security), status, settings
 ColumnLayout {
     id: root
 

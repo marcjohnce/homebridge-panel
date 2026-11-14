@@ -3,6 +3,7 @@
 Texts are written in English in the code: `tr("...")` in Python, `qsTr("...")` in QML.
 Translations live in `i18n_catalog.py`. Placeholders are `{name}` in Python and `%1` in QML.
 Adding a language: add it to LANGUAGES and FORMATS and a column to every catalog entry
+(or, like Portuguese, a separate dict merged in i18n_catalog.py)
 (tests/test_i18n.py checks that nothing is missing).
 """
 from __future__ import annotations
@@ -12,7 +13,7 @@ import os
 from .i18n_catalog import CATALOG
 
 # Language names in their own language (shown like this in the settings)
-LANGUAGES = {"en": "English", "de": "Deutsch", "fr": "Français", "it": "Italiano", "es": "Español"}
+LANGUAGES = {"en": "English", "de": "Deutsch", "fr": "Français", "it": "Italiano", "es": "Español", "pt": "Português"}
 
 # Qt locale, decimal point, thousands separator, date format (Qt date format)
 FORMATS = {
@@ -21,6 +22,7 @@ FORMATS = {
     "fr": ("fr_FR", ",", " ", "dddd d MMMM"),
     "it": ("it_IT", ",", ".", "dddd d MMMM"),
     "es": ("es_ES", ",", ".", "dddd, d 'de' MMMM"),
+    "pt": ("pt_PT", ",", " ", "dddd, d 'de' MMMM"),
 }
 
 _language = "en"

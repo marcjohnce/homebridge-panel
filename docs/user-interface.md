@@ -11,7 +11,7 @@ python tools/doc_screenshots.py      # writes docs/images/*.png
 ## Screen sizes
 
 The layout adapts to the display. Wide screens show a **sidebar** on the left with the clock,
-date, temperatures and the menu (*Lights*, *Climate*, *Scenes*, *Security*). Square and portrait
+date, temperatures and the menu (*Lights*, *Climate*, *Security*). Square and portrait
 screens (width less than 1.4 × height) switch to a slim **top bar**: clock, the menu as icon
 buttons, status and settings in one row, so the tiles get as much room as possible. Date and
 temperature appear in the top bar only on portrait screens.
@@ -42,7 +42,7 @@ Start the app at a given size in a window with `.venv/bin/python -m app --size 8
 |---|---|---|
 | 1 | Clock and date | Current time and date (the top bar shows only the clock on square screens) |
 | 2 | Indoor and outdoor temperature | *indoors*: average of all reachable thermostats and indoor sensors. *outdoors*: sensors marked as *Outdoor sensor* in Settings → Rooms and devices or with `outdoor: true` in `config.yaml` (shown only if there is one). Hidden devices are left out |
-| 3 | Menu | Chooses what the tiles show: [Lights](#menu), [Climate](#menu), [Scenes](#scenes), [Security](#security). Each entry shows a short status, e.g. *2 on*, *1 heating* or *1 alert* in red. The top bar shows the menu as icons with a red count on *Security* |
+| 3 | Menu | Chooses what the tiles show: [Lights](#menu), [Climate](#menu), [Security](#security). Each entry shows a short status, e.g. *2 on*, *1 heating* or *1 alert* in red. The top bar shows the menu as icons with a red count on *Security* |
 | 4 | Connection status | Green: all bridges connected. Red: a bridge is not reachable (details under Settings → Info) |
 | 5 | Settings | Opens the [settings page](#settings) |
 | 6 | Rooms | Filter the tiles by room. Only rooms with devices of the chosen menu entry appear. Choosing a menu entry selects the first room; *All* comes last and shows every device with its room above the name |
@@ -85,7 +85,6 @@ Tiles leave out the room from the device name when the room is shown anyway
 |---|---|
 | Lights | lights, switches, plugs and blinds |
 | Climate | heating, temperature, humidity, air pressure and light sensors, fans |
-| Scenes | the scenes of the room; *All* shows every scene, whole-house scenes first |
 | Security | window, door, glass break, leak and motion sensors – alarms and open windows first |
 
 ![Climate](images/home-climate.png)
@@ -95,16 +94,6 @@ Tiles leave out the room from the device name when the room is shown anyway
 | 1 | Climate | Selected menu entry |
 | 2 | Heating tile | Small arc with the target temperature; the text turns orange while heating. Tap to open the thermostat |
 | 3 | Sensor tile | Current readings, e.g. temperature, humidity and air pressure of a weather station. Tap to open the [sensor view](#sensors) |
-
-### Scenes
-
-![Scenes](images/home-scenes.png)
-
-| # | Element | What it does |
-|---|---|---|
-| 1 | Scenes | Selected menu entry |
-| 2 | Scene of a room | Tap to run it; the tile flashes gold. The room comes from `room:` of the scene in `config.yaml` |
-| 3 | Scene for the whole house | Scenes without a room appear under *All* |
 
 ### Security
 
@@ -249,7 +238,7 @@ connection details, number of devices, file locations and version.
 
 ### Language
 
-The panel speaks English, German, French, Italian and Spanish. *System* follows the language of
+The panel speaks English, German, French, Italian, Spanish and Portuguese. *System* follows the language of
 the operating system (English if it is none of these). The language switches immediately,
 including dates, decimal separators and messages, and also applies to the on-screen keyboard
 layout (QWERTZ for German, AZERTY for French).

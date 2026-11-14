@@ -6,6 +6,8 @@ Pure unit or number formats ("{pct}%", "%1 K") need no entry.
 """
 from __future__ import annotations
 
+from .i18n_catalog_pt import PT
+
 _ROWS: list[tuple[str, str, str, str, str]] = [
     # (English, Deutsch, Français, Italiano, Español)
 
@@ -15,8 +17,6 @@ _ROWS: list[tuple[str, str, str, str, str]] = [
     ("Settings", "Einstellungen", "Réglages", "Impostazioni", "Ajustes"),
     ("Back to %1", "Zurück zu %1", "Retour à %1", "Torna a %1", "Volver a %1"),
     ("All", "Alle", "Tous", "Tutti", "Todos"),
-    ("Scenes", "Szenen", "Scènes", "Scene", "Escenas"),
-    ("Run scene %1", "Szene %1 ausführen", "Lancer la scène %1", "Avvia scena %1", "Ejecutar escena %1"),
     ("Devices", "Geräte", "Appareils", "Dispositivi", "Dispositivos"),
     ("Open controls for %1", "Steuerung für %1 öffnen", "Ouvrir les commandes de %1", "Apri i comandi di %1", "Abrir controles de %1"),
     ("Turn on %1", "%1 einschalten", "Allumer %1", "Accendi %1", "Encender %1"),
@@ -305,11 +305,6 @@ _ROWS: list[tuple[str, str, str, str, str]] = [
     ("{n} heating", "{n} heizt", "{n} en chauffe", "{n} riscalda", "{n} calentando"),
     ("1 alert", "1 Meldung", "1 alerte", "1 avviso", "1 aviso"),
     ("{n} alerts", "{n} Meldungen", "{n} alertes", "{n} avvisi", "{n} avisos"),
-    ("Whole house", "Ganzes Haus", "Toute la maison", "Tutta la casa", "Toda la casa"),
-    ("No scenes here. Scenes are set up in config.yaml.", "Hier gibt es keine Szenen. Szenen werden in config.yaml eingerichtet.",
-     "Aucune scène ici. Les scènes se configurent dans config.yaml.",
-     "Nessuna scena qui. Le scene si configurano in config.yaml.",
-     "No hay escenas aquí. Las escenas se configuran en config.yaml."),
     ("No lights, switches or blinds here.", "Hier gibt es keine Lichter, Schalter oder Rollläden.",
      "Aucune lumière, aucun interrupteur ni volet ici.", "Nessuna luce, interruttore o tapparella qui.",
      "No hay luces, interruptores ni persianas aquí."),
@@ -564,5 +559,7 @@ _ROWS: list[tuple[str, str, str, str, str]] = [
      "Error de escritura en Homebridge UI: {error}"),
 ]
 
-LANGS = ("de", "fr", "it", "es")
-CATALOG: dict[str, dict[str, str]] = {row[0]: dict(zip(LANGS, row[1:])) for row in _ROWS}
+LANGS = ("de", "fr", "it", "es", "pt")
+CATALOG: dict[str, dict[str, str]] = {
+    row[0]: {**dict(zip(LANGS, row[1:])), "pt": PT[row[0]]} for row in _ROWS
+}
