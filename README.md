@@ -28,7 +28,8 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 - **Heating**: thermostats and heater-coolers with a dial (drag or −/+), modes Off/Heat/Auto
 - **Fans**: on/off, speed
 - **Blinds**: open, close, stop, position by dragging, slat angle; smooth position updates while moving
-- **Sensors**: temperature, humidity, air pressure (Eve) and light level; sensors of one device
+- **Sensors**: temperature, humidity, air pressure (Eve), light level, air quality, CO₂, fine dust (PM2.5/PM10)
+  and VOC; bad air or high CO₂ shown in red; sensors of one device
   combined into one tile; outdoor sensors shown as outdoor temperature
 - **Security**: window, door, glass break, leak and motion sensors; open windows and alarms first,
   a leak or glass break wakes the panel and shows a message

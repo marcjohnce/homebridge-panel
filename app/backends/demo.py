@@ -34,6 +34,9 @@ _DEVICES = [
     ("living-climate", "Sensor", "Living Room Climate",
      [("CurrentTemperature", 21.2, False, {}), ("CurrentRelativeHumidity", 46.0, False, {})]),
     ("hall-light", "Sensor", "Hall Light Sensor", [("CurrentAmbientLightLevel", 320.0, False, {})]),
+    ("living-air", "Sensor", "Air Quality",
+     [("AirQuality", 2, False, {}), ("CarbonDioxideLevel", 640.0, False, {}), ("PM2_5Density", 9.0, False, {}),
+      ("VOCDensity", 180.0, False, {})]),
     ("living-blinds", "WindowCovering", "Living Room Blinds",
      [("CurrentPosition", 60, False, {}), ("TargetPosition", 60, True, dict(min=0, max=100, step=1)),
       ("PositionState", 2, False, {}), ("HoldPosition", False, True, {}),
@@ -56,6 +59,10 @@ _SENSOR_DRIFT = {
     "CurrentRelativeHumidity": (0.3, 20.0, 99.0, 0),
     "AirPressure": (0.2, 980.0, 1040.0, 1),
     "CurrentAmbientLightLevel": (6.0, 50.0, 900.0, 0),
+    "AirQuality": (0, 1, 5, 0),
+    "CarbonDioxideLevel": (8.0, 420.0, 1600.0, 0),
+    "PM2_5Density": (0.4, 1.0, 60.0, 0),
+    "VOCDensity": (4.0, 20.0, 900.0, 0),
 }
 
 

@@ -97,7 +97,7 @@ def test_controller_demo_model_and_commands(qapp, tmp_path):
     ctl = make_controller(tmp_path)
     ctl.start()
     model = ctl.devices
-    assert pump_until(lambda: len(model.all()) == 18)
+    assert pump_until(lambda: len(model.all()) == 19)
     assert ctl.statusOk and ctl.statusText == "Connected"
     assert "Kitchen" in ctl.rooms and ctl.indoorTemp != ""
 
@@ -110,14 +110,14 @@ def test_controller_demo_model_and_commands(qapp, tmp_path):
     assert model.rowCount() == 8 and ctl.category == "light"      # lights, plugs, blinds
     ctl.selectCategory("climate")
     ctl.selectRoom("")                     # all rooms
-    assert model.rowCount() == 6 and "Kitchen" not in ctl.rooms
+    assert model.rowCount() == 7 and "Kitchen" not in ctl.rooms
     ctl.selectCategory("security")
     ctl.selectRoom("")                     # all rooms
     assert model.rowCount() == 4 and ctl.securityCount == 1       # the bedroom window is open
     assert ctl.devices.get(model._rows[0])["name"] == "Bedroom Window"     # alerts first
     ctl.selectCategory("")
     ctl.selectRoom("")                     # all rooms
-    assert model.rowCount() == 18
+    assert model.rowCount() == 19
 
     errors = []
     ctl.toast.connect(errors.append)
@@ -129,7 +129,7 @@ def test_controller_demo_model_and_commands(qapp, tmp_path):
 def test_settings_reconnect_and_test_connection(qapp, tmp_path, hap_server):
     ctl = make_controller(tmp_path)
     ctl.start()
-    assert pump_until(lambda: len(ctl.devices.all()) == 18)
+    assert pump_until(lambda: len(ctl.devices.all()) == 19)
 
     results = []
     ctl.settings.testFinished.connect(lambda ok, msg: results.append((ok, msg)))
@@ -145,7 +145,7 @@ def test_settings_reconnect_and_test_connection(qapp, tmp_path, hap_server):
                               "hap_port": hap_server, "hap_pin": "12345678"}) == {}
     lamp = "homebridge:2.9"
     assert pump_until(lambda: ctl.device(lamp).get("name") == "Hall Light")
-    assert pump_until(lambda: len(ctl.devices.all()) == 19 and ctl.statusOk)
+    assert pump_until(lambda: len(ctl.devices.all()) == 20 and ctl.statusOk)
     ctl.toggle(lamp)
     assert pump_until(lambda: FakeHap.lamp_on is True)
     assert json.loads((tmp_path / "settings.json").read_text())["hap_pin"] == "123-45-678"
@@ -213,7 +213,7 @@ def test_indoor_and_outdoor_temperature(qapp, tmp_path):
                                     "devices": {"Weather Station": {"outdoor": True}}})
     ctl = Controller(cfg, store)
     ctl.start()
-    assert pump_until(lambda: len(ctl.devices.all()) == 18 and ctl.outdoorTemp != "")
+    assert pump_until(lambda: len(ctl.devices.all()) == 19 and ctl.outdoorTemp != "")
     devs = ctl.devices.all()
     outdoor = [d["state"]["current_temp"] for d in devs if d.get("meta", {}).get("outdoor")]
     indoor = [d["state"]["current_temp"] for d in devs
@@ -243,7 +243,7 @@ def test_blind_detail_drag_sets_position(qapp, tmp_path):
     engine.load(QML_DIR / "Main.qml")
     win = Shiboken.wrapInstance(Shiboken.getCppPointer(engine.rootObjects()[0])[0], QQuickWindow)
     ctl.start()
-    assert pump_until(lambda: len(ctl.devices.all()) == 18)
+    assert pump_until(lambda: len(ctl.devices.all()) == 19)
     blind = next(d["id"] for d in ctl.devices.all() if d["name"] == "Living Room Blinds")
     win.setProperty("openDevice", blind)
     assert pump_until(lambda: win.findChild(QObject, "blindVisual") is not None)
@@ -264,7 +264,7 @@ def test_blind_detail_drag_sets_position(qapp, tmp_path):
 def test_room_editor_changes_rooms_and_persists(qapp, tmp_path):
     ctl = make_controller(tmp_path)
     ctl.start()
-    assert pump_until(lambda: len(ctl.devices.all()) == 18)
+    assert pump_until(lambda: len(ctl.devices.all()) == 19)
     ed = ctl.roomEditor
     coffee = next(d["id"] for d in ctl.devices.all() if d["name"] == "Coffee Maker")
 
@@ -283,7 +283,7 @@ def test_room_editor_changes_rooms_and_persists(qapp, tmp_path):
     assert "Büro" not in saved["order"] and saved["devices"][coffee] == "General"
     ctl2 = Controller(AppConfig.model_validate({"demo": {"enabled": True}}), SettingsStore(tmp_path / "settings.json"))
     ctl2.start()
-    assert pump_until(lambda: len(ctl2.devices.all()) == 18)
+    assert pump_until(lambda: len(ctl2.devices.all()) == 19)
     assert ctl2.device(coffee)["room"] == "General"
     ctl2.shutdown()
 
@@ -307,7 +307,7 @@ def test_rooms_page_rename_with_keyboard(qapp, tmp_path):
     engine.load(QML_DIR / "Main.qml")
     win = Shiboken.wrapInstance(Shiboken.getCppPointer(engine.rootObjects()[0])[0], QQuickWindow)
     ctl.start()
-    assert pump_until(lambda: len(ctl.devices.all()) == 18)
+    assert pump_until(lambda: len(ctl.devices.all()) == 19)
 
     def find(name, root=None):
         # Repeater delegates are not QObject children, so walk the visual item tree
@@ -353,7 +353,7 @@ def test_rooms_page_rename_with_keyboard(qapp, tmp_path):
 def test_security_alarm_and_open_since(qapp, tmp_path):
     ctl = make_controller(tmp_path)
     ctl.start()
-    assert pump_until(lambda: len(ctl.devices.all()) == 18)
+    assert pump_until(lambda: len(ctl.devices.all()) == 19)
     alarms = []
     ctl.securityAlarm.connect(alarms.append)
     leak = next(d for d in ctl.devices.all() if d["name"] == "Washing Machine Leak")
@@ -373,7 +373,7 @@ def test_security_alarm_and_open_since(qapp, tmp_path):
 def test_device_editor_name_kind_room_and_hide_general(qapp, tmp_path):
     ctl = make_controller(tmp_path)
     ctl.start()
-    assert pump_until(lambda: len(ctl.devices.all()) == 18)
+    assert pump_until(lambda: len(ctl.devices.all()) == 19)
     ed = ctl.roomEditor
     door = next(d for d in ed.devices if d["name"] == "Terrace Door")
     assert [k["value"] for k in door["kinds"]] == ["window", "door", "contact", "glassbreak"]
@@ -399,7 +399,7 @@ def test_device_editor_name_kind_room_and_hide_general(qapp, tmp_path):
 def test_hidden_device_only_in_settings(qapp, tmp_path):
     ctl = make_controller(tmp_path)
     ctl.start()
-    assert pump_until(lambda: len(ctl.devices.all()) == 18)
+    assert pump_until(lambda: len(ctl.devices.all()) == 19)
     ed = ctl.roomEditor
     fan = next(d for d in ed.devices if d["name"] == "Fan")
     assert ed.addRoom("Attic") == "" and ed.saveDevice(fan["id"], {"name": "", "kind": "", "room": "Attic", "hidden": False}) == ""
@@ -426,7 +426,7 @@ def test_hidden_device_only_in_settings(qapp, tmp_path):
 def test_outdoor_sensor_set_on_the_panel(qapp, tmp_path):
     ctl = make_controller(tmp_path)
     ctl.start()
-    assert pump_until(lambda: len(ctl.devices.all()) == 18)
+    assert pump_until(lambda: len(ctl.devices.all()) == 19)
     ed = ctl.roomEditor
     ws = next(d for d in ed.devices if d["name"] == "Weather Station")
     heating = next(d for d in ed.devices if d["name"] == "Living Room Heating")
@@ -442,7 +442,7 @@ def test_outdoor_sensor_set_on_the_panel(qapp, tmp_path):
 def test_appliance_kind_and_menu_area(qapp, tmp_path):
     ctl = make_controller(tmp_path)
     ctl.start()
-    assert pump_until(lambda: len(ctl.devices.all()) == 18)
+    assert pump_until(lambda: len(ctl.devices.all()) == 19)
     ed = ctl.roomEditor
     washer = next(d for d in ed.devices if d["name"] == "Washing Machine")
     assert washer["kind"] == "plug" and [k["value"] for k in washer["kinds"]][:2] == ["switch", "plug"]
@@ -473,7 +473,7 @@ def test_appliance_from_config_and_back_to_automatic(qapp, tmp_path):
         "Washing Machine": {"appliance": "washer", "area": "climate"}, "Coffee Maker": {"icon": "coffee"}}})
     ctl = Controller(cfg, store)
     ctl.start()
-    assert pump_until(lambda: len(ctl.devices.all()) == 18)
+    assert pump_until(lambda: len(ctl.devices.all()) == 19)
     ed = ctl.roomEditor
     washer = next(d for d in ed.devices if d["name"] == "Washing Machine")
     assert washer["kind"] == "washer" and washer["area"] == "climate" and washer["icon"] == "washer"
@@ -488,7 +488,7 @@ def test_appliance_from_config_and_back_to_automatic(qapp, tmp_path):
 def test_lamp_kind_changes_icon(qapp, tmp_path):
     ctl = make_controller(tmp_path)
     ctl.start()
-    assert pump_until(lambda: len(ctl.devices.all()) == 18)
+    assert pump_until(lambda: len(ctl.devices.all()) == 19)
     ed = ctl.roomEditor
     lamp = next(d for d in ed.devices if d["name"] == "Kitchen Light")
     assert lamp["kind"] == "bulb" and [k["value"] for k in lamp["kinds"]] == ["bulb", "ceiling", "spot", "wall", "table"]
@@ -503,7 +503,7 @@ def test_lamp_kind_changes_icon(qapp, tmp_path):
 def test_manual_device_order_per_room(qapp, tmp_path):
     ctl = make_controller(tmp_path)
     ctl.start()
-    assert pump_until(lambda: len(ctl.devices.all()) == 18)
+    assert pump_until(lambda: len(ctl.devices.all()) == 19)
     ed = ctl.roomEditor
     room = lambda: [d["name"] for d in ed.devices if d["room"] == "General" and d["type"] == "light"]   # noqa: E731
     before = room()
@@ -523,7 +523,7 @@ def test_manual_device_order_per_room(qapp, tmp_path):
 def test_light_group(qapp, tmp_path):
     ctl = make_controller(tmp_path)
     ctl.start()
-    assert pump_until(lambda: len(ctl.devices.all()) == 18)
+    assert pump_until(lambda: len(ctl.devices.all()) == 19)
     ed = ctl.roomEditor
     lights = [d for d in ed.lights if d["room"] == "General"][:2]
     ids = [d["id"] for d in lights]
@@ -552,7 +552,7 @@ def test_virtual_device_over_mqtt(qapp, tmp_path):
     ctl = make_controller(tmp_path)
     ctl.store.update({"mqtt_enabled": True, "mqtt_host": "127.0.0.1", "mqtt_port": 1})   # nothing listens there
     ctl.start()
-    assert pump_until(lambda: len(ctl.devices.all()) == 18)
+    assert pump_until(lambda: len(ctl.devices.all()) == 19)
     ed = ctl.roomEditor
     assert ed.saveVirtual({"name": "Pressure", "topic": ""}) != ""
     assert ed.saveVirtual({"name": "Water pressure", "topic": "boiler/pressure", "unit": "bar", "decimals": 1,
@@ -577,7 +577,7 @@ def test_virtual_device_over_mqtt(qapp, tmp_path):
 def test_light_group_color_and_white_tone(qapp, tmp_path):
     ctl = make_controller(tmp_path)
     ctl.start()
-    assert pump_until(lambda: len(ctl.devices.all()) == 18)
+    assert pump_until(lambda: len(ctl.devices.all()) == 19)
     ed = ctl.roomEditor
     by_name = {d["name"]: d["id"] for d in ed.lights}
     strip, ceiling, kitchen = by_name["LED Strip"], by_name["Living Room Ceiling Light"], by_name["Kitchen Light"]
@@ -604,7 +604,7 @@ def test_light_group_color_and_white_tone(qapp, tmp_path):
 def test_menu_switch_selects_first_room(qapp, tmp_path):
     ctl = make_controller(tmp_path)
     ctl.start()
-    assert pump_until(lambda: len(ctl.devices.all()) == 18)
+    assert pump_until(lambda: len(ctl.devices.all()) == 19)
     assert ctl.currentRoom == ctl.rooms[0]                  # at start
     ctl.selectRoom("")
     assert ctl.currentRoom == ""

@@ -488,6 +488,25 @@ _ROWS: list[tuple[str, str, str, str, str]] = [
     ("In a group", "In einer Gruppe", "Dans un groupe", "In un gruppo", "En un grupo"),
     ("{on} of {n} on", "{on} von {n} an", "{on} sur {n} allumées", "{on} di {n} accese", "{on} de {n} encendidas"),
 
+    # ---------- air quality ----------
+    ("Air quality", "Luftqualität", "Qualité de l'air", "Qualità dell'aria", "Calidad del aire"),
+    ("Air {level}", "Luft {level}", "Air {level}", "Aria {level}", "Aire {level}"),
+    ("excellent", "ausgezeichnet", "excellent", "eccellente", "excelente"),
+    ("good", "gut", "bon", "buona", "bueno"),
+    ("fair", "mittel", "moyen", "discreta", "regular"),
+    ("inferior", "mäßig", "médiocre", "scarsa", "deficiente"),
+    ("poor", "schlecht", "mauvais", "pessima", "malo"),
+    ("Excellent", "Ausgezeichnet", "Excellente", "Eccellente", "Excelente"),
+    ("Good", "Gut", "Bonne", "Buona", "Buena"),
+    ("Fair", "Mittel", "Moyenne", "Discreta", "Regular"),
+    ("Inferior", "Mäßig", "Médiocre", "Scarsa", "Deficiente"),
+    ("Poor", "Schlecht", "Mauvaise", "Pessima", "Mala"),
+    ("CO₂", "CO₂", "CO₂", "CO₂", "CO₂"),
+    ("{ppm} ppm", "{ppm} ppm", "{ppm} ppm", "{ppm} ppm", "{ppm} ppm"),
+    ("Fine dust PM2.5", "Feinstaub PM2,5", "Particules fines PM2,5", "Polveri sottili PM2,5", "Partículas finas PM2,5"),
+    ("Fine dust PM10", "Feinstaub PM10", "Particules fines PM10", "Polveri sottili PM10", "Partículas finas PM10"),
+    ("VOC", "VOC", "COV", "COV", "COV"),
+
     # ---------- on-screen keyboard ----------
     ("Shift", "Umschalt", "Majuscule", "Maiuscolo", "Mayúsculas"),
     ("Space", "Leerzeichen", "Espace", "Spazio", "Espacio"),

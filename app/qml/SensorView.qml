@@ -1,7 +1,8 @@
 import QtQuick
 import QtQuick.Layouts
 
-// Readings of a sensor as large cards: temperature, humidity, air pressure, light level
+// Readings of a sensor as large cards: temperature, humidity, air pressure, light level,
+// air quality, CO₂, fine dust (PM2.5, PM10) and VOC
 Item {
     id: root
 
@@ -20,11 +21,22 @@ Item {
             out.push({ key: "lux", icon: "sun", label: qsTr("Light level"),
                        value: Theme.num(st.lux, st.lux < 10 ? 1 : 0),
                        unit: "lx" });
+        if (st.air_quality)
+            out.push({ key: "air", icon: "air", label: qsTr("Air quality"), unit: "", warn: st.air_quality >= 4,
+                       value: [qsTr("Excellent"), qsTr("Good"), qsTr("Fair"), qsTr("Inferior"), qsTr("Poor")][st.air_quality - 1] });
+        if (st.co2 !== undefined && st.co2 !== null)
+            out.push({ key: "co2", icon: "gauge", label: qsTr("CO₂"), value: Math.round(st.co2), unit: "ppm", warn: !!st.co2_high });
+        if (st.pm25 !== undefined && st.pm25 !== null)
+            out.push({ key: "pm25", icon: "air", label: qsTr("Fine dust PM2.5"), value: Math.round(st.pm25), unit: "µg/m³" });
+        if (st.pm10 !== undefined && st.pm10 !== null)
+            out.push({ key: "pm10", icon: "air", label: qsTr("Fine dust PM10"), value: Math.round(st.pm10), unit: "µg/m³" });
+        if (st.voc !== undefined && st.voc !== null)
+            out.push({ key: "voc", icon: "leaf", label: qsTr("VOC"), value: Math.round(st.voc), unit: "µg/m³" });
         return out;
     }
-    // All cards in one row if they stay at least 180 px wide, otherwise two columns
-    readonly property int columns: (width - (readings.length - 1) * gap) / Math.max(1, readings.length) >= Theme.s(180)
-                                   ? Math.max(1, readings.length) : 2
+    // As many cards per row as stay at least 180 px wide (at least two), all in one row if they fit
+    readonly property int columns: Math.max(1, Math.min(readings.length,
+                                   Math.max(2, Math.floor((width + gap) / (Theme.s(180) + gap)))))
     readonly property int rows: Math.ceil(readings.length / Math.max(1, columns))
     readonly property real gap: Theme.s(16)
     readonly property real cardWidth: Math.min(Theme.s(300), (width - (columns - 1) * gap) / Math.max(1, columns))
@@ -70,9 +82,11 @@ Item {
                     anchors.centerIn: parent
                     anchors.verticalCenterOffset: Theme.s(4)
                     Text {
+                        readonly property bool word: typeof card.modelData.value === "string" && card.modelData.value.length > 5
                         text: card.modelData.value
-                        color: Theme.ink
-                        font.pixelSize: Math.min(root.cardHeight * 0.36, root.cardWidth * 0.26)
+                        color: card.modelData.warn ? Theme.err : Theme.ink
+                        // words such as "Excellent" get a smaller size than numbers
+                        font.pixelSize: Math.min(root.cardHeight * 0.36, root.cardWidth * (word ? 0.15 : 0.26))
                         font.weight: Font.ExtraLight
                     }
                     Text {

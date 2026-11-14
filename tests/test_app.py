@@ -442,3 +442,25 @@ def test_value_text():
     assert value_text(d) == "1.62 bar"
     assert value_text({**d, "state": {"value": None}}) == "No reading"
     assert value_text({**d, "state": {"value": "ok"}, "meta": {}}) == "ok"
+
+
+def test_air_quality_sensor_merged_and_texts():
+    from app.qt.format import air_warning, state_text
+    data = {"accessories": [{"aid": 9, "services": [
+        {"iid": 1, "type": U("3E"), "characteristics": [{"iid": 2, "type": U("23"), "value": "Eve Room", "perms": ["pr"]}]},
+        {"iid": 10, "type": U("8A"), "characteristics": [{"iid": 11, "type": U("11"), "value": 21.5, "perms": ["pr"]}]},
+        {"iid": 20, "type": U("8D"), "characteristics": [
+            {"iid": 21, "type": U("95"), "value": 4, "perms": ["pr"]},
+            {"iid": 22, "type": U("C8"), "value": 450, "perms": ["pr"]}]},
+        {"iid": 30, "type": U("97"), "characteristics": [
+            {"iid": 31, "type": U("92"), "value": 0, "perms": ["pr"]},
+            {"iid": 32, "type": U("93"), "value": 820, "perms": ["pr"]}]},
+    ]}]}
+    snaps = HapBackend.parse_accessories(data)
+    assert len(snaps) == 1                                  # one tile for the whole accessory
+    dtype, st, _, meta = snapshot_to_state(snaps[0])
+    assert dtype.value == "sensor" and st["air_quality"] == 4 and st["voc"] == 450 and st["co2"] == 820
+    d = {"type": "sensor", "reachable": True, "state": st, "meta": meta}
+    assert state_text(d) == "21.5 °C, Air inferior, 820 ppm"
+    assert air_warning(d)
+    assert not air_warning({**d, "state": {**st, "air_quality": 2}})

@@ -20,6 +20,7 @@ Rectangle {
     required property real maxTemp
     required property bool modeOff
     required property int alertLevel     // security: 2 alarm, 1 open / motion
+    required property bool warning       // sensors: bad air quality or high CO₂
 
     property bool showRoom: false
     property int columns: 4
@@ -138,7 +139,7 @@ Rectangle {
             elide: Text.ElideRight
             font.pixelSize: Theme.s(14)
             font.weight: root.alertLevel > 0 ? Font.Medium : Font.Normal
-            color: root.alertLevel === 1 ? Theme.err : root.heating && !root.isOn ? Theme.heat2 : root.sub
+            color: root.alertLevel === 1 || root.warning ? Theme.err : root.heating && !root.isOn ? Theme.heat2 : root.sub
             opacity: root.isOn ? 0.72 : 1
         }
     }

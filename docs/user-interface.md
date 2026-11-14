@@ -191,9 +191,14 @@ In scenes: `position` (0–100), `tilt` (−90…90), `stop: true`; `on: true` o
 
 ## Sensors
 
-Temperature, humidity, air pressure and light sensors from Homebridge appear as tiles with
-their readings. All sensors of one device are combined into one tile, so a weather station
-with three sensors shows up once. Tap the tile for large readings.
+Temperature, humidity, air pressure, light, air quality and CO₂ sensors from Homebridge appear
+as tiles with their readings. All sensors of one device are combined into one tile, so a weather
+station with three sensors shows up once. Tap the tile for large readings.
+
+Air quality sensors show the HomeKit rating (excellent, good, fair, inferior, poor) and, if the
+device reports them, CO₂ (ppm), fine dust PM2.5 and PM10 and VOC (µg/m³). The tile shows the
+rating and CO₂, e.g. *Air good, 640 ppm*; it turns red when the air is inferior or poor or the
+CO₂ sensor reports a high level.
 
 ![Weather station at 1280 × 800](images/sensor.png)
 

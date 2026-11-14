@@ -28,7 +28,7 @@ from ..rooms import BUILTIN_DEFAULT, RoomLayout
 from ..scheduler import Scheduler
 from ..settings import ACTIONS, SettingsStore, apply_to_config, validate
 from ..models import AREAS, KIND_ICONS, KIND_KEYS
-from .format import alert_level, category, fmt_temp, has_detail, short_name, state_text
+from .format import air_warning, alert_level, category, fmt_temp, has_detail, short_name, state_text
 
 log = logging.getLogger(__name__)
 ALL_ROOMS = ""
@@ -71,7 +71,7 @@ class DeviceModel(QAbstractListModel):
     """Devices of the selected menu area and room (or all rooms) for the tile grid."""
 
     ROLES = ("deviceId", "name", "shortName", "room", "type", "icon", "isOn", "reachable", "heating",
-             "stateText", "hasDetail", "targetTemp", "minTemp", "maxTemp", "modeOff", "alertLevel")
+             "stateText", "hasDetail", "targetTemp", "minTemp", "maxTemp", "modeOff", "alertLevel", "warning")
     # order inside a room: per menu area
     RANK = {"light": 0, "switch": 1, "plug": 1, "blind": 2, "thermostat": 0, "sensor": 1, "fan": 2}
 
@@ -118,6 +118,7 @@ class DeviceModel(QAbstractListModel):
             case "maxTemp": return float(m.get("max_temp", 30))
             case "modeOff": return s.get("mode") == "off"
             case "alertLevel": return alert_level(d)
+            case "warning": return air_warning(d)
         return None
 
     # --- maintenance ---

@@ -32,6 +32,8 @@ SERVICE_TYPES: dict[str, str] = {
     "82": "HumiditySensor",
     "84": "LightSensor",
     "8A": "TemperatureSensor",
+    "8D": "AirQualitySensor",
+    "97": "CarbonDioxideSensor",
     "8C": "WindowCovering",
     "80": "ContactSensor",
     "83": "LeakSensor",
@@ -42,7 +44,8 @@ SERVICE_TYPES: dict[str, str] = {
 }
 
 # Sensor services; all sensors of one accessory are merged into one "Sensor" device
-SENSOR_SERVICES = {"TemperatureSensor", "HumiditySensor", "LightSensor", "AirPressureSensor", "EveWeather"}
+SENSOR_SERVICES = {"TemperatureSensor", "HumiditySensor", "LightSensor", "AirPressureSensor", "EveWeather",
+                   "AirQualitySensor", "CarbonDioxideSensor"}
 
 # Characteristic UUIDs (short form) -> name
 CHAR_TYPES: dict[str, str] = {
@@ -78,12 +81,19 @@ CHAR_TYPES: dict[str, str] = {
     "7D": "TargetVerticalTiltAngle",
     "6B": "CurrentAmbientLightLevel",
     "6A": "ContactSensorState",
+    "95": "AirQuality",
+    "C6": "PM2_5Density",
+    "C7": "PM10Density",
+    "C8": "VOCDensity",
+    "92": "CarbonDioxideDetected",
+    "93": "CarbonDioxideLevel",
     "70": "LeakDetected",
     "22": "MotionDetected",
     "71": "OccupancyDetected",
     EVE_AIR_PRESSURE: "AirPressure",
 }
-SENSOR_CHARS = {"CurrentTemperature", "CurrentRelativeHumidity", "CurrentAmbientLightLevel", "AirPressure"}
+SENSOR_CHARS = {"CurrentTemperature", "CurrentRelativeHumidity", "CurrentAmbientLightLevel", "AirPressure",
+                "AirQuality", "PM2_5Density", "PM10Density", "VOCDensity", "CarbonDioxideDetected", "CarbonDioxideLevel"}
 
 DEVICE_TYPE_BY_SERVICE: dict[str, DeviceType] = {
     "Lightbulb": DeviceType.LIGHT,
@@ -220,9 +230,21 @@ def snapshot_to_state(s: ServiceSnapshot) -> tuple[DeviceType, dict[str, Any], l
         if "CurrentAmbientLightLevel" in c:
             state["lux"] = _num(s.get("CurrentAmbientLightLevel"))
             caps.append("lux")
+        # air quality: 1 excellent … 5 poor (0 = unknown, left out); densities in µg/m³, CO₂ in ppm
+        if int(s.get("AirQuality", 0) or 0) in range(1, 6):
+            state["air_quality"] = int(s.get("AirQuality"))
+            caps.append("air_quality")
+        for char, key in (("PM2_5Density", "pm25"), ("PM10Density", "pm10"), ("VOCDensity", "voc"),
+                          ("CarbonDioxideLevel", "co2")):
+            if char in c and _num(s.get(char)) is not None:
+                state[key] = _num(s.get(char))
+                caps.append(key)
+        if "CarbonDioxideDetected" in c:
+            state["co2_high"] = int(s.get("CarbonDioxideDetected", 0) or 0) == 1
         meta["icon_hint"] = ("weather" if "pressure" in caps else
                              "thermostat" if "CurrentTemperature" in c else
-                             "drop" if "humidity" in caps else "sun")
+                             "drop" if "humidity" in caps else
+                             "air" if {"air_quality", "co2", "pm25", "pm10", "voc"} & set(caps) else "sun")
     elif s.service_type == "Thermostat":
         mode = THERMOSTAT_MODES.get(int(s.get("TargetHeatingCoolingState", 0)), "off")
         state["mode"] = mode

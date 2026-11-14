@@ -89,7 +89,22 @@ def sensor_parts(s: dict[str, Any]) -> list[str]:
         parts.append(tr("{hpa} hPa").format(hpa=fmt_number(float(s["pressure"]), 0, group=False)))
     if s.get("lux") is not None:
         parts.append(fmt_lux(s["lux"]))
+    if s.get("air_quality"):
+        parts.append(tr("Air {level}").format(level=air_level(s["air_quality"])))
+    if s.get("co2") is not None:
+        parts.append(tr("{ppm} ppm").format(ppm=fmt_number(float(s["co2"]), 0, group=False)))
     return parts
+
+
+def air_level(q: int) -> str:
+    """HomeKit air quality 1–5 as a word (lower case, used after "Air")."""
+    return {1: tr("excellent"), 2: tr("good"), 3: tr("fair"), 4: tr("inferior"), 5: tr("poor")}.get(int(q), "")
+
+
+def air_warning(d: dict[str, Any]) -> bool:
+    """Bad air: quality inferior or poor, or the CO₂ sensor reports a high level."""
+    s = d.get("state", {})
+    return d["type"] == "sensor" and d.get("reachable", True) and (int(s.get("air_quality") or 0) >= 4 or bool(s.get("co2_high")))
 
 
 def short_name(name: str, room: str) -> str:
