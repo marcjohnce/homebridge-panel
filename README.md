@@ -6,7 +6,7 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 
 ![Home screen at 1280 × 800](docs/images/home-1280x800.png)
 
-**[User interface guide with annotated screenshots for all screen sizes →](docs/user-interface.md)**
+**[Project page →](https://marcjohnce.github.io/homebridge-panel/)** · **[User interface guide with annotated screenshots for all screen sizes →](docs/user-interface.md)**
 
 ```
 ┌──────────────────────────── Raspberry Pi ────────────────────────────┐
@@ -175,7 +175,9 @@ app/
   assets/fonts/        Jost (SIL Open Font License)
 deploy/                install.sh, start.sh, systemd service for running without a desktop
 docs/                  user interface guide and screenshots
+site/                  project page (GitHub Pages), see site/README.md
 tools/
+  site_screenshots.py  regenerates the screenshots of the project page
   doc_screenshots.py   regenerates the annotated screenshots in docs/images
   screenshots.py       quick headless screenshots (also used as a QML load check)
 tests/                 pytest: backends, manager, settings, Qt controller, QML

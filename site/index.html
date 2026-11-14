@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Homebridge Panel – a wall touch panel for your Homebridge home</title>
+<meta name="description" content="A calm, fast touch panel for the Raspberry Pi. Control lights, heating, blinds, scenes and sensors from Homebridge – locally, in five languages, on any screen size.">
+<meta property="og:title" content="Homebridge Panel">
+<meta property="og:description" content="A wall touch panel for the Raspberry Pi that controls your Homebridge accessories – lights, heating, blinds, scenes and security.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://marcjohnce.github.io/homebridge-panel/assets/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#1C1D1F">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="assets/fonts/Jost-Light.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/screens/dark-home-light.webp" as="image">
+<style>
+@font-face{font-family:Jost;src:url(assets/fonts/Jost-ExtraLight.woff2) format("woff2");font-weight:200;font-display:swap}
+@font-face{font-family:Jost;src:url(assets/fonts/Jost-Light.woff2) format("woff2");font-weight:300;font-display:swap}
+@font-face{font-family:Jost;src:url(assets/fonts/Jost-Regular.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:Jost;src:url(assets/fonts/Jost-Medium.woff2) format("woff2");font-weight:500;font-display:swap}
+
+:root{
+  --graphite:#1C1D1F; --tile:#26272A; --line:#36373B; --ink:#E8E4DC; --muted:#9A9CA1;
+  --gold:#C9A86E; --gold-deep:#B4945F; --gold-ink:#1F1B15;
+  --day:#E6E7EA; --day-tile:#F6F6F7; --day-ink:#3A3B3E; --day-muted:#5C5E63;
+  --heat:#E7774A; --ok:#6FB08C;
+  --wrap:1180px; --gutter:clamp(20px,4vw,48px);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{font-family:Jost,system-ui,sans-serif;font-weight:300;font-size:1.125rem;line-height:1.6;background:var(--graphite);color:var(--ink);-webkit-font-smoothing:antialiased}
+img{display:block;max-width:100%;height:auto}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:4px}
+.wrap{max-width:var(--wrap);margin:0 auto;padding:0 var(--gutter)}
+.skip{position:absolute;left:-999px;top:8px;background:var(--gold);color:var(--gold-ink);padding:8px 14px;border-radius:6px;z-index:99}
+.skip:focus{left:8px}
+
+/* type scale 1.25 */
+h1,h2,h3{font-weight:200;letter-spacing:-.01em;line-height:1.05}
+h1{font-size:clamp(2.9rem,6.4vw,5.6rem)}
+h2{font-size:clamp(2.2rem,4.4vw,3.8rem);margin-bottom:.45em}
+h3{font-size:1.45rem;font-weight:400;line-height:1.25;letter-spacing:0}
+p{max-width:34em}
+.lede{font-size:clamp(1.15rem,1.6vw,1.35rem);color:var(--muted);max-width:30em}
+.day .lede,.day p.sub{color:var(--day-muted)}
+p.sub{color:var(--muted)}
+
+/* nav */
+.nav{position:sticky;top:0;z-index:50;background:rgba(28,29,31,.82);backdrop-filter:saturate(1.2) blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid transparent;transition:border-color .3s}
+.nav.scrolled{border-bottom-color:var(--line)}
+.nav .wrap{display:flex;align-items:center;gap:28px;height:68px}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;font-weight:400;font-size:1.1rem;white-space:nowrap}
+.brand svg{flex:none}
+.nav ul{display:flex;gap:26px;list-style:none;margin-left:auto}
+.nav ul a{text-decoration:none;color:var(--muted);font-size:1rem;transition:color .2s}
+.nav ul a:hover{color:var(--ink)}
+.lang{display:flex;border:1px solid var(--line);border-radius:999px;padding:3px}
+.lang button{font:inherit;font-size:.85rem;background:none;border:0;color:var(--muted);padding:3px 10px;border-radius:999px;cursor:pointer}
+.lang button[aria-pressed=true]{background:var(--tile);color:var(--ink)}
+.btn{display:inline-flex;align-items:center;gap:10px;font:inherit;font-weight:400;font-size:1.02rem;text-decoration:none;border-radius:999px;padding:13px 24px;border:1px solid transparent;cursor:pointer;transition:background .2s,border-color .2s,transform .2s}
+.btn-gold{background:var(--gold);color:var(--gold-ink)}
+.btn-gold:hover{background:#D4B57E}
+.btn-ghost{border-color:var(--line);color:var(--ink)}
+.btn-ghost:hover{border-color:var(--muted)}
+.nav .btn{padding:8px 18px;font-size:.95rem}
+@media (max-width:900px){.nav ul{display:none}.nav .lang{margin-left:auto}}
+@media (max-width:480px){.nav .btn span{display:none}.nav .wrap{gap:14px}}
+
+/* hero: the wall */
+.hero{position:relative;overflow:hidden;padding:clamp(56px,8vw,110px) 0 clamp(60px,7vw,96px);
+  background:
+    radial-gradient(60% 55% at 72% 0%,rgba(201,168,110,.22),rgba(201,168,110,0) 70%),
+    radial-gradient(90% 70% at 70% 45%,#2a2a2c 0%,var(--graphite) 70%)}
+.hero::before{content:"";position:absolute;inset:0;opacity:.35;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.hero .wrap{position:relative;display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(32px,5vw,72px);align-items:center}
+.hero h1{margin-bottom:.35em}
+.hero .lede{margin-bottom:2em}
+.cta-row{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+.hero-facts{display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:2.4em;color:var(--muted);font-size:.98rem;list-style:none}
+.hero-facts li{display:flex;align-items:center;gap:8px}
+.hero-facts li::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--gold)}
+@media (max-width:920px){.hero .wrap{grid-template-columns:1fr}}
+
+/* device frame */
+.device{position:relative;background:linear-gradient(160deg,#141416 0%,#0a0a0b 55%,#121214 100%);border-radius:clamp(12px,1.6vw,20px);padding:clamp(12px,2.6%,26px);
+  box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 0 0 1px #000,0 2px 2px rgba(0,0,0,.25),0 14px 28px rgba(0,0,0,.35),0 40px 80px -10px rgba(0,0,0,.55)}
+.device::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(115deg,rgba(255,255,255,.07) 0%,rgba(255,255,255,0) 32%)}
+.device.edge{margin-right:10px}
+.device.edge::before{content:"";position:absolute;top:3%;bottom:3%;right:-10px;width:10px;border-radius:0 6px 6px 0;background:linear-gradient(90deg,#8e9095,#d9dbde 40%,#a5a7ab 70%,#6c6e72)}
+.device .screen{position:relative;overflow:hidden;border-radius:3px;background:var(--graphite);aspect-ratio:var(--ar,1280/800)}
+.device .screen img{width:100%;height:100%;object-fit:cover;transition:opacity .35s ease}
+.device .screen img.swap{position:absolute;inset:0}
+
+.hero-device{transform:perspective(1800px) rotateY(-9deg) rotateX(2deg);transform-origin:left center}
+@media (max-width:920px){.hero-device{transform:none}}
+
+.tabs{display:flex;gap:6px;margin-top:22px;flex-wrap:wrap}
+.tabs button{font:inherit;font-size:1rem;background:none;border:1px solid var(--line);color:var(--muted);padding:8px 16px;border-radius:999px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .2s}
+.tabs button:hover{color:var(--ink)}
+.tabs button[aria-selected=true]{background:rgba(201,168,110,.14);border-color:rgba(201,168,110,.5);color:var(--ink)}
+.tabs svg{width:18px;height:18px}
+.tab-note{color:var(--muted);font-size:.98rem;margin-top:12px;min-height:3.2em;max-width:36em}
+
+/* sections */
+section{padding:clamp(80px,10vw,140px) 0}
+.day{background:var(--day);color:var(--day-ink)}
+.day .btn-ghost{border-color:#c8cace;color:var(--day-ink)}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(32px,6vw,90px);align-items:end;margin-bottom:clamp(40px,5vw,64px)}
+@media (max-width:820px){.split{grid-template-columns:1fr;align-items:start}}
+
+/* controls */
+.controls{display:grid;grid-template-columns:repeat(12,1fr);gap:clamp(18px,2.4vw,30px)}
+.control figure{margin:0}
+.control figcaption{margin-top:18px}
+.control figcaption p{color:var(--muted);font-size:1rem;margin-top:4px}
+.c-heat{grid-column:1/8;grid-row:span 2}
+.c-light{grid-column:8/13}
+.c-blinds{grid-column:8/13}
+.c-sensor{grid-column:1/7}
+.c-security{grid-column:7/13}
+@media (max-width:820px){.controls>*{grid-column:1/-1!important;grid-row:auto!important}}
+
+/* day/night compare */
+.compare{position:relative;user-select:none;-webkit-user-select:none;touch-action:pan-y}
+.compare .screen{cursor:ew-resize}
+.compare .night{position:absolute;inset:0;clip-path:inset(0 0 0 var(--pos,50%))}
+.compare .night img{width:100%;height:100%}
+.handle{position:absolute;top:0;bottom:0;left:var(--pos,50%);width:2px;background:var(--gold);transform:translateX(-1px);pointer-events:none}
+.handle::after{content:"";position:absolute;top:50%;left:50%;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;background:var(--gold) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231F1B15' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 6l-5 6 5 6M15 6l5 6-5 6'/%3E%3C/svg%3E") center/22px no-repeat;box-shadow:0 6px 18px rgba(0,0,0,.35)}
+.compare input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:ew-resize;margin:0}
+.compare input:focus-visible+.handle::after{outline:2px solid var(--day-ink);outline-offset:3px}
+.daynight-points{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(20px,4vw,48px);margin-top:clamp(36px,4vw,56px);list-style:none}
+.daynight-points h3{margin-bottom:6px}
+.daynight-points p{color:var(--day-muted);font-size:1.02rem}
+@media (max-width:820px){.daynight-points{grid-template-columns:1fr}}
+
+/* sizes lineup */
+.lineup{display:flex;align-items:flex-end;gap:clamp(14px,2.2vw,32px);padding-bottom:28px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:thin}
+.lineup{--u:clamp(.12px,calc((min(100vw,1180px) - 2*var(--gutter) - 4*clamp(14px,2.2vw,32px) - 60px)/4544),.215px)}
+.lineup .unit{flex:none;width:calc(var(--px)*var(--u) + 12px)}
+.lineup .device{padding:6px;border-radius:8px}
+.lineup .label{margin-top:16px;font-size:.98rem;line-height:1.35}
+.lineup .label strong{display:block;font-weight:400;color:var(--ink)}
+.lineup .label span{color:var(--muted)}
+.lineup-note{color:var(--muted);font-size:.95rem;margin-top:14px}
+
+/* languages */
+.langs{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,7fr);gap:clamp(32px,5vw,72px);align-items:center}
+.lang-words{list-style:none;margin:28px 0 0}
+.lang-words li{border-top:1px solid #cdd0d4}
+.lang-words li:last-child{border-bottom:1px solid #cdd0d4}
+.lang-words button{display:flex;justify-content:space-between;align-items:baseline;width:100%;font:inherit;background:none;border:0;color:var(--day-muted);padding:14px 2px;cursor:pointer;text-align:left;transition:color .2s}
+.lang-words button .w{font-size:clamp(1.6rem,2.6vw,2.2rem);font-weight:200}
+.lang-words button .n{font-size:.95rem}
+.lang-words button:hover,.lang-words button[aria-pressed=true]{color:var(--day-ink)}
+.lang-words button[aria-pressed=true] .w{color:var(--gold-deep);font-weight:300}
+@media (max-width:820px){.langs{grid-template-columns:1fr}}
+
+/* how it connects */
+.flow{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:stretch;gap:0;margin-top:8px}
+.node{background:var(--tile);border:1px solid var(--line);border-radius:14px;padding:26px 24px}
+.node h3{margin:14px 0 6px}
+.node p{color:var(--muted);font-size:1rem}
+.node.here{border-color:rgba(201,168,110,.55);background:linear-gradient(180deg,rgba(201,168,110,.10),rgba(201,168,110,.02)),var(--tile)}
+.node svg{width:30px;height:30px;color:var(--gold)}
+.link{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 14px;color:var(--muted);font-size:.88rem;min-width:110px;text-align:center}
+.link i{display:block;width:100%;height:1px;background:repeating-linear-gradient(90deg,var(--gold) 0 6px,transparent 6px 12px);margin:8px 0;position:relative}
+.link i::after{content:"";position:absolute;right:-1px;top:-4px;border:4.5px solid transparent;border-left:7px solid var(--gold)}
+@media (prefers-reduced-motion:no-preference){.link i{animation:flow 1.2s linear infinite}@keyframes flow{to{background-position:12px 0}}}
+@media (max-width:860px){.flow{grid-template-columns:1fr}.link{flex-direction:row;gap:12px;padding:10px 0;min-width:0}.link i{width:1px;height:28px;background:repeating-linear-gradient(180deg,var(--gold) 0 6px,transparent 6px 12px);margin:0}.link i::after{right:-4px;top:auto;bottom:-6px;border:4.5px solid transparent;border-top:7px solid var(--gold)}}
+.facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px;margin-top:clamp(48px,5vw,72px);list-style:none}
+.facts b{display:block;font-weight:200;font-size:clamp(2.4rem,4vw,3.4rem);line-height:1;color:var(--ink)}
+.facts span{color:var(--muted);font-size:1rem;display:block;margin-top:10px;max-width:16em}
+@media (max-width:820px){.facts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* install */
+.steps{list-style:none;counter-reset:s;display:grid;gap:0}
+.steps>li{counter-increment:s;display:grid;grid-template-columns:70px minmax(0,1fr);gap:20px;padding:30px 0;border-top:1px solid #cdd0d4}
+.steps>li:last-child{border-bottom:1px solid #cdd0d4}
+.steps>li::before{content:counter(s);font-size:2.6rem;font-weight:200;line-height:1;color:var(--gold-deep)}
+.steps h3{margin-bottom:6px}
+.steps p{color:var(--day-muted);font-size:1.02rem}
+.code{position:relative;margin-top:14px;background:var(--graphite);color:var(--ink);border-radius:10px;padding:16px 56px 16px 18px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.86rem;line-height:1.7;overflow-x:auto;white-space:pre}
+.code .c{color:#8A8C91}
+.copy{position:absolute;top:10px;right:10px;font:inherit;font-family:Jost,sans-serif;font-size:.85rem;background:var(--tile);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 10px;cursor:pointer}
+.copy:hover{border-color:var(--muted)}
+.install-grid{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,4fr);gap:clamp(32px,5vw,72px)}
+.req{background:var(--day-tile);border-radius:14px;padding:28px;align-self:start}
+.req h3{margin-bottom:14px}
+.req ul{list-style:none;display:grid;gap:12px;font-size:1rem}
+.req li{padding-left:22px;position:relative}
+.req li::before{content:"";position:absolute;left:2px;top:.62em;width:8px;height:8px;border-radius:50%;border:1.5px solid var(--gold-deep)}
+.req small{display:block;color:var(--day-muted);font-size:.92rem}
+@media (max-width:900px){.install-grid{grid-template-columns:1fr}}
+@media (max-width:600px){.steps>li{grid-template-columns:36px minmax(0,1fr);gap:12px}.steps>li::before{font-size:2rem}}
+
+/* faq */
+.faq{max-width:820px}
+.faq details{border-top:1px solid var(--line)}
+.faq details:last-child{border-bottom:1px solid var(--line)}
+.faq summary{list-style:none;cursor:pointer;padding:22px 40px 22px 0;font-size:1.25rem;font-weight:400;position:relative}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"";position:absolute;right:6px;top:50%;width:12px;height:12px;border-right:1.5px solid var(--gold);border-bottom:1.5px solid var(--gold);transform:translateY(-70%) rotate(45deg);transition:transform .25s}
+.faq details[open] summary::after{transform:translateY(-30%) rotate(225deg)}
+.faq details p{color:var(--muted);padding:0 0 24px;font-size:1.05rem}
+.faq code{font-size:.9em;background:var(--tile);padding:1px 6px;border-radius:4px}
+
+/* final */
+.final{text-align:left;padding-bottom:clamp(60px,7vw,90px)}
+.final .big{font-size:clamp(4.5rem,13vw,11rem);font-weight:200;line-height:.9;letter-spacing:-.02em;color:var(--ink)}
+.final .big span{color:var(--gold)}
+.final p{margin:22px 0 32px;color:var(--muted);font-size:1.2rem}
+footer{border-top:1px solid var(--line);padding:30px 0 44px;color:var(--muted);font-size:.92rem}
+footer .wrap{display:flex;flex-wrap:wrap;gap:16px 40px;justify-content:space-between}
+footer p{max-width:46em}
+footer a{color:var(--ink)}
+
+/* the one orchestrated moment: hero load */
+@media (prefers-reduced-motion:no-preference){
+  .hero-copy>*{opacity:0;transform:translateY(14px);animation:rise .9s cubic-bezier(.2,.7,.2,1) forwards}
+  .hero-copy>*:nth-child(2){animation-delay:.08s}.hero-copy>*:nth-child(3){animation-delay:.16s}.hero-copy>*:nth-child(4){animation-delay:.24s}
+  .hero-stage{opacity:0;animation:light 1.4s .15s ease-out forwards}
+  @keyframes rise{to{opacity:1;transform:none}}
+  @keyframes light{from{opacity:0;filter:brightness(.4)}to{opacity:1;filter:none}}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+
+<header class="nav" id="nav">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Homebridge Panel">
+      <svg width="30" height="22" viewBox="0 0 30 22" aria-hidden="true"><rect x=".75" y=".75" width="28.5" height="20.5" rx="3.5" fill="none" stroke="#C9A86E" stroke-width="1.5"/><rect x="5" y="5" width="9" height="12" rx="1" fill="#C9A86E"/><rect x="16" y="5" width="9" height="5" rx="1" fill="none" stroke="#C9A86E" stroke-width="1.2"/><rect x="16" y="12" width="9" height="5" rx="1" fill="none" stroke="#C9A86E" stroke-width="1.2"/></svg>
+      Homebridge Panel
+    </a>
+    <nav aria-label="Main">
+      <ul>
+        <li><a href="#controls" data-i18n="nav.controls">Controls</a></li>
+        <li><a href="#screens" data-i18n="nav.screens">Screens</a></li>
+        <li><a href="#how" data-i18n="nav.how">How it works</a></li>
+        <li><a href="#install" data-i18n="nav.install">Install</a></li>
+        <li><a href="#faq" data-i18n="nav.faq">FAQ</a></li>
+      </ul>
+    </nav>
+    <div class="lang" role="group" aria-label="Language">
+      <button type="button" data-lang="en" aria-pressed="true">EN</button>
+      <button type="button" data-lang="de" aria-pressed="false">DE</button>
+    </div>
+    <a class="btn btn-gold" href="https://github.com/marcjohnce/homebridge-panel">
+      <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      <span>GitHub</span>
+    </a>
+  </div>
+</header>
+
+<main id="main">
+<!-- HERO -->
+<section class="hero" id="top" style="padding-top:clamp(56px,8vw,110px)">
+  <div class="wrap">
+    <div class="hero-copy">
+      <h1 data-i18n="hero.title">Your Homebridge, on the wall.</h1>
+      <p class="lede" data-i18n="hero.lede">A calm touch panel for the Raspberry Pi. Lights, heating, blinds, scenes and alarms – one tap away, right where you need them.</p>
+      <div class="cta-row">
+        <a class="btn btn-gold" href="#install" data-i18n="hero.cta">Install on your Pi</a>
+        <a class="btn btn-ghost" href="https://github.com/marcjohnce/homebridge-panel" data-i18n="hero.cta2">View the source</a>
+      </div>
+      <ul class="hero-facts">
+        <li data-i18n="hero.f1">Runs locally, no cloud</li>
+        <li data-i18n="hero.f2">Raspberry Pi 4 and 5</li>
+        <li data-i18n="hero.f3">Five languages</li>
+      </ul>
+    </div>
+    <div class="hero-stage">
+      <div class="device edge hero-device">
+        <div class="screen" id="heroScreen">
+          <img src="assets/screens/dark-home-light.webp" width="1280" height="800" alt="Home screen with the lights of all rooms: washing machine running, ceiling light at 70 percent, TV plug in use" id="heroImg">
+        </div>
+      </div>
+      <div class="tabs" role="tablist" aria-label="Panel menu">
+        <button role="tab" aria-selected="true" data-tab="light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z"/></svg><span data-i18n="tab.light">Lights</span></button>
+        <button role="tab" aria-selected="false" data-tab="climate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M10 14.5V5a2 2 0 014 0v9.5a4 4 0 11-4 0z"/></svg><span data-i18n="tab.climate">Climate</span></button>
+        <button role="tab" aria-selected="false" data-tab="scenes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M18.5 16l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></svg><span data-i18n="tab.scenes">Scenes</span></button>
+        <button role="tab" aria-selected="false" data-tab="security"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/></svg><span data-i18n="tab.security">Security</span></button>
+      </div>
+      <p class="tab-note" id="tabNote" aria-live="polite" data-i18n="note.light">Every light, plug and blind at a glance. Tap a tile to switch it, tap the arrow for brightness and colour.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CONTROLS -->
+<section id="controls">
+  <div class="wrap">
+    <div class="split">
+      <h2 data-i18n="controls.title">Made for a fingertip, not a mouse.</h2>
+      <p class="lede" data-i18n="controls.lede">Big targets, clear states, no menus to dig through. Every accessory gets a control that feels like the real thing.</p>
+    </div>
+    <div class="controls">
+      <div class="control c-heat"><figure>
+        <div class="device"><div class="screen"><img src="assets/screens/dark-heating.webp" width="1280" height="800" loading="lazy" alt="Thermostat with a dial set to 21 degrees, currently 19.9 degrees, mode Heat"></div></div>
+        <figcaption><h3 data-i18n="c.heat">Heating with a dial</h3><p data-i18n="c.heat.p">Drag the ring or tap − and +. Off, Heat and Auto are one tap apart, and the panel tells you when the room is heating.</p></figcaption>
+      </figure></div>
+      <div class="control c-light"><figure>
+        <div class="device"><div class="screen"><img src="assets/screens/dark-light.webp" width="1280" height="800" loading="lazy" alt="Light control with a brightness bar at 40 percent and a colour wheel"></div></div>
+        <figcaption><h3 data-i18n="c.light">Light and colour</h3><p data-i18n="c.light.p">Brightness bar, colour wheel and white tone. Group several lamps into one tile.</p></figcaption>
+      </figure></div>
+      <div class="control c-blinds"><figure>
+        <div class="device"><div class="screen"><img src="assets/screens/dark-blinds.webp" width="1280" height="800" loading="lazy" alt="Blinds 60 percent open with up, stop and down buttons and a slat angle slider"></div></div>
+        <figcaption><h3 data-i18n="c.blinds">Blinds you can drag</h3><p data-i18n="c.blinds.p">Open, stop, close or drag to a position. Slat angle included, live while they move.</p></figcaption>
+      </figure></div>
+      <div class="control c-sensor"><figure>
+        <div class="device"><div class="screen"><img src="assets/screens/dark-sensor.webp" width="1280" height="800" loading="lazy" alt="Weather station showing 6.5 degrees, 82 percent humidity and 1014 hectopascal"></div></div>
+        <figcaption><h3 data-i18n="c.sensor">Air and climate sensors</h3><p data-i18n="c.sensor.p">Temperature, humidity, pressure, light, CO₂, fine dust and VOC. Bad air shows up in red.</p></figcaption>
+      </figure></div>
+      <div class="control c-security"><figure>
+        <div class="device"><div class="screen"><img src="assets/screens/dark-home-security.webp" width="1280" height="800" loading="lazy" alt="Security view: bedroom window open, washing machine leak sensor dry, terrace door closed"></div></div>
+        <figcaption><h3 data-i18n="c.sec">Security that speaks up</h3><p data-i18n="c.sec.p">Open windows come first. A leak or broken glass wakes the panel and shows a message.</p></figcaption>
+      </figure></div>
+    </div>
+  </div>
+</section>
+
+<!-- DAY / NIGHT -->
+<section class="day" id="daynight">
+  <div class="wrap">
+    <div class="split">
+      <h2 data-i18n="dn.title">Bright by day. Dim by night.</h2>
+      <p class="lede" data-i18n="dn.lede">In automatic mode the panel turns dark at 7 pm and light again at 7 am, so it never glares across a dark hallway. Drag to compare.</p>
+    </div>
+    <div class="compare" id="compare" style="--pos:50%">
+      <div class="device edge"><div class="screen">
+        <img src="assets/screens/light-home-light.webp" width="1280" height="800" loading="lazy" alt="Home screen in the light theme">
+        <div class="night"><img src="assets/screens/dark-home-light.webp" width="1280" height="800" loading="lazy" alt="Home screen in the dark theme"></div>
+        <input type="range" min="0" max="100" value="50" aria-label="Compare light and dark theme" id="compareRange">
+        <span class="handle"></span>
+      </div></div>
+    </div>
+    <ul class="daynight-points">
+      <li><h3 data-i18n="dn.p1">Screen saver with a clock</h3><p data-i18n="dn.p1.p">After one to fifteen minutes the panel fades to a large clock with indoor and outdoor temperature.</p></li>
+      <li><h3 data-i18n="dn.p2">Rooms set up on the panel</h3><p data-i18n="dn.p2.p">Add, rename and reorder rooms, move devices and change names right on the touchscreen.</p></li>
+      <li><h3 data-i18n="dn.p3">Scenes on a schedule</h3><p data-i18n="dn.p3.p">“Comfort” on weekdays at 06:30, “Eco” every night at 22:30 – or whatever your home needs.</p></li>
+    </ul>
+  </div>
+</section>
+
+<!-- SCREENS -->
+<section id="screens">
+  <div class="wrap">
+    <div class="split">
+      <h2 data-i18n="sizes.title">One app, every screen.</h2>
+      <p class="lede" data-i18n="sizes.lede">From the classic Raspberry Pi Touch Display to 10.1″ panels and square wall screens. The layout adapts – sidebar, top bar or portrait.</p>
+    </div>
+    <div class="lineup" id="lineup">
+      <div class="unit" style="--px:800"><div class="device"><div class="screen" style="--ar:800/480"><img src="assets/screens/dark-800x480-home-light.webp" width="800" height="480" loading="lazy" alt="Home screen at 800 by 480"></div></div><p class="label"><strong>800 × 480</strong><span>Raspberry Pi Touch Display</span></p></div>
+      <div class="unit" style="--px:1024"><div class="device"><div class="screen" style="--ar:1024/600"><img src="assets/screens/dark-1024x600-home-light.webp" width="1024" height="600" loading="lazy" alt="Home screen at 1024 by 600"></div></div><p class="label"><strong>1024 × 600</strong><span data-i18n="sizes.7">7″ HDMI displays</span></p></div>
+      <div class="unit" style="--px:1280"><div class="device"><div class="screen"><img src="assets/screens/dark-home-light.webp" width="1280" height="800" loading="lazy" alt="Home screen at 1280 by 800"></div></div><p class="label"><strong>1280 × 800</strong><span data-i18n="sizes.10">10.1″ panels – recommended</span></p></div>
+      <div class="unit" style="--px:720"><div class="device"><div class="screen" style="--ar:1"><img src="assets/screens/dark-720x720-home-light.webp" width="720" height="720" loading="lazy" alt="Home screen on a square 720 by 720 display"></div></div><p class="label"><strong>720 × 720</strong><span data-i18n="sizes.sq">Square – recommended</span></p></div>
+      <div class="unit" style="--px:720"><div class="device"><div class="screen" style="--ar:720/1280"><img src="assets/screens/dark-720x1280-home-light.webp" width="720" height="1280" loading="lazy" alt="Home screen in portrait at 720 by 1280"></div></div><p class="label"><strong>720 × 1280</strong><span data-i18n="sizes.p">Portrait</span></p></div>
+    </div>
+    <p class="lineup-note" data-i18n="sizes.note">Drawn to pixel scale. 1280 × 720 (Touch Display 2) works as well.</p>
+  </div>
+</section>
+
+<!-- LANGUAGES -->
+<section class="day" id="languages">
+  <div class="wrap langs">
+    <div>
+      <h2 data-i18n="lang.title">Speaks your language.</h2>
+      <p class="lede" data-i18n="lang.lede">English, German, French, Italian and Spanish – switch in the settings and the whole panel follows, dates included.</p>
+      <ul class="lang-words" role="group" aria-label="Preview language">
+        <li><button type="button" data-shot="dark-home-light" aria-pressed="true"><span class="w">Lights</span><span class="n">English</span></button></li>
+        <li><button type="button" data-shot="dark-de-home-light" aria-pressed="false"><span class="w">Licht</span><span class="n">Deutsch</span></button></li>
+        <li><button type="button" data-shot="dark-fr-home-light" aria-pressed="false"><span class="w">Lumières</span><span class="n">Français</span></button></li>
+        <li><button type="button" data-shot="dark-it-home-light" aria-pressed="false"><span class="w">Luci</span><span class="n">Italiano</span></button></li>
+        <li><button type="button" data-shot="dark-es-home-light" aria-pressed="false"><span class="w">Luces</span><span class="n">Español</span></button></li>
+      </ul>
+    </div>
+    <div class="device edge"><div class="screen"><img id="langImg" src="assets/screens/dark-home-light.webp" width="1280" height="800" loading="lazy" alt="Home screen in the selected language"></div></div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="wrap">
+    <div class="split">
+      <h2 data-i18n="how.title">Talks straight to Homebridge.</h2>
+      <p class="lede" data-i18n="how.lede">The panel speaks the HomeKit Accessory Protocol with your Homebridge over the home network. No account, no cloud, no extra server.</p>
+    </div>
+    <div class="flow">
+      <div class="node">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-6 8 6M6 9.5V19h12V9.5"/><path d="M10 19v-5h4v5"/></svg>
+        <h3 data-i18n="how.n1">Your accessories</h3><p data-i18n="how.n1.p">Lamps, plugs, thermostats, blinds and sensors – any brand Homebridge has a plugin for.</p>
+      </div>
+      <div class="link"><span data-i18n="how.l1">plugins</span><i></i></div>
+      <div class="node">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="6" rx="1.5"/><rect x="4" y="13" width="16" height="6" rx="1.5"/><path d="M8 8h.01M8 16h.01"/></svg>
+        <h3>Homebridge</h3><p data-i18n="how.n2.p">Bridges them into HomeKit. The panel connects with address, port and PIN.</p>
+      </div>
+      <div class="link"><span data-i18n="how.l2">HAP, local network</span><i></i></div>
+      <div class="node here">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><rect x="3" y="5" width="18" height="13" rx="2"/><rect x="6" y="8" width="5" height="7" rx=".6" fill="currentColor" stroke="none"/><path d="M13 8.5h5M13 11.5h5M13 14.5h3"/></svg>
+        <h3>Homebridge Panel</h3><p data-i18n="how.n3.p">On a Raspberry Pi with a touchscreen. Optional MQTT topics appear as tiles, too.</p>
+      </div>
+    </div>
+    <ul class="facts">
+      <li><b data-i18n="f.1">0</b><span data-i18n="f.1s">cloud services or accounts needed</span></li>
+      <li><b data-i18n="f.2">≤ 5 s</b><span data-i18n="f.2s">until changes from the Home app appear on the panel</span></li>
+      <li><b>6</b><span data-i18n="f.3s">screen layouts, landscape, square and portrait</span></li>
+      <li><b>5</b><span data-i18n="f.4s">languages, switchable without a restart</span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- INSTALL -->
+<section class="day" id="install">
+  <div class="wrap">
+    <div class="split">
+      <h2 data-i18n="inst.title">Up and running in minutes.</h2>
+      <p class="lede" data-i18n="inst.lede">One script installs everything and starts the panel in full screen after login.</p>
+    </div>
+    <div class="install-grid">
+      <ol class="steps">
+        <li><div><h3 data-i18n="s1">Prepare Homebridge</h3><p data-i18n="s1.p">In the Homebridge UI open Settings, turn on “Homebridge Insecure Mode” and restart Homebridge. Port and PIN are in config.json under “bridge”.</p></div></li>
+        <li><div><h3 data-i18n="s2">Install on the Pi</h3><p data-i18n="s2.p">Clone the repository and run the installer. Use <b>--eglfs</b> instead for Pi OS Lite without a desktop.</p>
+          <div class="code" id="code1"><span class="c"># on the Raspberry Pi</span>
+git clone https://github.com/marcjohnce/homebridge-panel ~/homebridge-panel
+cd ~/homebridge-panel
+./deploy/install.sh --autostart<button class="copy" type="button" data-copy="code1" data-i18n="copy">Copy</button></div></div></li>
+        <li><div><h3 data-i18n="s3">Connect</h3><p data-i18n="s3.p">Tap the settings icon, enter address, port and PIN, tap “Test connection” and then “Apply”. No restart needed.</p></div></li>
+      </ol>
+      <aside class="req" aria-labelledby="reqh">
+        <h3 id="reqh" data-i18n="req.title">What you need</h3>
+        <ul>
+          <li data-i18n="req.1">Raspberry Pi 4 or 5<small>Pi 3 works, too</small></li>
+          <li data-i18n="req.2">Raspberry Pi OS Bookworm or Trixie, 64-bit</li>
+          <li data-i18n="req.3">A touchscreen<small>800 × 480 up to 1280 × 800, square or portrait</small></li>
+          <li data-i18n="req.4">Homebridge in insecure mode</li>
+          <li data-i18n="req.5">Optional: an MQTT broker<small>e.g. Mosquitto, for virtual devices</small></li>
+        </ul>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+  <div class="wrap">
+    <h2 data-i18n="faq.title">Questions, answered.</h2>
+    <div class="faq">
+      <details><summary data-i18n="q1">Why does Homebridge need insecure mode?</summary><p data-i18n="a1">The panel reads and controls accessories through Homebridge's HAP interface, which requires insecure mode. Keep in mind that anyone on your home network who knows the PIN can then reach Homebridge – use it on a network you trust.</p></details>
+      <details><summary data-i18n="q2">Can I use HomeKit devices without Homebridge?</summary><p data-i18n="a2">Not directly. Native HomeKit devices such as Eve need encrypted pairing, which the panel doesn't include. Add them to Homebridge with a plugin and they show up on the panel.</p></details>
+      <details><summary data-i18n="q3">What if I change something in the Home app?</summary><p data-i18n="a3">The panel picks it up within five seconds. Your own taps on the panel take effect immediately.</p></details>
+      <details><summary data-i18n="q4">Can I try it without hardware?</summary><p data-i18n="a4">Yes. Start it with <code>python -m app --demo</code> on any Linux machine to get simulated devices in a window.</p></details>
+      <details><summary data-i18n="q5">Does it run on older Raspberry Pis?</summary><p data-i18n="a5">A Pi 3 works. On very old models without OpenGL ES 3, set <code>QT_QUICK_BACKEND=software</code> before starting.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="final">
+  <div class="wrap">
+    <div class="big" aria-hidden="true">22<span>:</span>30</div>
+    <h2 style="margin-top:.3em" data-i18n="final.title">Lights out. From the wall.</h2>
+    <p data-i18n="final.p">Free to download. Built with Qt Quick and Python.</p>
+    <div class="cta-row">
+      <a class="btn btn-gold" href="https://github.com/marcjohnce/homebridge-panel" data-i18n="final.cta">Get it on GitHub</a>
+      <a class="btn btn-ghost" href="https://github.com/marcjohnce/homebridge-panel/blob/main/docs/user-interface.md" data-i18n="final.cta2">Read the user guide</a>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p data-i18n="foot.1">Homebridge Panel is an independent project and is not affiliated with Homebridge or Apple. HomeKit is a trademark of Apple Inc.</p>
+    <p><a href="https://github.com/marcjohnce/homebridge-panel">GitHub</a> &nbsp; <a href="https://github.com/marcjohnce/homebridge-panel/issues" data-i18n="foot.issues">Report an issue</a></p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var DE={
+    "skip":"Zum Inhalt springen",
+    "nav.controls":"Bedienung","nav.screens":"Displays","nav.how":"So funktioniert's","nav.install":"Installation","nav.faq":"FAQ",
+    "hero.title":"Dein Homebridge. An der Wand.",
+    "hero.lede":"Ein ruhiges Touch-Panel für den Raspberry Pi. Licht, Heizung, Rollos, Szenen und Alarme – einen Fingertipp entfernt, genau dort, wo du sie brauchst.",
+    "hero.cta":"Auf dem Pi installieren","hero.cta2":"Quellcode ansehen",
+    "hero.f1":"Läuft lokal, ohne Cloud","hero.f2":"Raspberry Pi 4 und 5","hero.f3":"Fünf Sprachen",
+    "tab.light":"Licht","tab.climate":"Klima","tab.scenes":"Szenen","tab.security":"Sicherheit",
+    "note.light":"Alle Lampen, Steckdosen und Rollos auf einen Blick. Kachel antippen zum Schalten, Pfeil für Helligkeit und Farbe.",
+    "note.climate":"Heizkörper, Thermostate, Lüfter und Luftqualität. Was gerade heizt, siehst du sofort.",
+    "note.scenes":"„Alles aus“, „Komfort“, „Filmabend“ – Szenen pro Raum, mit einem Tipp ausgeführt.",
+    "note.security":"Fenster, Türen, Wasser- und Glasbruchmelder. Offene Fenster und Alarme stehen immer oben.",
+    "controls.title":"Für den Finger gemacht, nicht für die Maus.",
+    "controls.lede":"Große Flächen, klare Zustände, keine verschachtelten Menüs. Jedes Gerät bekommt eine Bedienung, die sich anfühlt wie das Original.",
+    "c.heat":"Heizung mit Drehregler","c.heat.p":"Ring ziehen oder − und + tippen. Aus, Heizen und Auto liegen einen Tipp auseinander, und das Panel zeigt, wann der Raum heizt.",
+    "c.light":"Licht und Farbe","c.light.p":"Helligkeitsbalken, Farbrad und Weißton. Mehrere Lampen lassen sich zu einer Kachel gruppieren.",
+    "c.blinds":"Rollos zum Ziehen","c.blinds.p":"Auf, Stopp, Zu oder auf eine Position ziehen. Mit Lamellenwinkel, live während der Fahrt.",
+    "c.sensor":"Luft- und Klimasensoren","c.sensor.p":"Temperatur, Feuchte, Luftdruck, Helligkeit, CO₂, Feinstaub und VOC. Schlechte Luft erscheint rot.",
+    "c.sec":"Sicherheit, die sich meldet","c.sec.p":"Offene Fenster stehen oben. Wasser oder Glasbruch wecken das Panel und zeigen eine Meldung.",
+    "dn.title":"Hell am Tag. Dezent in der Nacht.",
+    "dn.lede":"Im Automatikmodus wird das Panel um 19 Uhr dunkel und um 7 Uhr wieder hell – so blendet es nie im dunklen Flur. Zum Vergleichen ziehen.",
+    "dn.p1":"Bildschirmschoner mit Uhr","dn.p1.p":"Nach einer bis fünfzehn Minuten blendet das Panel auf eine große Uhr mit Innen- und Außentemperatur über.",
+    "dn.p2":"Räume direkt am Panel","dn.p2.p":"Räume anlegen, umbenennen und sortieren, Geräte verschieben und umbenennen – direkt am Touchscreen.",
+    "dn.p3":"Szenen nach Zeitplan","dn.p3.p":"„Komfort“ werktags um 06:30, „Eco“ jeden Abend um 22:30 – oder was dein Zuhause braucht.",
+    "sizes.title":"Eine App, jedes Display.",
+    "sizes.lede":"Vom klassischen Raspberry Pi Touch Display über 10,1″-Panels bis zum quadratischen Wanddisplay. Das Layout passt sich an – Seitenleiste, Kopfleiste oder Hochformat.",
+    "sizes.7":"7″-HDMI-Displays","sizes.10":"10,1″-Panels – empfohlen","sizes.sq":"Quadratisch – empfohlen","sizes.p":"Hochformat",
+    "sizes.note":"Im Pixelmaßstab dargestellt. 1280 × 720 (Touch Display 2) funktioniert ebenfalls.",
+    "lang.title":"Spricht deine Sprache.",
+    "lang.lede":"Deutsch, Englisch, Französisch, Italienisch und Spanisch – in den Einstellungen umschalten, und das ganze Panel folgt, Datum inklusive.",
+    "how.title":"Spricht direkt mit Homebridge.",
+    "how.lede":"Das Panel nutzt das HomeKit Accessory Protocol und verbindet sich über das Heimnetz mit deinem Homebridge. Kein Konto, keine Cloud, kein zusätzlicher Server.",
+    "how.n1":"Deine Geräte","how.n1.p":"Lampen, Steckdosen, Thermostate, Rollos und Sensoren – jede Marke, für die es ein Homebridge-Plugin gibt.",
+    "how.l1":"Plugins","how.n2.p":"Bringt sie in HomeKit. Das Panel verbindet sich mit Adresse, Port und PIN.",
+    "how.l2":"HAP, Heimnetz","how.n3.p":"Auf einem Raspberry Pi mit Touchscreen. Optionale MQTT-Topics erscheinen ebenfalls als Kacheln.",
+    "f.1s":"Cloud-Dienste oder Konten nötig","f.2s":"bis Änderungen aus der Home-App am Panel erscheinen","f.3s":"Bildschirm-Layouts: quer, quadratisch, hoch","f.4s":"Sprachen, umschaltbar ohne Neustart",
+    "inst.title":"In wenigen Minuten startklar.","inst.lede":"Ein Skript installiert alles und startet das Panel nach dem Login im Vollbild.",
+    "s1":"Homebridge vorbereiten","s1.p":"In der Homebridge-Oberfläche die Einstellungen öffnen, „Homebridge Insecure Mode“ einschalten und Homebridge neu starten. Port und PIN stehen in der config.json unter „bridge“.",
+    "s2":"Auf dem Pi installieren","s2.p":"Repository klonen und den Installer starten. Für Pi OS Lite ohne Desktop stattdessen <b>--eglfs</b> verwenden.",
+    "s3":"Verbinden","s3.p":"Einstellungen antippen, Adresse, Port und PIN eingeben, „Verbindung testen“ und dann „Übernehmen“ tippen. Kein Neustart nötig.",
+    "copy":"Kopieren","copied":"Kopiert",
+    "req.title":"Das brauchst du","req.1":"Raspberry Pi 4 oder 5<small>Pi 3 geht auch</small>","req.2":"Raspberry Pi OS Bookworm oder Trixie, 64 Bit",
+    "req.3":"Ein Touchscreen<small>800 × 480 bis 1280 × 800, quadratisch oder hochkant</small>","req.4":"Homebridge im Insecure Mode","req.5":"Optional: ein MQTT-Broker<small>z. B. Mosquitto, für virtuelle Geräte</small>",
+    "faq.title":"Fragen und Antworten.",
+    "q1":"Warum braucht Homebridge den Insecure Mode?","a1":"Das Panel liest und steuert Geräte über die HAP-Schnittstelle von Homebridge, und die setzt den Insecure Mode voraus. Bedenke: Dann kann jeder in deinem Heimnetz, der die PIN kennt, auf Homebridge zugreifen – nutze es nur in einem Netz, dem du vertraust.",
+    "q2":"Funktionieren HomeKit-Geräte ohne Homebridge?","a2":"Nicht direkt. Native HomeKit-Geräte wie Eve brauchen ein verschlüsseltes Pairing, das das Panel nicht enthält. Binde sie per Plugin in Homebridge ein, dann erscheinen sie auf dem Panel.",
+    "q3":"Was passiert, wenn ich etwas in der Home-App ändere?","a3":"Das Panel übernimmt es innerhalb von fünf Sekunden. Deine eigenen Eingaben am Panel wirken sofort.",
+    "q4":"Kann ich es ohne Hardware ausprobieren?","a4":"Ja. Starte es mit <code>python -m app --demo</code> auf einem beliebigen Linux-Rechner, dann bekommst du simulierte Geräte in einem Fenster.",
+    "q5":"Läuft es auf älteren Raspberry Pis?","a5":"Ein Pi 3 funktioniert. Auf sehr alten Modellen ohne OpenGL ES 3 vor dem Start <code>QT_QUICK_BACKEND=software</code> setzen.",
+    "final.title":"Licht aus. Von der Wand.","final.p":"Kostenlos herunterladen. Gebaut mit Qt Quick und Python.","final.cta":"Auf GitHub holen","final.cta2":"Bedienungsanleitung lesen",
+    "foot.1":"Homebridge Panel ist ein unabhängiges Projekt und steht in keiner Verbindung zu Homebridge oder Apple. HomeKit ist eine Marke von Apple Inc.","foot.issues":"Problem melden"
+  };
+  var EN={"copied":"Copied",
+    "note.light":"Every light, plug and blind at a glance. Tap a tile to switch it, tap the arrow for brightness and colour.",
+    "note.climate":"Radiators, thermostats, fans and air quality. You see at once what is heating.",
+    "note.scenes":"“All off”, “Comfort”, “Movie night” – scenes per room, run with one tap.",
+    "note.security":"Windows, doors, leak and glass break sensors. Open windows and alarms always come first."};
+  var nodes=document.querySelectorAll("[data-i18n]");
+  nodes.forEach(function(n){EN[n.dataset.i18n]=EN[n.dataset.i18n]||n.innerHTML;});
+  var lang="en", tab="light";
+  function t(k){return (lang==="de"?DE[k]:EN[k])||EN[k]||"";}
+  function setLang(l){
+    lang=l;document.documentElement.lang=l;
+    nodes.forEach(function(n){var v=t(n.dataset.i18n);if(v)n.innerHTML=v;});
+    document.getElementById("tabNote").innerHTML=t("note."+tab);
+    document.querySelectorAll(".lang button").forEach(function(b){b.setAttribute("aria-pressed",b.dataset.lang===l);});
+    try{localStorage.setItem("hbp-lang",l);}catch(e){}
+  }
+  var saved=null;try{saved=localStorage.getItem("hbp-lang");}catch(e){}
+  var initial=saved||((navigator.language||"").slice(0,2)==="de"?"de":"en");
+  if(initial!=="en")setLang(initial);
+  document.querySelectorAll(".lang button").forEach(function(b){b.addEventListener("click",function(){setLang(b.dataset.lang);});});
+
+  /* swap a screenshot with a crossfade */
+  function swap(img,src,alt){
+    if(img.getAttribute("src")===src)return;
+    var next=new Image();next.src=src;
+    next.decode?next.decode().then(go,go):(next.onload=go);
+    function go(){img.style.opacity=0;setTimeout(function(){img.src=src;if(alt)img.alt=alt;img.style.opacity=1;},180);}
+  }
+  var ALTS={light:"Home screen with the lights of all rooms",climate:"Climate view with heating, weather station, fan and air quality",scenes:"Scenes: All off, Comfort, Eco and Movie night",security:"Security view with an open bedroom window shown first"};
+  var tabs=document.querySelectorAll("[role=tab]");
+  tabs.forEach(function(b,i){
+    b.addEventListener("click",function(){
+      tab=b.dataset.tab;
+      tabs.forEach(function(x){x.setAttribute("aria-selected",x===b);x.tabIndex=x===b?0:-1;});
+      swap(document.getElementById("heroImg"),"assets/screens/dark-home-"+tab+".webp",ALTS[tab]);
+      document.getElementById("tabNote").innerHTML=t("note."+tab);
+    });
+    b.tabIndex=i===0?0:-1;
+    b.addEventListener("keydown",function(e){
+      var d=e.key==="ArrowRight"?1:e.key==="ArrowLeft"?-1:0;if(!d)return;
+      var n=tabs[(i+d+tabs.length)%tabs.length];n.focus();n.click();
+    });
+  });
+  ["light","climate","scenes","security"].forEach(function(c){var i=new Image();i.src="assets/screens/dark-home-"+c+".webp";});
+
+  /* language preview */
+  var lb=document.querySelectorAll(".lang-words button");
+  lb.forEach(function(b){b.addEventListener("click",function(){
+    lb.forEach(function(x){x.setAttribute("aria-pressed",x===b);});
+    swap(document.getElementById("langImg"),"assets/screens/"+b.dataset.shot+".webp");
+  });});
+
+  /* day/night compare */
+  var cmp=document.getElementById("compare"),rng=document.getElementById("compareRange");
+  rng.addEventListener("input",function(){cmp.style.setProperty("--pos",rng.value+"%");});
+
+  /* copy buttons */
+  document.querySelectorAll(".copy").forEach(function(b){b.addEventListener("click",function(){
+    var el=document.getElementById(b.dataset.copy).cloneNode(true);
+    el.querySelectorAll(".copy,.c").forEach(function(x){x.remove();});
+    var txt=el.textContent.trim();
+    var done=function(){b.textContent=t("copied");setTimeout(function(){b.textContent=t("copy");},1600);};
+    if(navigator.clipboard)navigator.clipboard.writeText(txt).then(done,function(){});
+  });});
+
+  /* nav border on scroll */
+  var nav=document.getElementById("nav");
+  addEventListener("scroll",function(){nav.classList.toggle("scrolled",scrollY>8);},{passive:true});
+})();
+</script>
+</body>
+</html>
