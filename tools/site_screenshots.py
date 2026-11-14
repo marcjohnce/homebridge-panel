@@ -20,7 +20,7 @@ from PIL import Image  # noqa: E402
 from PySide6.QtGui import QGuiApplication  # noqa: E402
 
 OUT = ROOT / "site" / "assets" / "screens"
-CATEGORIES = ("light", "climate", "scenes", "security")
+CATEGORIES = ("light", "climate", "security")
 
 
 def save(p: ds.Panel, name: str) -> None:
@@ -52,7 +52,7 @@ def main() -> int:
     for size, tag in (((720, 720), "720x720"), ((800, 480), "800x480"),
                       ((720, 1280), "720x1280"), ((1024, 600), "1024x600")):
         home(size, "dark", f"dark-{tag}", cats=("light",)).close()
-    for lang in ("de", "fr", "it", "es"):
+    for lang in ("de", "fr", "it", "es", "pt"):
         home((1280, 800), "dark", f"dark-{lang}", lang=lang, cats=("light",)).close()
     print(f"saved to {OUT}")
     return 0

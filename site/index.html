@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Homebridge Panel – a wall touch panel for your Homebridge home</title>
-<meta name="description" content="A calm, fast touch panel for the Raspberry Pi. Control lights, heating, blinds, scenes and sensors from Homebridge – locally, in five languages, on any screen size.">
+<meta name="description" content="A calm, fast touch panel for the Raspberry Pi. Control lights, heating, blinds and sensors from Homebridge – locally, in six languages, on any screen size.">
 <meta property="og:title" content="Homebridge Panel">
-<meta property="og:description" content="A wall touch panel for the Raspberry Pi that controls your Homebridge accessories – lights, heating, blinds, scenes and security.">
+<meta property="og:description" content="A wall touch panel for the Raspberry Pi that controls your Homebridge accessories – lights, heating, blinds, sensors and security.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://marcjohnce.github.io/homebridge-panel/assets/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -264,7 +264,7 @@ footer a{color:var(--ink)}
   <div class="wrap">
     <div class="hero-copy">
       <h1 data-i18n="hero.title">Your Homebridge, on the wall.</h1>
-      <p class="lede" data-i18n="hero.lede">A calm touch panel for the Raspberry Pi. Lights, heating, blinds, scenes and alarms – one tap away, right where you need them.</p>
+      <p class="lede" data-i18n="hero.lede">A calm touch panel for the Raspberry Pi. Lights, heating, blinds, sensors and alarms – one tap away, right where you need them.</p>
       <div class="cta-row">
         <a class="btn btn-gold" href="#install" data-i18n="hero.cta">Install on your Pi</a>
         <a class="btn btn-ghost" href="https://github.com/marcjohnce/homebridge-panel" data-i18n="hero.cta2">View the source</a>
@@ -273,7 +273,7 @@ footer a{color:var(--ink)}
         <li data-i18n="hero.f1">Runs locally, no cloud</li>
         <li data-i18n="hero.f4">Open source</li>
         <li data-i18n="hero.f2">Raspberry Pi 4 and 5</li>
-        <li data-i18n="hero.f3">Five languages</li>
+        <li data-i18n="hero.f3">Six languages</li>
       </ul>
     </div>
     <div class="hero-stage">
@@ -285,7 +285,6 @@ footer a{color:var(--ink)}
       <div class="tabs" role="tablist" aria-label="Panel menu">
         <button role="tab" aria-selected="true" data-tab="light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z"/></svg><span data-i18n="tab.light">Lights</span></button>
         <button role="tab" aria-selected="false" data-tab="climate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M10 14.5V5a2 2 0 014 0v9.5a4 4 0 11-4 0z"/></svg><span data-i18n="tab.climate">Climate</span></button>
-        <button role="tab" aria-selected="false" data-tab="scenes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M18.5 16l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></svg><span data-i18n="tab.scenes">Scenes</span></button>
         <button role="tab" aria-selected="false" data-tab="security"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/></svg><span data-i18n="tab.security">Security</span></button>
       </div>
       <p class="tab-note" id="tabNote" aria-live="polite" data-i18n="note.light">Every light, plug and blind at a glance. Tap a tile to switch it, tap the arrow for brightness and colour.</p>
@@ -371,13 +370,14 @@ footer a{color:var(--ink)}
   <div class="wrap langs">
     <div>
       <h2 data-i18n="lang.title">Speaks your language.</h2>
-      <p class="lede" data-i18n="lang.lede">English, German, French, Italian and Spanish – switch in the settings and the whole panel follows, dates included.</p>
+      <p class="lede" data-i18n="lang.lede">English, German, French, Italian, Spanish and Portuguese – switch in the settings and the whole panel follows, dates included.</p>
       <ul class="lang-words" role="group" aria-label="Preview language">
         <li><button type="button" data-shot="dark-home-light" aria-pressed="true"><span class="w">Lights</span><span class="n">English</span></button></li>
         <li><button type="button" data-shot="dark-de-home-light" aria-pressed="false"><span class="w">Licht</span><span class="n">Deutsch</span></button></li>
         <li><button type="button" data-shot="dark-fr-home-light" aria-pressed="false"><span class="w">Lumières</span><span class="n">Français</span></button></li>
         <li><button type="button" data-shot="dark-it-home-light" aria-pressed="false"><span class="w">Luci</span><span class="n">Italiano</span></button></li>
         <li><button type="button" data-shot="dark-es-home-light" aria-pressed="false"><span class="w">Luces</span><span class="n">Español</span></button></li>
+        <li><button type="button" data-shot="dark-pt-home-light" aria-pressed="false"><span class="w">Luzes</span><span class="n">Português</span></button></li>
       </ul>
     </div>
     <div class="device edge"><div class="screen"><img id="langImg" src="assets/screens/dark-home-light.webp" width="1280" height="800" loading="lazy" alt="Home screen in the selected language"></div></div>
@@ -411,7 +411,7 @@ footer a{color:var(--ink)}
       <li><b data-i18n="f.1">0</b><span data-i18n="f.1s">cloud services or accounts needed</span></li>
       <li><b data-i18n="f.2">≤ 5 s</b><span data-i18n="f.2s">until changes from the Home app appear on the panel</span></li>
       <li><b>6</b><span data-i18n="f.3s">screen layouts, landscape, square and portrait</span></li>
-      <li><b>5</b><span data-i18n="f.4s">languages, switchable without a restart</span></li>
+      <li><b>6</b><span data-i18n="f.4s">languages, switchable without a restart</span></li>
     </ul>
   </div>
 </section>
@@ -487,13 +487,12 @@ cd ~/homebridge-panel
     "skip":"Zum Inhalt springen",
     "nav.controls":"Bedienung","nav.screens":"Displays","nav.how":"So funktioniert's","nav.install":"Installation","nav.faq":"FAQ",
     "hero.title":"Dein Homebridge. An der Wand.",
-    "hero.lede":"Ein ruhiges Touch-Panel für den Raspberry Pi. Licht, Heizung, Rollos, Szenen und Alarme – einen Fingertipp entfernt, genau dort, wo du sie brauchst.",
+    "hero.lede":"Ein ruhiges Touch-Panel für den Raspberry Pi. Licht, Heizung, Rollos, Sensoren und Alarme – einen Fingertipp entfernt, genau dort, wo du sie brauchst.",
     "hero.cta":"Auf dem Pi installieren","hero.cta2":"Quellcode ansehen",
-    "hero.f1":"Läuft lokal, ohne Cloud","hero.f2":"Raspberry Pi 4 und 5","hero.f3":"Fünf Sprachen","hero.f4":"Open Source",
-    "tab.light":"Licht","tab.climate":"Klima","tab.scenes":"Szenen","tab.security":"Sicherheit",
+    "hero.f1":"Läuft lokal, ohne Cloud","hero.f2":"Raspberry Pi 4 und 5","hero.f3":"Sechs Sprachen","hero.f4":"Open Source",
+    "tab.light":"Licht","tab.climate":"Klima","tab.security":"Sicherheit",
     "note.light":"Alle Lampen, Steckdosen und Rollos auf einen Blick. Kachel antippen zum Schalten, Pfeil für Helligkeit und Farbe.",
     "note.climate":"Heizkörper, Thermostate, Lüfter und Luftqualität. Was gerade heizt, siehst du sofort.",
-    "note.scenes":"„Alles aus“, „Komfort“, „Filmabend“ – Szenen pro Raum, mit einem Tipp ausgeführt.",
     "note.security":"Fenster, Türen, Wasser- und Glasbruchmelder. Offene Fenster und Alarme stehen immer oben.",
     "controls.title":"Für den Finger gemacht, nicht für die Maus.",
     "controls.lede":"Große Flächen, klare Zustände, keine verschachtelten Menüs. Jedes Gerät bekommt eine Bedienung, die sich anfühlt wie das Original.",
@@ -512,7 +511,7 @@ cd ~/homebridge-panel
     "sizes.7":"7″-HDMI-Displays","sizes.10":"10,1″-Panels – empfohlen","sizes.sq":"Quadratisch – empfohlen","sizes.p":"Hochformat",
     "sizes.note":"Im Pixelmaßstab dargestellt. 1280 × 720 (Touch Display 2) funktioniert ebenfalls.",
     "lang.title":"Spricht deine Sprache.",
-    "lang.lede":"Deutsch, Englisch, Französisch, Italienisch und Spanisch – in den Einstellungen umschalten, und das ganze Panel folgt, Datum inklusive.",
+    "lang.lede":"Deutsch, Englisch, Französisch, Italienisch, Spanisch und Portugiesisch – in den Einstellungen umschalten, und das ganze Panel folgt, Datum inklusive.",
     "how.title":"Spricht direkt mit Homebridge.",
     "how.lede":"Das Panel nutzt das HomeKit Accessory Protocol und verbindet sich über das Heimnetz mit deinem Homebridge. Kein Konto, keine Cloud, kein zusätzlicher Server.",
     "how.n1":"Deine Geräte","how.n1.p":"Lampen, Steckdosen, Thermostate, Rollos und Sensoren – jede Marke, für die es ein Homebridge-Plugin gibt.",
@@ -538,7 +537,6 @@ cd ~/homebridge-panel
   var EN={"copied":"Copied",
     "note.light":"Every light, plug and blind at a glance. Tap a tile to switch it, tap the arrow for brightness and colour.",
     "note.climate":"Radiators, thermostats, fans and air quality. You see at once what is heating.",
-    "note.scenes":"“All off”, “Comfort”, “Movie night” – scenes per room, run with one tap.",
     "note.security":"Windows, doors, leak and glass break sensors. Open windows and alarms always come first."};
   var nodes=document.querySelectorAll("[data-i18n]");
   nodes.forEach(function(n){EN[n.dataset.i18n]=EN[n.dataset.i18n]||n.innerHTML;});
@@ -563,7 +561,7 @@ cd ~/homebridge-panel
     next.decode?next.decode().then(go,go):(next.onload=go);
     function go(){img.style.opacity=0;setTimeout(function(){img.src=src;if(alt)img.alt=alt;img.style.opacity=1;},180);}
   }
-  var ALTS={light:"Home screen with the lights of all rooms",climate:"Climate view with heating, weather station, fan and air quality",scenes:"Scenes: All off, Comfort, Eco and Movie night",security:"Security view with an open bedroom window shown first"};
+  var ALTS={light:"Home screen with the lights of all rooms",climate:"Climate view with heating, weather station, fan and air quality",security:"Security view with an open bedroom window shown first"};
   var tabs=document.querySelectorAll("[role=tab]");
   tabs.forEach(function(b,i){
     b.addEventListener("click",function(){
@@ -578,7 +576,7 @@ cd ~/homebridge-panel
       var n=tabs[(i+d+tabs.length)%tabs.length];n.focus();n.click();
     });
   });
-  ["light","climate","scenes","security"].forEach(function(c){var i=new Image();i.src="assets/screens/dark-home-"+c+".webp";});
+  ["light","climate","security"].forEach(function(c){var i=new Image();i.src="assets/screens/dark-home-"+c+".webp";});
 
   /* language preview */
   var lb=document.querySelectorAll(".lang-words button");
