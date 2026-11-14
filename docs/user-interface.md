@@ -126,6 +126,11 @@ disarm* is set under *Settings → Security*, disarming asks for it. A triggered
 wakes the panel and shows a message like a leak. **Motion sensors** only count as alerts (and
 get the red dot before the room) while the alarm system is armed.
 
+A window, door, contact or motion sensor that is only used for automations can be kept out
+of the alerts: switch off *Security alerts* in [Settings → Rooms and devices](#rooms-and-devices).
+It is still shown under *Security*, but raises no alert, gets no red dot and is marked
+*No alerts* in the device list. Leak, smoke, CO and glass break sensors always alert.
+
 ![Alarm system](images/alarm-system.png)
 
 ![PIN to disarm](images/alarm-pin.png)

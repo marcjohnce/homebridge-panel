@@ -151,6 +151,7 @@ class DeviceModel(QAbstractListModel):
         out = {**d, "baseRoom": base, "room": self.layout.room_of(d["id"], base),
                "baseName": base_name, "name": self.layout.names.get(d["id"]) or base_name,
                "hidden": d["id"] in self.layout.hidden,
+               "quiet": d["id"] in self.layout.quiet,
                "grouped": d["id"] in self.grouped}
         meta = d.get("meta", {})
         base_outdoor = d.get("baseOutdoor", bool(meta.get("outdoor")))
@@ -399,6 +400,9 @@ class RoomsBridge(QObject):
                         # temperature sensors can be marked as outdoor sensors (not thermostats)
                         "canOutdoor": d["type"] == "sensor" and d.get("state", {}).get("current_temp") is not None,
                         "outdoor": bool(d.get("meta", {}).get("outdoor")),
+                        # security sensors (not leak, smoke, CO, glass break) can be kept out of alerts
+                        "canQuiet": d["type"] == "security",
+                        "quiet": bool(d.get("quiet")),
                         "kinds": [{"value": k, "label": tr(self.KIND_LABELS[k]), "icon": KIND_ICONS[k]}
                                   for k in kinds] if len(kinds) > 1 else []})
         return out
@@ -538,7 +542,7 @@ class RoomsBridge(QObject):
     @Slot(str, "QVariantMap", result=str)
     def saveDevice(self, dev_id: str, values: dict[str, Any]) -> str:
         """Saves what the device editor changed: name ("" = original), kind, room, area
-        ("" = automatic), hidden and outdoor. Missing keys keep their value."""
+        ("" = automatic), hidden, outdoor and quiet (no security alerts). Missing keys keep their value."""
         m = self._ctl._model
         d = m.get(dev_id)
         if not d:
@@ -551,6 +555,7 @@ class RoomsBridge(QObject):
         if area and area not in AREAS:
             return tr("Choose one of the offered options")
         hidden = bool(values.get("hidden", d.get("hidden", False)))
+        quiet = bool(values.get("quiet", d.get("quiet", False)))
         outdoor = bool(values.get("outdoor", meta.get("outdoor", False)))
         name, err = self._layout.check_device_name(name)
         if err:
@@ -562,6 +567,8 @@ class RoomsBridge(QObject):
             self._layout.set_kind(dev_id, kind, d.get("baseKind", kind))
         self._layout.set_room(dev_id, room, d["baseRoom"], m.device_rooms())
         self._layout.set_hidden(dev_id, hidden)
+        if d["type"] == "security":
+            self._layout.set_quiet(dev_id, quiet)
         self._layout.set_area(dev_id, area, d.get("baseArea", ""))
         if d["type"] == "sensor":
             self._layout.set_outdoor(dev_id, outdoor, d.get("baseOutdoor", False))

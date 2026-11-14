@@ -56,6 +56,8 @@ def alert_level(d: dict[str, Any]) -> int:
     if d["type"] == "alarm":
         return 2
     kind = d.get("meta", {}).get("security")
+    if d.get("quiet") and kind not in ALARM_KINDS:      # set on the panel: only shown, no alerts
+        return 0
     if kind == "motion" and not _alarm_armed:
         return 0
     return 2 if kind in ALARM_KINDS else 1

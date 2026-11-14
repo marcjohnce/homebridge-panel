@@ -441,6 +441,28 @@ def test_alarm_system(qapp, tmp_path):
     ctl.shutdown()
 
 
+def test_quiet_security_sensor(qapp, tmp_path):
+    """A sensor with "Security alerts" off is only shown: no alert, no red dot; alarms stay alarms."""
+    ctl = make_controller(tmp_path)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 21)
+    ctl.selectCategory("security")
+    window = next(d for d in ctl.roomEditor.devices if d["name"] == "Bedroom Window")
+    assert window["canQuiet"] and ctl.securityCount == 1
+    assert ctl.roomEditor.saveDevice(window["id"], {"quiet": True}) == ""
+    assert ctl.securityCount == 0 and ctl.roomMarks == {} and ctl.device(window["id"])["quiet"]
+    assert next(d for d in ctl.roomEditor.devices if d["id"] == window["id"])["quiet"]
+    leak = next(d for d in ctl.devices.all() if d["name"] == "Washing Machine Leak")
+    assert ctl.roomEditor.saveDevice(leak["id"], {"quiet": True}) == ""
+    d = ctl.device(leak["id"])
+    ctl._on_message({"type": "device", "device": {**{k: v for k, v in d.items() if k not in ("shortName", "stateText")},
+                                                  "state": {**d["state"], "triggered": True}}})
+    assert ctl.securityCount == 1                                   # a leak still is an alarm
+    ctl.roomEditor.saveDevice(window["id"], {"quiet": False})
+    assert ctl.securityCount == 2
+    ctl.shutdown()
+
+
 def test_room_marks_follow_switching(qapp, tmp_path):
     """The dot and the "n on" summary follow a light at once, not only after a room change."""
     ctl = make_controller(tmp_path)
