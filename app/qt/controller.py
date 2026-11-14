@@ -28,7 +28,8 @@ from ..rooms import BUILTIN_DEFAULT, RoomLayout
 from ..scheduler import Scheduler
 from ..settings import ACTIONS, SettingsStore, apply_to_config, validate
 from ..models import AREAS, KIND_ICONS, KIND_KEYS
-from .format import air_warning, alert_level, category, fmt_temp, has_detail, short_name, state_text
+from .format import (air_warning, alert_level, battery_low, battery_text, category, fmt_temp, has_detail,
+                     short_name, state_text)
 
 log = logging.getLogger(__name__)
 ALL_ROOMS = ""
@@ -77,7 +78,8 @@ class DeviceModel(QAbstractListModel):
     """Devices of the selected menu area and room (or all rooms) for the tile grid."""
 
     ROLES = ("deviceId", "name", "shortName", "room", "type", "icon", "isOn", "reachable", "heating",
-             "stateText", "hasDetail", "targetTemp", "minTemp", "maxTemp", "modeOff", "alertLevel", "warning")
+             "stateText", "hasDetail", "targetTemp", "minTemp", "maxTemp", "modeOff", "alertLevel", "warning",
+             "batteryLow")
     # order inside a room: per menu area
     RANK = {"light": 0, "switch": 1, "plug": 1, "blind": 2, "thermostat": 0, "sensor": 1, "fan": 2}
 
@@ -123,6 +125,7 @@ class DeviceModel(QAbstractListModel):
             case "minTemp": return float(m.get("min_temp", 10))
             case "maxTemp": return float(m.get("max_temp", 30))
             case "modeOff": return s.get("mode") == "off"
+            case "batteryLow": return battery_low(d)
             case "alertLevel": return alert_level(d)
             case "warning": return air_warning(d)
         return None
@@ -1042,7 +1045,8 @@ class Controller(QObject):
         d = self._model.get(dev_id)
         if not d:
             return {}
-        return {**d, "shortName": short_name(d["name"], d["room"]), "stateText": state_text(d)}
+        return {**d, "shortName": short_name(d["name"], d["room"]), "stateText": state_text(d),
+                "batteryLow": battery_low(d), "batteryText": battery_text(d)}
 
     @Slot(str)
     def selectCategory(self, cat: str) -> None:
@@ -1144,6 +1148,19 @@ class Controller(QObject):
         else:
             return {}
         return {d["room"]: mark for d in self._model.shown() if hit(d)}
+
+    @Property("QVariantList", notify=summaryChanged)
+    def batteries(self) -> list[dict[str, Any]]:
+        """Every device with a battery, the emptiest first (almost empty ones on top)."""
+        out = [{"id": d["id"], "name": d["name"], "room": d["room"], "icon": d["icon"],
+                "level": d["state"].get("battery", -1), "low": battery_low(d), "text": battery_text(d)}
+               for d in self._model.all()
+               if "battery" in d.get("state", {}) or "battery_low" in d.get("state", {})]
+        return sorted(out, key=lambda b: (not b["low"], b["level"] if b["level"] >= 0 else 101, b["name"]))
+
+    @Property(int, notify=summaryChanged)
+    def lowBatteryCount(self) -> int:
+        return sum(1 for d in self._model.all() if battery_low(d))
 
     @Property(int, notify=summaryChanged)
     def securityCount(self) -> int:

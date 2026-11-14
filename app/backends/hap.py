@@ -19,7 +19,7 @@ import httpx
 
 from ..config import HapBackendConfig
 from ..hap_types import (CHAR_TYPES, DEVICE_TYPE_BY_SERVICE, SENSOR_SERVICES, SERVICE_TYPES, Char, ServiceSnapshot,
-                         merge_sensors, short_uuid)
+                         attach_battery, merge_sensors, short_uuid)
 from ..i18n import tr
 from .base import Backend, BackendError
 
@@ -65,9 +65,11 @@ class HapBackend(Backend):
                         if CHAR_TYPES.get(short_uuid(ch.get("type", ""))) == "Name":
                             acc_name = ch.get("value") or ""
             sensors: list[ServiceSnapshot] = []
+            devices: list[ServiceSnapshot] = []
+            battery: dict[str, Char] = {}
             for svc in services:
                 stype = SERVICE_TYPES.get(short_uuid(svc.get("type", "")))
-                if stype not in DEVICE_TYPE_BY_SERVICE and stype not in SENSOR_SERVICES:
+                if stype not in DEVICE_TYPE_BY_SERVICE and stype not in SENSOR_SERVICES and stype != "Battery":
                     continue
                 chars: dict[str, Char] = {}
                 for ch in svc.get("characteristics", []):
@@ -83,13 +85,18 @@ class HapBackend(Backend):
                         max=ch.get("maxValue"),
                         step=ch.get("minStep"),
                     )
+                if stype == "Battery":
+                    battery.update({k: v for k, v in chars.items() if k in ("BatteryLevel", "StatusLowBattery")})
+                    continue
                 name = (chars.get("ConfiguredName") and chars["ConfiguredName"].value) \
                     or (chars.get("Name") and chars["Name"].value) or acc_name or f"{stype} {aid}"
                 snap = ServiceSnapshot(key=f"{aid}.{svc['iid']}", service_type=stype, name=name,
                                        chars=chars, accessory=acc_name)
-                (sensors if stype in SENSOR_SERVICES else result).append(snap)
+                (sensors if stype in SENSOR_SERVICES else devices).append(snap)
             if sensors:
-                result.append(merge_sensors(str(aid), acc_name, sensors))
+                devices.append(merge_sensors(str(aid), acc_name, sensors))
+            attach_battery(devices, battery)
+            result += devices
         return result
 
     async def write(self, writes: list[tuple[Char, Any]]) -> None:

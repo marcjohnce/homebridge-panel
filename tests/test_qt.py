@@ -393,6 +393,21 @@ def test_room_marks(qapp, tmp_path):
     ctl.shutdown()
 
 
+def test_batteries(qapp, tmp_path):
+    ctl = make_controller(tmp_path)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 19)
+    names = [b["name"] for b in ctl.batteries]
+    # demo: leak sensor 4 % (and reported low), bathroom heating 7 %, window only "not low", door 62 %
+    assert names[:2] == ["Washing Machine Leak", "Bathroom Heating"] and ctl.lowBatteryCount == 2
+    assert [b["low"] for b in ctl.batteries] == [True, True, False, False]
+    heating = next(d for d in ctl.devices.all() if d["name"] == "Bathroom Heating")
+    assert ctl.device(heating["id"])["batteryLow"] and ctl.device(heating["id"])["batteryText"] == "Battery 7 %"
+    door = next(d for d in ctl.devices.all() if d["name"] == "Terrace Door")
+    assert not ctl.device(door["id"])["batteryLow"]
+    ctl.shutdown()
+
+
 def test_room_marks_follow_switching(qapp, tmp_path):
     """The dot and the "n on" summary follow a light at once, not only after a room change."""
     ctl = make_controller(tmp_path)

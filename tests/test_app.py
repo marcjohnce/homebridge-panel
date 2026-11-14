@@ -403,6 +403,35 @@ def test_security_sensors_from_hap():
         command_to_writes(contact, {"on": True})
 
 
+def test_battery_from_hap_and_ui():
+    """The battery service of an accessory is attached to its devices; low = below 10 % or reported."""
+    data = {"accessories": [{"aid": 7, "services": [
+        {"iid": 1, "type": U("3E"), "characteristics": [{"iid": 2, "type": U("23"), "value": "Door", "perms": ["pr"]}]},
+        {"iid": 10, "type": U("80"), "characteristics": [{"iid": 11, "type": U("6A"), "value": 0, "perms": ["pr"]}]},
+        {"iid": 20, "type": U("96"), "characteristics": [{"iid": 21, "type": U("68"), "value": 7, "perms": ["pr"]},
+                                                         {"iid": 22, "type": U("79"), "value": 0, "perms": ["pr"]}]},
+    ]}, {"aid": 8, "services": [
+        {"iid": 10, "type": U("83"), "characteristics": [{"iid": 11, "type": U("70"), "value": 0, "perms": ["pr"]},
+                                                         {"iid": 12, "type": U("79"), "value": 1, "perms": ["pr"]}]},
+    ]}]}
+    door, leak = HapBackend.parse_accessories(data)
+    assert snapshot_to_state(door)[1] == {"triggered": False, "battery": 7, "battery_low": False}
+    assert snapshot_to_state(leak)[1] == {"triggered": False, "battery_low": True}
+    from app.qt.format import battery_low
+    assert battery_low({"state": {"battery": 7, "battery_low": False}})          # below 10 %
+    assert battery_low({"state": {"battery_low": True}})                         # reported low
+    assert not battery_low({"state": {"battery": 40}}) and not battery_low({"state": {}})
+
+    ui = [{"uniqueId": "c1", "aid": 3, "instance": {"username": "0E:AA"}, "type": "ContactSensor",
+           "serviceName": "Window", "accessoryInformation": {"Name": "Window"},
+           "serviceCharacteristics": [{"type": "ContactSensorState", "value": 1, "canWrite": False}]},
+          {"uniqueId": "b1", "aid": 3, "instance": {"username": "0E:AA"}, "type": "Battery",
+           "serviceName": "Battery", "accessoryInformation": {"Name": "Window"},
+           "serviceCharacteristics": [{"type": "BatteryLevel", "value": 55, "canWrite": False}]}]
+    (window,) = HomebridgeUiBackend.parse_accessories(ui)
+    assert snapshot_to_state(window)[1] == {"triggered": True, "battery": 55}
+
+
 def test_security_kind_override_and_icon():
     cfg = AppConfig.model_validate({"demo": {"enabled": True}, "devices": {
         "Bedroom Window": {"security": "window"}, "Washing Machine Leak": {"security": "window"}}})

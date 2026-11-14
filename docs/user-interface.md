@@ -337,6 +337,21 @@ Names, kinds and rooms set here take precedence over `name:`, `security:` and `r
 `config.yaml`. Scenes keep working with the original names. Setting a value back to the one from
 `config.yaml` or Homebridge removes the override again.
 
+### Batteries
+
+Battery powered devices (contact and leak sensors, radiator thermostats …) report their battery
+through HomeKit, either as a charge in percent or only as *battery low*. A battery counts as
+**almost empty** below 10 % or when the device reports it as low. Such a device gets a small red
+battery on its tile, and its detail view says e.g. *Battery 7 % – replace soon*. Almost empty
+batteries do not count as security alerts.
+
+*Settings → Batteries* shows how many are almost empty and lists every device with a battery,
+the emptiest first.
+
+![Battery on a tile](images/battery-tile.png)
+
+![Batteries](images/batteries.png)
+
 ### Keypad
 
 Tapping *Address*, *Port* or *PIN* opens a keypad.
