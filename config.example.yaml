@@ -66,6 +66,7 @@ devices:
   "Hall Smoke Detector":       { room: Hall }
   "Alarm System":              { room: Hall }
   "Garden Sprinkler":          { room: Garden }
+  "Garage Door":               { room: Garage }
   # "homebridge:12.10":        { hidden: true }
 
 # --- Scenes (icon: moon, sun, film, leaf, home, power) -----------------------------

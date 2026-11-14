@@ -127,8 +127,16 @@ ApplicationWindow {
             panel.selectRoom("");               // the alarm may be in any room
             toast.show(message);
         }
+        function onGarageRequested(id) {
+            garageConfirm.ask(id);
+        }
         function onRestarting(message) {
             restartOverlay.message = message;
         }
+    }
+
+    GarageConfirm {
+        id: garageConfirm
+        objectName: "garageDialog"
     }
 }

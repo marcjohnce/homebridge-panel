@@ -13,7 +13,8 @@ from ..models import ALARM_KINDS
 CATEGORIES = ("light", "climate", "security")
 CATEGORY_OF_TYPE = {"light": "light", "plug": "light", "switch": "light", "blind": "light",
                     "thermostat": "climate", "sensor": "climate", "fan": "climate",
-                    "security": "security", "value": "climate", "alarm": "security"}
+                    "security": "security", "value": "climate", "alarm": "security",
+                    "garage": "security"}
 
 # Motion sensors only raise an alert while an alarm system is armed (set by the controller)
 _alarm_armed = False
@@ -52,11 +53,13 @@ def battery_text(d: dict[str, Any]) -> str:
 def alert_level(d: dict[str, Any]) -> int:
     """Security sensors: 2 = alarm (leak, glass break, smoke, CO, alarm system triggered),
     1 = open / motion / presence (those only while an alarm system is armed), 0 = quiet."""
-    if d["type"] not in ("security", "alarm") or not d.get("reachable", True) \
+    if d["type"] not in ("security", "alarm", "garage") or not d.get("reachable", True) \
             or not d.get("state", {}).get("triggered"):
         return 0
     if d["type"] == "alarm":
         return 2
+    if d["type"] == "garage":                # open door: like an open window
+        return 0 if d.get("quiet") else 1
     kind = d.get("meta", {}).get("security")
     if d.get("quiet") and kind not in ALARM_KINDS:      # set on the panel: only shown, no alerts
         return 0
@@ -100,6 +103,22 @@ def security_text(d: dict[str, Any]) -> str:
     if kind == "presence":
         return tr("Present") if hit else tr("Nobody there")
     return tr("Motion") if hit else tr("No motion")
+
+
+def garage_text(d: dict[str, Any]) -> str:
+    s = d.get("state", {})
+    if s.get("obstructed"):
+        return tr("Obstructed")
+    door = s.get("door", "closed")
+    if door == "opening":
+        return tr("Opening …")
+    if door == "closing":
+        return tr("Closing …")
+    if door == "stopped":
+        return tr("Stopped")
+    if door == "open":
+        return _open_for(d.get("since"))
+    return tr("Closed")
 
 
 def valve_text(s: dict[str, Any]) -> str:
@@ -196,6 +215,8 @@ def state_text(d: dict[str, Any]) -> str:
         return alarm_text(s)
     if d["type"] == "valve":
         return valve_text(s)
+    if d["type"] == "garage":
+        return garage_text(d)
     if d.get("meta", {}).get("choice"):         # switch group: the switch that is on
         return s.get("active_name") or tr("Off")
     if d["type"] == "security":

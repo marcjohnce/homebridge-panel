@@ -85,7 +85,7 @@ Tiles leave out the room from the device name when the room is shown anyway
 |---|---|
 | Lights | lights, switches, plugs and blinds |
 | Climate | heating, temperature, humidity, air pressure and light sensors, fans |
-| Security | window, door, glass break, leak, motion, presence, smoke and CO sensors – alarms and open windows first |
+| Security | alarm system, garage doors, window, door, glass break, leak, motion, presence, smoke and CO sensors – alarms and open windows first |
 
 A dot before a room tab shows where something is going on: under *Lights* a dot in the accent
 colour marks rooms with at least one light, switch or plug on (blinds don't count); under
@@ -130,6 +130,14 @@ A window, door, contact or motion sensor that is only used for automations can b
 of the alerts: switch off *Security alerts* in [Settings → Rooms and devices](#rooms-and-devices).
 It is still shown under *Security*, but raises no alert, gets no red dot and is marked
 *No alerts* in the device list. Leak, smoke, CO and glass break sensors always alert.
+
+A **garage door** (HomeKit garage door opener) shows *Closed*, *Open for 12 min*, *Opening …*,
+*Closing …*, *Stopped* or *Obstructed*. An open door counts as an alert like an open window (can
+be switched off with *Security alerts*). A tap never moves the door directly: the panel asks
+*Open …?* or *Close …?* first, and opening asks for the *PIN to disarm* of the alarm system if one
+is set. Closing needs no PIN.
+
+![Open garage door](images/garage-confirm.png)
 
 **Presence sensors** (HomeKit occupancy sensors, e.g. mmWave radar) show *Present* or *Nobody
 there*. They report presence for as long as someone is in the room, so their *Security alerts* are

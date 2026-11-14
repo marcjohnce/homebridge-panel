@@ -483,6 +483,25 @@ def test_valve_from_hap():
     assert state_text({**d, "state": {"on": False}}) == "Closed"
 
 
+def test_garage_door_from_hap():
+    data = {"accessories": [{"aid": 6, "services": [
+        {"iid": 10, "type": U("41"), "characteristics": [
+            {"iid": 11, "type": U("0E"), "value": 2, "perms": ["pr", "ev"]},
+            {"iid": 12, "type": U("32"), "value": 0, "perms": ["pr", "pw", "ev"]},
+            {"iid": 13, "type": U("24"), "value": False, "perms": ["pr", "ev"]}]},
+    ]}]}
+    (snap,) = HapBackend.parse_accessories(data)
+    dtype, st, _, _ = snapshot_to_state(snap)
+    assert dtype.value == "garage"
+    assert st == {"door": "opening", "target": "open", "obstructed": False, "triggered": True}
+    assert [(ch.name, v) for ch, v in command_to_writes(snap, {"on": False})] == [("TargetDoorState", 1)]
+    from app.qt.format import alert_level, state_text
+    d = {"type": "garage", "reachable": True, "state": st, "meta": {}}
+    assert state_text(d) == "Opening …" and alert_level(d) == 1
+    assert state_text({**d, "state": {**st, "obstructed": True}}) == "Obstructed"
+    assert alert_level({**d, "state": {"door": "closed", "triggered": False}}) == 0
+
+
 def test_security_kind_override_and_icon():
     cfg = AppConfig.model_validate({"demo": {"enabled": True}, "devices": {
         "Bedroom Window": {"security": "window"}, "Washing Machine Leak": {"security": "window"}}})

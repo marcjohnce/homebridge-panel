@@ -42,6 +42,7 @@ SERVICE_TYPES: dict[str, str] = {
     "87": "SmokeSensor",
     "7E": "SecuritySystem",
     "D0": "Valve",
+    "41": "GarageDoorOpener",
     "7F": "CarbonMonoxideSensor",
     "96": "Battery",
     EVE_WEATHER_SERVICE: "EveWeather",
@@ -98,6 +99,8 @@ CHAR_TYPES: dict[str, str] = {
     "76": "SmokeDetected",
     "66": "SecuritySystemCurrentState",
     "D2": "InUse",
+    "E": "CurrentDoorState",
+    "32": "TargetDoorState",
     "D3": "SetDuration",
     "D4": "RemainingDuration",
     "D5": "ValveType",
@@ -140,6 +143,7 @@ DEVICE_TYPE_BY_SERVICE: dict[str, DeviceType] = {
     "SmokeSensor": DeviceType.SECURITY,
     "SecuritySystem": DeviceType.ALARM,
     "Valve": DeviceType.VALVE,
+    "GarageDoorOpener": DeviceType.GARAGE,
     "CarbonMonoxideSensor": DeviceType.SECURITY,
     "Value": DeviceType.VALUE,          # virtual device from MQTT (app/backends/mqtt.py)
 }
@@ -153,6 +157,9 @@ SECURITY_SERVICES = {
     "SmokeSensor": ("SmokeDetected", 1, "smoke", ("smoke",)),
     "CarbonMonoxideSensor": ("CarbonMonoxideDetected", 1, "co", ("co",)),
 }
+
+# GarageDoorOpener: current door state; the target is 0 = open, 1 = closed
+DOOR_STATES = {0: "open", 1: "closed", 2: "opening", 3: "closing", 4: "stopped"}
 
 # Valve.ValveType
 VALVE_TYPES = {0: "generic", 1: "irrigation", 2: "shower", 3: "faucet"}
@@ -254,6 +261,13 @@ def snapshot_to_state(s: ServiceSnapshot) -> tuple[DeviceType, dict[str, Any], l
             caps.append("tilt")
             meta.update(min_tilt=tilt.min if tilt.min is not None else -90,
                         max_tilt=tilt.max if tilt.max is not None else 90)
+    elif s.service_type == "GarageDoorOpener":
+        door = DOOR_STATES.get(int(s.get("CurrentDoorState", 1) or 0), "closed")
+        state["door"] = door
+        state["target"] = "closed" if int(s.get("TargetDoorState", 1) or 0) == 1 else "open"
+        state["obstructed"] = bool(s.get("ObstructionDetected", False))
+        state["triggered"] = door != "closed" or state["obstructed"]      # not closed: a security alert
+        caps.append("on")
     elif s.service_type == "Valve":
         state["on"] = int(s.get("Active", 0) or 0) == 1
         state["in_use"] = int(s.get("InUse", 0) or 0) == 1
@@ -406,7 +420,9 @@ def command_to_writes(s: ServiceSnapshot, attrs: dict[str, Any]) -> list[tuple[C
     for key, value in attrs.items():
         if key == "on":
             on = bool(value)
-            if s.service_type == "Thermostat":
+            if s.service_type == "GarageDoorOpener":    # on = open, off = close
+                writes.append((need("TargetDoorState"), 0 if on else 1))
+            elif s.service_type == "Thermostat":
                 ch = need("TargetHeatingCoolingState")
                 writes.append((ch, THERMOSTAT_MODES_REV["heat"] if on else 0))
             elif s.service_type == "WindowCovering":     # on = open fully, off = close
