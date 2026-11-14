@@ -14,6 +14,10 @@ Popup {
     property string draftRoom
     property bool draftHidden
     property bool draftOutdoor
+    property bool draftQuiet
+    // window, door, contact and motion sensors can be kept out of security alerts (not alarms)
+    readonly property bool canQuiet: !!device.canQuiet
+        && ["window", "door", "contact", "motion"].indexOf(draftKind || device.kind || "") >= 0
     property string draftArea
     property string error
 
@@ -24,6 +28,7 @@ Popup {
         draftRoom = d.room;
         draftHidden = !!d.hidden;
         draftOutdoor = !!d.outdoor;
+        draftQuiet = !!d.quiet;
         draftArea = d.area || "";
         error = "";
         open();
@@ -31,7 +36,7 @@ Popup {
     function save() {
         const err = panel.roomEditor.saveDevice(device.id, {
             name: draftName, kind: draftKind, room: draftRoom, area: draftArea,
-            hidden: draftHidden, outdoor: draftOutdoor
+            hidden: draftHidden, outdoor: draftOutdoor, quiet: canQuiet ? draftQuiet : false
         });
         if (err !== "")
             error = err;
@@ -242,6 +247,16 @@ Popup {
                     checked: root.draftOutdoor
                     toggleName: "outdoorToggle"
                     onToggled: root.draftOutdoor = !root.draftOutdoor
+                }
+                ToggleRow {
+                    objectName: "alertsRow"
+                    visible: root.canQuiet
+                    width: parent.width
+                    label: qsTr("Security alerts")
+                    help: qsTr("Off: only shown, e.g. a motion sensor used for automations – no alert, no red dot")
+                    checked: !root.draftQuiet
+                    toggleName: "alertsToggle"
+                    onToggled: root.draftQuiet = !root.draftQuiet
                 }
                 ToggleRow {
                     width: parent.width

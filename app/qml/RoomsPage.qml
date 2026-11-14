@@ -343,8 +343,9 @@ Rectangle {
                                                 }
                                                 Text {
                                                     objectName: "hiddenLabel:" + devItem.modelData.id
-                                                    visible: devItem.modelData.hidden || devItem.modelData.grouped
-                                                    text: devItem.modelData.hidden ? qsTr("Hidden") : qsTr("In a group")
+                                                    visible: devItem.modelData.hidden || devItem.modelData.grouped || devItem.modelData.quiet
+                                                    text: devItem.modelData.hidden ? qsTr("Hidden")
+                                                        : devItem.modelData.grouped ? qsTr("In a group") : qsTr("No alerts")
                                                     color: Theme.muted
                                                     font.pixelSize: Theme.s(14)
                                                 }
