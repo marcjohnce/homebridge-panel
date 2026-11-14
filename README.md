@@ -201,3 +201,15 @@ python tools/doc_screenshots.py         # update the documentation screenshots
 - On the Pi, Qt draws lines and arcs with its GPU curve renderer. On very old models without
   OpenGL ES 3, set `QT_QUICK_BACKEND=software`.
 - Schedules also accept the German weekday abbreviations (`di mi do so`) for older configurations.
+
+## License
+
+Copyright 2026 marcjohnce
+
+Licensed under the [Apache License, Version 2.0](LICENSE). You may not use this project except in
+compliance with the License. Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS
+OF ANY KIND, either express or implied.
+
+The bundled Jost font (`app/assets/fonts`, `site/assets/fonts`) is licensed under the
+SIL Open Font License 1.1, see `OFL.txt`.
