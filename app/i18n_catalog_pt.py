@@ -216,8 +216,13 @@ PT: dict[str, str] = {
     "{n} alerts": "{n} alertas",
     "No lights, switches or blinds here.": "Não há luzes, interruptores nem estores aqui.",
     "No heating or climate sensors here.": "Não há aquecimento nem sensores de clima aqui.",
-    "No window, door, contact, glass break or leak sensors here.":
-        "Não há sensores de janela, porta, contacto, quebra de vidro nem fugas aqui.",
+    "No security sensors here.": "Não há sensores de segurança aqui.",
+    "Smoke detected": "Fumo detetado",
+    "No smoke": "Sem fumo",
+    "CO detected": "CO detetado",
+    "No CO": "Sem CO",
+    "Smoke detector": "Detetor de fumo",
+    "CO detector": "Detetor de CO",
     # security sensors
     "Open for {n} min": "Aberta há {n} min",
     "Open for {n} h": "Aberta há {n} h",

@@ -85,7 +85,7 @@ Tiles leave out the room from the device name when the room is shown anyway
 |---|---|
 | Lights | lights, switches, plugs and blinds |
 | Climate | heating, temperature, humidity, air pressure and light sensors, fans |
-| Security | window, door, glass break, leak and motion sensors – alarms and open windows first |
+| Security | window, door, glass break, leak, motion, smoke and CO sensors – alarms and open windows first |
 
 A dot before a room tab shows where something is going on: under *Lights* a dot in the accent
 colour marks rooms with at least one light, switch or plug on (blinds don't count); under
@@ -110,7 +110,7 @@ yet). *Climate* and *All* have no dots.
 | 2 | Open window | Red text, e.g. *Open for 25 min*; open windows and doors come first |
 | 3 | Glass break sensor | *No alarm* while quiet |
 
-A **leak or glass break alarm** turns the tile red, wakes the panel from the screen saver,
+A **leak, glass break, smoke or CO alarm** turns the tile red, wakes the panel from the screen saver,
 switches to *Security* and shows a message. Open windows and doors only raise the count in the
 menu.
 
@@ -339,7 +339,7 @@ Names, kinds and rooms set here take precedence over `name:`, `security:` and `r
 
 ### Batteries
 
-Battery powered devices (contact and leak sensors, radiator thermostats …) report their battery
+Battery powered devices (contact, leak and smoke sensors, radiator thermostats …) report their battery
 through HomeKit, either as a charge in percent or only as *battery low*. A battery counts as
 **almost empty** below 10 % or when the device reports it as low. Such a device gets a small red
 battery on its tile, and its detail view says e.g. *Battery 7 % – replace soon*. Almost empty

@@ -432,6 +432,20 @@ def test_battery_from_hap_and_ui():
     assert snapshot_to_state(window)[1] == {"triggered": True, "battery": 55}
 
 
+def test_smoke_and_co_detectors():
+    data = {"accessories": [{"aid": 9, "services": [
+        {"iid": 10, "type": U("87"), "characteristics": [{"iid": 11, "type": U("76"), "value": 1, "perms": ["pr", "ev"]}]},
+        {"iid": 20, "type": U("7F"), "characteristics": [{"iid": 21, "type": U("69"), "value": 0, "perms": ["pr", "ev"]}]},
+    ]}]}
+    smoke, co = HapBackend.parse_accessories(data)
+    assert snapshot_to_state(smoke)[1:4:2] == ({"triggered": True}, {"security": "smoke", "kinds": ["smoke"]})
+    assert snapshot_to_state(co)[1:4:2] == ({"triggered": False}, {"security": "co", "kinds": ["co"]})
+    from app.qt.format import alert_level, security_text
+    d = {"type": "security", "reachable": True, "state": {"triggered": True}, "meta": {"security": "smoke"}}
+    assert alert_level(d) == 2 and security_text(d) == "Smoke detected"       # an alarm like leak
+    assert security_text({**d, "state": {}, "meta": {"security": "co"}}) == "No CO"
+
+
 def test_security_kind_override_and_icon():
     cfg = AppConfig.model_validate({"demo": {"enabled": True}, "devices": {
         "Bedroom Window": {"security": "window"}, "Washing Machine Leak": {"security": "window"}}})

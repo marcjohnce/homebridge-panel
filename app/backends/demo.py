@@ -51,6 +51,8 @@ _DEVICES = [
     ("washer-leak", "LeakSensor", "Washing Machine Leak", [("LeakDetected", 0, False, {}),     # battery almost empty
                                                              ("BatteryLevel", 4, False, {}), ("StatusLowBattery", 1, False, {})]),
     # without HoldPosition and tilt: stop sets the target to the current position
+    ("hall-smoke", "SmokeSensor", "Hall Smoke Detector", [("SmokeDetected", 0, False, {}),
+                                                           ("BatteryLevel", 80, False, {})]),
     ("bedroom-blinds", "WindowCovering", "Bedroom Blinds",
      [("CurrentPosition", 0, False, {}), ("TargetPosition", 0, True, dict(min=0, max=100, step=1)),
       ("PositionState", 2, False, {})]),

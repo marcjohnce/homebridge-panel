@@ -14,7 +14,7 @@ class DeviceType(str, Enum):
     FAN = "fan"
     SENSOR = "sensor"
     BLIND = "blind"
-    SECURITY = "security"     # contact (window, door, glass break), leak and motion sensors
+    SECURITY = "security"     # contact (window, door, glass break), leak, motion, smoke and CO sensors
     VALUE = "value"           # virtual device: a value received over MQTT
 
 
@@ -36,10 +36,10 @@ DEFAULT_ICONS = {
 # Kinds of security sensors. A contact sensor can be a window, a door, a plain contact
 # (e.g. a cupboard or a gate) or a glass break detector; HomeKit has no glass break type, so
 # plugins expose those as contact or motion sensors.
-SECURITY_KINDS = ("window", "door", "contact", "glassbreak", "leak", "motion")
+SECURITY_KINDS = ("window", "door", "contact", "glassbreak", "leak", "motion", "smoke", "co")
 SECURITY_ICONS = {"window": "window", "door": "door", "contact": "contact", "glassbreak": "glass",
-                  "leak": "leak", "motion": "motion"}
-ALARM_KINDS = {"glassbreak", "leak"}
+                  "leak": "leak", "motion": "motion", "smoke": "smoke", "co": "co"}
+ALARM_KINDS = {"glassbreak", "leak", "smoke", "co"}
 
 # What a switch or plug powers; chosen on the panel or with appliance: in config.yaml.
 # The kind sets the icon; "fan" puts the device under "Climate", washer and dishwasher

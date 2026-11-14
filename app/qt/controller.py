@@ -367,7 +367,7 @@ class RoomsBridge(QObject):
                 for r in self._layout.all_rooms(dev_rooms.values())]
 
     KIND_LABELS = {"window": "Window", "door": "Door", "contact": "Contact", "glassbreak": "Glass break",
-                   "leak": "Leak", "motion": "Motion",
+                   "leak": "Leak", "motion": "Motion", "smoke": "Smoke detector", "co": "CO detector",
                    "switch": "Switch", "plug": "Plug", "tv": "TV", "coffee": "Coffee machine",
                    "washer": "Washing machine", "dishwasher": "Dishwasher", "fan": "Fan",
                    "bulb": "Bulb", "ceiling": "Ceiling lamp", "spot": "Spotlight", "wall": "Wall lamp",
@@ -636,7 +636,7 @@ class Controller(QObject):
     currentRoomChanged = Signal()
     categoryChanged = Signal()
     summaryChanged = Signal()
-    securityAlarm = Signal(str)       # new leak / glass break alarm: wake up and show "Security"
+    securityAlarm = Signal(str)       # new leak / glass break / smoke / CO alarm: wake up and show "Security"
     scenesChanged = Signal()
     statusChanged = Signal()
     climateChanged = Signal()
