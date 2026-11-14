@@ -99,6 +99,7 @@ DEVICE_TYPE_BY_SERVICE: dict[str, DeviceType] = {
     "LeakSensor": DeviceType.SECURITY,
     "MotionSensor": DeviceType.SECURITY,
     "OccupancySensor": DeviceType.SECURITY,
+    "Value": DeviceType.VALUE,          # virtual device from MQTT (app/backends/mqtt.py)
 }
 
 # Security sensors: (characteristic, value meaning "triggered", default kind, selectable kinds)
@@ -200,6 +201,10 @@ def snapshot_to_state(s: ServiceSnapshot) -> tuple[DeviceType, dict[str, Any], l
             caps.append("tilt")
             meta.update(min_tilt=tilt.min if tilt.min is not None else -90,
                         max_tilt=tilt.max if tilt.max is not None else 90)
+    elif s.service_type == "Value":
+        state["value"] = s.get("Value")
+        meta.update(unit=s.get("Unit", ""), decimals=int(s.get("Decimals", 1)), icon_hint=s.get("Icon") or "none",
+                    topic=s.accessory)
     elif s.service_type in SECURITY_SERVICES:
         char, hit, kind, kinds = SECURITY_SERVICES[s.service_type]
         v = s.get(char, 0)

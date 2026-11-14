@@ -45,6 +45,28 @@ class HomebridgeUiBackendConfig(BaseModel):
     timeout: float = 8.0
 
 
+class MqttConfig(BaseModel):
+    """MQTT broker for virtual devices (values of subscribed topics)."""
+    name: str = "mqtt"
+    host: str = "127.0.0.1"
+    port: int = 1883
+    protocol: Literal["tcp", "tls", "websocket"] = "tcp"
+    username: str | None = None
+    password: str | None = None
+    timeout: float = 5.0
+
+
+class VirtualDevice(BaseModel):
+    """A value received over MQTT, shown like a sensor, e.g. the water pressure of a boiler."""
+    id: str
+    name: str
+    topic: str
+    unit: str = ""
+    json_key: str = Field("", description="Key (a.b for nested) when the payload is JSON")
+    decimals: int = Field(1, ge=0, le=3)
+    icon: str = Field("gauge", description='Icon of the tile; "none" shows the value without an icon')
+
+
 class DemoBackendConfig(BaseModel):
     enabled: bool = False
     name: str = "demo"
@@ -118,6 +140,8 @@ class AppConfig(BaseModel):
     hap: list[HapBackendConfig] = []
     homebridge_ui: list[HomebridgeUiBackendConfig] = []
     demo: DemoBackendConfig = DemoBackendConfig()
+    mqtt: MqttConfig | None = None
+    virtual: list[VirtualDevice] = []
     devices: dict[str, DeviceOverride] = {}
     scenes: list[Scene] = []
     schedules: list[Schedule] = []

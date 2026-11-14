@@ -299,6 +299,24 @@ under *All* and in the default room – and from the menu status, alarms and tem
 listed here, marked *Hidden*, so it can be shown again. (`hidden: true` in `config.yaml` removes a
 device completely, also from the settings.)
 
+The arrows next to each device set the order of the tiles in the room (under *All*: rooms first,
+then this order; alarms stay in front under *Security*).
+
+**Virtual devices (MQTT)** show a value received on an MQTT topic, e.g. the water pressure of a
+boiler in bar. Set up the broker first under *Settings → MQTT* (address, port, protocol MQTT /
+MQTT over TLS / WebSocket, user name, password, *Test*). *Virtual device (MQTT)* then asks for
+name, unit, topic, an optional JSON key (`pressure` or `data.pressure` when the topic sends JSON),
+decimal places, an icon (or none) and the room. Virtual devices appear under *Climate* and only
+show values.
+
+![Virtual device](images/virtual-device.png)
+
+**Light groups** combine lights of one room into one tile: it is on when at least one light is
+on, shows e.g. *2 of 3 on, 60%*, a tap switches all lights, and the brightness bar sets them all
+to the same value. *Hide the single lights* shows only the group on the home screen.
+
+![Light group](images/light-group.png)
+
 Names, kinds and rooms set here take precedence over `name:`, `security:` and `room:` in
 `config.yaml`. Scenes keep working with the original names. Setting a value back to the one from
 `config.yaml` or Homebridge removes the override again.

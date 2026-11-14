@@ -5,6 +5,7 @@ import asyncio
 import concurrent.futures
 import logging
 import os
+import secrets
 import subprocess
 import sys
 import threading
@@ -20,8 +21,9 @@ from PySide6.QtCore import (QAbstractListModel, QByteArray, QEvent, QModelIndex,
 from .. import __version__, i18n
 from ..i18n import tr
 from ..backends import BackendError, HapBackend, create_backends
-from ..config import AppConfig, HapBackendConfig
+from ..config import AppConfig, HapBackendConfig, MqttConfig, VirtualDevice
 from ..manager import DeviceManager, DeviceNotFound
+from ..backends.mqtt import MqttBackend, test_connection as test_mqtt
 from ..rooms import BUILTIN_DEFAULT, RoomLayout
 from ..scheduler import Scheduler
 from ..settings import ACTIONS, SettingsStore, apply_to_config, validate
@@ -31,6 +33,14 @@ from .format import alert_level, category, fmt_temp, has_detail, short_name, sta
 log = logging.getLogger(__name__)
 ALL_ROOMS = ""
 NIGHT_FROM, NIGHT_TO = 19, 7
+
+
+def _emit_safely(signal: Any, *args: Any) -> None:
+    """Emits from a background callback; the receiver may be gone after a shutdown."""
+    try:
+        signal.emit(*args)
+    except RuntimeError:
+        pass
 
 
 class AsyncRunner:
@@ -64,6 +74,7 @@ class DeviceModel(QAbstractListModel):
     def __init__(self, parent: QObject | None = None, layout: RoomLayout | None = None):
         super().__init__(parent)
         self.layout = layout or RoomLayout()
+        self.grouped: set[str] = set()      # lights shown only through their light group
         self._all: dict[str, dict[str, Any]] = {}
         self._rows: list[str] = []
         self._room = ALL_ROOMS
@@ -123,7 +134,8 @@ class DeviceModel(QAbstractListModel):
         base_name = d.get("baseName", d["name"])
         out = {**d, "baseRoom": base, "room": self.layout.room_of(d["id"], base),
                "baseName": base_name, "name": self.layout.names.get(d["id"]) or base_name,
-               "hidden": d["id"] in self.layout.hidden}
+               "hidden": d["id"] in self.layout.hidden,
+               "grouped": d["id"] in self.grouped}
         meta = d.get("meta", {})
         base_outdoor = d.get("baseOutdoor", bool(meta.get("outdoor")))
         outdoor = self.layout.outdoor.get(d["id"], base_outdoor)
@@ -160,11 +172,16 @@ class DeviceModel(QAbstractListModel):
     def _visible(self) -> list[str]:
         devs = [d for d in self.shown() if self._room in (ALL_ROOMS, d["room"])
                 and self._category in ("", category(d))]
-        room_rank = {r: i for i, r in enumerate(self.rooms())}
-        # alarms first, then open windows/doors; otherwise by room, kind of device, order, name
-        devs.sort(key=lambda d: (-alert_level(d), room_rank.get(d["room"], 0), self.RANK.get(d["type"], 0),
-                                 d.get("order", 100), d["name"].casefold()))
-        return [d["id"] for d in devs]
+        # alarms first, then open windows/doors; otherwise the order of rooms and devices
+        alerts = {d["id"]: alert_level(d) for d in devs}
+        return [d["id"] for d in sorted(self.ordered(devs), key=lambda d: -alerts[d["id"]])]
+
+    def ordered(self, devs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Room order, then the manual order in the room (settings), then kind of device,
+        order from config.yaml and name."""
+        room_rank = {r: i for i, r in enumerate(self.layout.all_rooms(d["room"] for d in self._all.values()))}
+        return sorted(devs, key=lambda d: (room_rank.get(d["room"], 0), self.layout.device_rank(d["room"], d["id"]),
+                                           self.RANK.get(d["type"], 0), d.get("order", 100), d["name"].casefold()))
 
     def set_category(self, cat: str, room: str) -> None:
         self._category = cat
@@ -176,7 +193,7 @@ class DeviceModel(QAbstractListModel):
         return sum(1 for d in self.shown() if pred(d))
 
     def shown(self) -> list[dict[str, Any]]:
-        return [d for d in self._all.values() if not d.get("hidden")]
+        return [d for d in self._all.values() if not d.get("hidden") and not d.get("grouped")]
 
     def _relayout(self) -> None:
         rows = self._visible()
@@ -200,7 +217,7 @@ class DeviceModel(QAbstractListModel):
         old = self._all.get(d["id"])
         d = self._place(d)
         self._all[d["id"]] = d
-        structural = (old is None or any(old.get(k) != d.get(k) for k in ("room", "name", "order", "hidden"))
+        structural = (old is None or any(old.get(k) != d.get(k) for k in ("room", "name", "order", "hidden", "grouped"))
                       or alert_level(old) != alert_level(d))
         if structural:
             self._relayout()
@@ -262,6 +279,20 @@ class SettingsBridge(QObject):
     def runAction(self, key: str) -> None:
         self._ctl.run_action(key)
 
+    @Slot(str, "QVariant", str, str, str)
+    def testMqtt(self, host: str, port: Any, protocol: str, user: str, password: str) -> None:
+        for key, value in (("mqtt_host", host), ("mqtt_port", port), ("mqtt_protocol", protocol)):
+            v, err = validate(key, value)
+            if err:
+                self.testFinished.emit(False, err)
+                return
+            if key == "mqtt_port":
+                port = v
+        cfg = MqttConfig(host=host.strip(), port=port, protocol=protocol, username=user or None,
+                         password=password or None, timeout=4)
+        fut = self._ctl.runner.submit(test_mqtt(cfg))
+        fut.add_done_callback(lambda f: _emit_safely(self.testFinished, *f.result()))
+
     @Slot(str, "QVariant", str)
     def testConnection(self, host: str, port: Any, pin: str) -> None:
         for key, value in (("hap_host", host), ("hap_port", port), ("hap_pin", pin)):
@@ -287,7 +318,7 @@ class SettingsBridge(QObject):
                 await backend.stop()
 
         fut = self._ctl.runner.submit(probe())
-        fut.add_done_callback(lambda f: self.testFinished.emit(*f.result()))
+        fut.add_done_callback(lambda f: _emit_safely(self.testFinished, *f.result()))
 
 
 class RoomsBridge(QObject):
@@ -330,12 +361,18 @@ class RoomsBridge(QObject):
 
     @Property("QVariantList", notify=changed)
     def devices(self) -> list[dict[str, Any]]:
-        devs = sorted(self._ctl._model.all(), key=lambda d: d["name"].casefold())
+        devs = self._ctl._model.ordered(self._ctl._model.all())     # same order as the tiles
+        virtual = {f"mqtt:{v['id']}": v for v in self._store.virtual}
+        groups = {f"group:{g['id']}": g for g in self._store.groups}
         out = []
         for d in devs:
             kinds = d.get("meta", {}).get("kinds", [])
+            v, g = virtual.get(d["id"]), groups.get(d["id"])
             out.append({"id": d["id"], "name": d["name"], "baseName": d["baseName"], "icon": d["icon"],
-                        "room": d["room"], "reachable": d["reachable"],
+                        "room": d["room"], "reachable": d["reachable"], "type": d["type"],
+                        "grouped": bool(d.get("grouped")),
+                        # virtual device (MQTT) and light group: edited in their own dialogs
+                        "virtual": v or None, "group": g or None,
                         "kind": next((d["meta"][k] for k in KIND_KEYS if k in d.get("meta", {})), ""),
                         "hidden": bool(d.get("hidden")),
                         "area": d.get("meta", {}).get("area", ""),
@@ -346,6 +383,101 @@ class RoomsBridge(QObject):
                         "kinds": [{"value": k, "label": tr(self.KIND_LABELS[k]), "icon": KIND_ICONS[k]}
                                   for k in kinds] if len(kinds) > 1 else []})
         return out
+
+    @Slot(str, int)
+    def moveDevice(self, dev_id: str, delta: int) -> None:
+        """Moves a device up or down within its room (order of the tiles)."""
+        m = self._ctl._model
+        d = m.get(dev_id)
+        if not d:
+            return
+        ids = [x["id"] for x in m.ordered(m.all()) if x["room"] == d["room"]]
+        self._layout.move_device(d["room"], dev_id, delta, ids)
+        self._commit()
+
+    # ---------- virtual devices (MQTT) ----------
+    @Slot("QVariantMap", result=str)
+    def saveVirtual(self, values: dict[str, Any]) -> str:
+        """New (no id) or changed virtual device; the MQTT connection restarts to subscribe."""
+        name = " ".join(str(values.get("name", "")).split())
+        topic = str(values.get("topic", "")).strip()
+        if not name:
+            return tr("Enter a name")
+        if not topic:
+            return tr("Enter an MQTT topic")
+        vid = str(values.get("id") or "") or "v" + secrets.token_hex(3)
+        try:
+            dev = VirtualDevice(id=vid, name=name, topic=topic, unit=str(values.get("unit", "")).strip(),
+                                json_key=str(values.get("jsonKey", "")).strip(),
+                                decimals=int(values.get("decimals", 1)), icon=str(values.get("icon") or "gauge"))
+        except ValueError as e:
+            return str(e)
+        self._store.virtual = [v for v in self._store.virtual if v.get("id") != vid] + [dev.model_dump()]
+        room = values.get("room")
+        if room:
+            self._layout._set(f"mqtt:{vid}", str(room), BUILTIN_DEFAULT)
+        self._store.rooms = self._layout.to_dict()
+        self._store.save()
+        self._ctl.restart_backends()
+        self.changed.emit()
+        return ""
+
+    @Slot(str)
+    def deleteVirtual(self, vid: str) -> None:
+        self._store.virtual = [v for v in self._store.virtual if v.get("id") != vid]
+        self._layout.assign.pop(f"mqtt:{vid}", None)
+        self._store.rooms = self._layout.to_dict()
+        self._store.save()
+        self._ctl.restart_backends()
+        self.changed.emit()
+
+    @Slot(str, result=str)
+    def lastValue(self, dev_id: str) -> str:
+        """What the MQTT topic of a virtual device sent last, for its dialog."""
+        d = self._ctl._model.get(dev_id)
+        if not d:
+            return ""
+        topic = d.get("meta", {}).get("topic", "")
+        backend = self._ctl.mqtt_backend()
+        if not backend or topic not in backend.payloads:
+            return tr("No value received yet")
+        age = int(time.time() - backend.received[topic])
+        return tr("Received {age} s ago: {value}").format(age=age, value=backend.payloads[topic][:60])
+
+    # ---------- light groups ----------
+    @Property("QVariantList", notify=changed)
+    def lights(self) -> list[dict[str, Any]]:
+        """Lights that can join a group (not groups themselves)."""
+        m = self._ctl._model
+        return [{"id": d["id"], "name": d["name"], "icon": d["icon"], "room": d["room"]}
+                for d in m.ordered(m.all()) if d["type"] == "light" and not d.get("meta", {}).get("group")]
+
+    @Slot("QVariantMap", result=str)
+    def saveGroup(self, values: dict[str, Any]) -> str:
+        name = " ".join(str(values.get("name", "")).split())
+        room = str(values.get("room", ""))
+        members = [str(x) for x in values.get("members", [])]
+        if not name:
+            return tr("Enter a name")
+        lights = {d["id"]: d for d in self.lights}
+        if not members:
+            return tr("Choose at least one light")
+        if any(m not in lights or lights[m]["room"] != room for m in members):
+            return tr("All lights of a group must be in its room")
+        gid = str(values.get("id") or "") or "g" + secrets.token_hex(3)
+        group = {"id": gid, "name": name, "room": room, "members": members, "hide": bool(values.get("hide", True))}
+        self._store.groups = [g for g in self._store.groups if g.get("id") != gid] + [group]
+        self._store.save()
+        self._ctl.refresh_groups()
+        self._commit()
+        return ""
+
+    @Slot(str)
+    def deleteGroup(self, gid: str) -> None:
+        self._store.groups = [g for g in self._store.groups if g.get("id") != gid]
+        self._store.save()
+        self._ctl.refresh_groups()
+        self._commit()
 
     @Slot(str, "QVariantMap", result=str)
     def saveDevice(self, dev_id: str, values: dict[str, Any]) -> str:
@@ -500,7 +632,48 @@ class Controller(QObject):
 
     # ---------- lifecycle ----------
     def effective_config(self) -> AppConfig:
-        return apply_to_config(self.base_cfg, self.store.values)
+        return apply_to_config(self.base_cfg, self.store.values, self.store.virtual)
+
+    def restart_backends(self) -> None:
+        """Reconnects with the current settings (Homebridge, MQTT, virtual devices)."""
+        self._started = False
+        self.statusChanged.emit()
+        self.runner.submit(self._restart(self.effective_config()))
+
+    def mqtt_backend(self) -> MqttBackend | None:
+        if not self._mgr:
+            return None
+        return next((b for b in self._mgr.backends.values() if isinstance(b, MqttBackend)), None)
+
+    # ---------- light groups ----------
+    def refresh_groups(self) -> None:
+        """Builds the group devices from their lights; called when a light or a group changes."""
+        m = self._model
+        ids = set()
+        grouped = set()
+        for g in self.store.groups:
+            members = [m.get(x) for x in g.get("members", [])]
+            members = [x for x in members if x]
+            if g.get("hide", True):
+                grouped |= {x["id"] for x in members}
+            reachable = [x for x in members if x["reachable"]]
+            on = [x for x in reachable if x["state"].get("on")]
+            dimmable = [x for x in (on or reachable) if x["state"].get("brightness") is not None]
+            state = {"on": bool(on), "on_count": len(on), "count": len(members)}
+            if dimmable:
+                state["brightness"] = round(sum(x["state"]["brightness"] for x in dimmable) / len(dimmable))
+            caps = ["on"] + (["brightness"] if any("brightness" in x.get("capabilities", []) for x in members) else [])
+            gid = f"group:{g['id']}"
+            ids.add(gid)
+            m.upsert({"id": gid, "name": g["name"], "type": "light", "backend": "group", "room": g["room"],
+                      "icon": "group", "state": state, "capabilities": caps, "reachable": bool(reachable),
+                      "order": 100, "meta": {"group": True, "members": [x["id"] for x in members]}})
+        for d in m.all():
+            if d.get("meta", {}).get("group") and d["id"] not in ids:
+                m.remove(d["id"])
+        if grouped != m.grouped:
+            m.grouped = grouped
+            m.reassign()
 
     def start(self) -> None:
         self.runner.submit(self._restart(self.effective_config()))
@@ -596,12 +769,15 @@ class Controller(QObject):
             self.idleChanged.emit()
         if "show_general" in keys:
             self._refresh_rooms()
+        if any(k.startswith("mqtt_") for k in keys) and not any(k.startswith("hap_") for k in keys):
+            self.restart_backends()
 
     # ---------- messages from the background thread ----------
     def _on_message(self, msg: dict[str, Any]) -> None:
         kind = msg.get("type")
         if kind == "snapshot":
             self._model.set_all([self._stamp(d) for d in msg.get("devices", [])])
+            self.refresh_groups()
             self._backends = msg.get("backends", {})
             self._started = "title" in msg
             self._refresh_rooms()
@@ -609,12 +785,19 @@ class Controller(QObject):
             self.statusChanged.emit()
         elif kind == "device":
             d = self._stamp(msg["device"])
-            if self._model.upsert(d):
+            structural = self._model.upsert(d)
+            groups = [f"group:{g['id']}" for g in self.store.groups if d["id"] in g.get("members", [])]
+            if groups:
+                self.refresh_groups()
+            if structural:
                 self._refresh_rooms()
             self.deviceUpdated.emit(d["id"])
+            for gid in groups:
+                self.deviceUpdated.emit(gid)        # open group detail follows its lights
             self.climateChanged.emit()
         elif kind == "remove":
             self._model.remove(msg["id"])
+            self.refresh_groups()
             self._refresh_rooms()
             self.deviceUpdated.emit(msg["id"])
             self.climateChanged.emit()
@@ -672,6 +855,12 @@ class Controller(QObject):
         fut = self.runner.submit(coro_factory(self._mgr))
 
         def done(f: concurrent.futures.Future) -> None:
+            try:
+                report(f)
+            except RuntimeError:        # the controller was deleted meanwhile (shutdown, tests)
+                pass
+
+        def report(f: concurrent.futures.Future) -> None:
             e = f.exception()
             if e is None:
                 return
@@ -688,6 +877,9 @@ class Controller(QObject):
         d = self._model.get(dev_id)
         if not d:
             return
+        if d.get("meta", {}).get("group"):          # a group: all lights on, or all off if any is on
+            self.setAttrs(dev_id, {"on": not d["state"].get("on")})
+            return
         if not d["reachable"]:
             self.toast.emit(tr("{name} is not reachable. Check the device and Homebridge.").format(name=d["name"]))
             return
@@ -697,6 +889,14 @@ class Controller(QObject):
     def setAttrs(self, dev_id: str, attrs: dict[str, Any]) -> None:
         attrs = {k: (int(v) if isinstance(v, float) and v.is_integer() and k != "target_temp" else v)
                  for k, v in dict(attrs).items()}
+        d = self._model.get(dev_id)
+        if d and d.get("meta", {}).get("group"):
+            for member in d["meta"]["members"]:
+                md = self._model.get(member)
+                if md and md["reachable"]:
+                    own = {k: v for k, v in attrs.items() if k == "on" or k in md.get("capabilities", [])}
+                    self._command(lambda m, member=member, own=own: m.command(member, own))
+            return
         self._command(lambda m: m.command(dev_id, attrs))
 
     @Slot(str)

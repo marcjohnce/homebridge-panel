@@ -492,3 +492,74 @@ def test_lamp_kind_changes_icon(qapp, tmp_path):
     assert ed.saveDevice(lamp["id"], {"kind": "bulb"}) == ""
     assert ctl.device(lamp["id"])["icon"] == "light" and lamp["id"] not in ed._layout.kinds
     ctl.shutdown()
+
+
+def test_manual_device_order_per_room(qapp, tmp_path):
+    ctl = make_controller(tmp_path)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 18)
+    ed = ctl.roomEditor
+    room = lambda: [d["name"] for d in ed.devices if d["room"] == "General" and d["type"] == "light"]   # noqa: E731
+    before = room()
+    last = next(d for d in ed.devices if d["name"] == before[-1])
+    ed.moveDevice(last["id"], -99)
+    assert room()[0] == before[-1]
+    ctl.selectCategory("light")
+    ctl.selectRoom("General")
+    model = ctl.devices
+    first = model.data(model.index(0), list(model.roleNames())[model.ROLES.index("name")])
+    assert first == before[-1]                                          # the tiles follow the order
+    assert ed.renameRoom("General", "House") == "" and "House" in ed._layout.device_order
+    ctl.shutdown()
+
+
+def test_light_group(qapp, tmp_path):
+    ctl = make_controller(tmp_path)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 18)
+    ed = ctl.roomEditor
+    lights = [d for d in ed.lights if d["room"] == "General"][:2]
+    ids = [d["id"] for d in lights]
+    assert ed.saveGroup({"name": "", "room": "General", "members": ids}) != ""
+    assert ed.saveGroup({"name": "Both", "room": "Kitchen", "members": ids}) != ""     # one room only
+    assert ed.saveGroup({"name": "Both", "room": "General", "members": ids, "hide": True}) == ""
+    group = next(d for d in ctl.devices.all() if d.get("meta", {}).get("group"))
+    assert group["state"]["count"] == 2 and all(ctl.device(i)["grouped"] for i in ids)
+    ctl.selectCategory("light")
+    assert group["id"] in ctl.devices._rows and not set(ids) & set(ctl.devices._rows)
+
+    ctl.toggle(group["id"])                                             # on if any was off …
+    target = not group["state"]["on"]
+    assert pump_until(lambda: all(ctl.device(i)["state"]["on"] is target for i in ids))
+    assert pump_until(lambda: ctl.device(group["id"])["state"]["on"] is target)
+    gid = next(g["id"] for g in ctl.store.groups)
+    ed.deleteGroup(gid)
+    assert not any(d.get("meta", {}).get("group") for d in ctl.devices.all())
+    assert not any(ctl.device(i)["grouped"] for i in ids)
+    ctl.shutdown()
+
+
+def test_virtual_device_over_mqtt(qapp, tmp_path):
+    from app.backends.mqtt import MqttBackend
+    ctl = make_controller(tmp_path)
+    ctl.store.update({"mqtt_enabled": True, "mqtt_host": "127.0.0.1", "mqtt_port": 1})   # nothing listens there
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 18)
+    ed = ctl.roomEditor
+    assert ed.saveVirtual({"name": "Pressure", "topic": ""}) != ""
+    assert ed.saveVirtual({"name": "Water pressure", "topic": "boiler/pressure", "unit": "bar", "decimals": 1,
+                           "room": "Kitchen", "icon": "none"}) == ""
+    assert pump_until(lambda: ctl.mqtt_backend() is not None and ctl.mqtt_backend().devices, timeout=10)
+    backend = ctl.mqtt_backend()
+    assert isinstance(backend, MqttBackend) and not backend.connected
+    backend._client.loop_stop()                   # no broker here: stop retrying, pretend it answered
+    backend._connected.set()
+    backend.receive("boiler/pressure", "1.62")
+    dev_id = "mqtt:" + ctl.store.virtual[0]["id"]
+    assert pump_until(lambda: ctl.device(dev_id).get("stateText") == "1.6 bar", timeout=8)
+    d = ctl.device(dev_id)
+    assert d["room"] == "Kitchen" and d["icon"] == "none" and d["type"] == "value"
+    assert "Received" in ed.lastValue(dev_id)
+    ctl.selectCategory("climate")
+    assert dev_id in ctl.devices._rows
+    ctl.shutdown()

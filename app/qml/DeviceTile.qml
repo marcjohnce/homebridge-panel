@@ -55,7 +55,7 @@ Rectangle {
     Behavior on color { ColorAnimation { duration: 200 } }
 
     function activate() {
-        if (security)
+        if (security || type === "value")
             return;                  // read-only
         if (thermostat || sensor)
             root.openDetail(deviceId);
@@ -76,7 +76,7 @@ Rectangle {
         width: Theme.s(34)
         height: Theme.s(34)
         lineWidth: 1.15
-        visible: !root.thermostat
+        visible: !root.thermostat && root.icon !== "none"     // virtual devices can go without an icon
         name: root.icon
         color: root.alertLevel === 1 ? Theme.err : root.sub
     }

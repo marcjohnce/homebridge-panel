@@ -69,6 +69,25 @@ Rectangle {
         messageOk = true;
         message = qsTr("Applied. Reconnecting …");
     }
+    function testMqtt() {
+        testing = true;
+        message = "";
+        panel.settings.testMqtt(current("mqtt_host"), current("mqtt_port"), current("mqtt_protocol"),
+                                current("mqtt_user"), current("mqtt_password"));
+    }
+    // text and passwords with the on-screen keyboard, numbers and addresses with the keypad
+    function editValue(field, value) {
+        if (field.kind === "text" || field.kind === "password") {
+            textKeyboard.edit(field.label, String(value), text => {
+                const err = panel.settings.validate(field.key, text);
+                if (err === "")
+                    root.setDraft(field.key, text);
+                return err;
+            }, { hint: field.help, maxLength: 200, autoCapitalize: false, secret: field.kind === "password" });
+        } else {
+            keypad.edit(field, value, v => root.setDraft(field.key, v));
+        }
+    }
     function testConnection() {
         testing = true;
         message = "";
@@ -137,8 +156,9 @@ Rectangle {
                         draft: root.draft
                         errors: root.errors
                         onEdit: (key, value) => section.instant ? root.saveInstant(key, value) : root.setDraft(key, value)
-                        onEditRequested: (field, value) => keypad.edit(field, value, v => root.setDraft(field.key, v))
+                        onEditRequested: (field, value) => root.editValue(field, value)
                         onActionRequested: field => field.kind === "page" ? root.subPage = field.key
+                                                 : field.key === "mqtt_test" ? root.testMqtt()
                                                  : field.confirm ? confirm.ask(field) : panel.settings.runAction(field.key)
                     }
                 }
@@ -165,7 +185,7 @@ Rectangle {
                 Layout.fillWidth: true
                 text: root.testing ? qsTr("Testing connection …")
                     : root.message !== "" ? root.message
-                    : root.dirty ? qsTr("Changes to the Homebridge connection are not applied yet.")
+                    : root.dirty ? qsTr("Changes to the connections are not applied yet.")
                     : qsTr("Display settings are saved immediately.")
                 color: root.testing || (root.message === "" && !root.dirty) ? Theme.muted
                      : root.message === "" ? Theme.ink : (root.messageOk ? Theme.ok : Theme.err)
@@ -176,7 +196,7 @@ Rectangle {
             }
             PillButton {
                 objectName: "testButton"
-                text: qsTr("Test connection")
+                text: qsTr("Test Homebridge")
                 enabled: !root.testing
                 onClicked: root.testConnection()
             }
@@ -205,6 +225,11 @@ Rectangle {
     Keypad {
         id: keypad
         objectName: "keypad"
+    }
+
+    TextKeyboard {
+        id: textKeyboard
+        objectName: "settingsKeyboard"
     }
 
     ConfirmDialog {

@@ -15,6 +15,7 @@ class DeviceType(str, Enum):
     SENSOR = "sensor"
     BLIND = "blind"
     SECURITY = "security"     # contact (window, door, glass break), leak and motion sensors
+    VALUE = "value"           # virtual device: a value received over MQTT
 
 
 # Icon names used by the UI (see app/qml/Icons.js):
@@ -29,6 +30,7 @@ DEFAULT_ICONS = {
     DeviceType.SENSOR: "thermostat",
     DeviceType.BLIND: "blinds",
     DeviceType.SECURITY: "contact",
+    DeviceType.VALUE: "gauge",
 }
 
 # Kinds of security sensors. A contact sensor can be a window, a door, a plain contact

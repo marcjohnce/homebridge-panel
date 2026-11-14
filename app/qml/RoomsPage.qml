@@ -22,13 +22,17 @@ Rectangle {
         return n === 0 ? qsTr("No devices") : n === 1 ? qsTr("1 device") : qsTr("%1 devices").arg(n);
     }
     function addRoom() {
-        keyboard.hint = "";
-        keyboard.maxLength = 24;
         keyboard.edit(qsTr("New room"), "", text => root.editor.addRoom(text));
     }
+    function openDevice(d) {
+        if (d.virtual)
+            virtualEditor.edit(d);
+        else if (d.group)
+            groupEditor.edit(d);
+        else
+            deviceEditor.edit(d);
+    }
     function renameRoom(room) {
-        keyboard.hint = "";
-        keyboard.maxLength = 24;
         keyboard.edit(qsTr("Rename room"), room.name, text => root.editor.renameRoom(room.name, text));
     }
 
@@ -232,6 +236,23 @@ Rectangle {
                     wrapMode: Text.WordWrap
                 }
 
+                Flow {
+                    Layout.fillWidth: true
+                    spacing: 10
+                    PillButton {
+                        objectName: "addVirtual"
+                        iconName: "plus"
+                        text: qsTr("Virtual device (MQTT)")
+                        onClicked: virtualEditor.edit(null)
+                    }
+                    PillButton {
+                        objectName: "addGroup"
+                        iconName: "plus"
+                        text: qsTr("Light group")
+                        onClicked: groupEditor.edit(null)
+                    }
+                }
+
                 Repeater {
                     model: root.filledRooms
                     ColumnLayout {
@@ -280,8 +301,13 @@ Rectangle {
                                             activeFocusOnTab: true
                                             Accessible.role: Accessible.Button
                                             Accessible.name: qsTr("Edit %1").arg(devItem.modelData.name)
-                                            Keys.onReturnPressed: deviceEditor.edit(devItem.modelData)
+                                            Keys.onReturnPressed: root.openDevice(devItem.modelData)
 
+                                            MouseArea {
+                                                id: devMouse
+                                                anchors.fill: parent
+                                                onClicked: root.openDevice(devItem.modelData)
+                                            }
                                             Rectangle {
                                                 anchors.fill: parent
                                                 radius: 14
@@ -309,10 +335,24 @@ Rectangle {
                                                 }
                                                 Text {
                                                     objectName: "hiddenLabel:" + devItem.modelData.id
-                                                    visible: devItem.modelData.hidden
-                                                    text: qsTr("Hidden")
+                                                    visible: devItem.modelData.hidden || devItem.modelData.grouped
+                                                    text: devItem.modelData.hidden ? qsTr("Hidden") : qsTr("In a group")
                                                     color: Theme.muted
                                                     font.pixelSize: Theme.s(14)
+                                                }
+                                                IconButton {
+                                                    objectName: "deviceUp:" + devItem.modelData.id
+                                                    iconName: "up"
+                                                    label: qsTr("Move %1 up").arg(devItem.modelData.name)
+                                                    enabled: devItem.index > 0
+                                                    onClicked: root.editor.moveDevice(devItem.modelData.id, -1)
+                                                }
+                                                IconButton {
+                                                    objectName: "deviceDown:" + devItem.modelData.id
+                                                    iconName: "down"
+                                                    label: qsTr("Move %1 down").arg(devItem.modelData.name)
+                                                    enabled: devItem.index < group.members.length - 1
+                                                    onClicked: root.editor.moveDevice(devItem.modelData.id, 1)
                                                 }
                                                 LineIcon {
                                                     Layout.preferredWidth: 20
@@ -320,11 +360,6 @@ Rectangle {
                                                     name: "chevron"
                                                     color: Theme.muted
                                                 }
-                                            }
-                                            MouseArea {
-                                                id: devMouse
-                                                anchors.fill: parent
-                                                onClicked: deviceEditor.edit(devItem.modelData)
                                             }
                                         }
                                     }
@@ -345,6 +380,18 @@ Rectangle {
     DeviceEditor {
         id: deviceEditor
         objectName: "deviceEditor"
+        keyboard: keyboard
+    }
+
+    VirtualDeviceEditor {
+        id: virtualEditor
+        objectName: "virtualEditor"
+        keyboard: keyboard
+    }
+
+    LightGroupEditor {
+        id: groupEditor
+        objectName: "groupEditor"
         keyboard: keyboard
     }
 

@@ -33,7 +33,9 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 - **Security**: window, door, glass break, leak and motion sensors; open windows and alarms first,
   a leak or glass break wakes the panel and shows a message
 - **Menu** Lights, Climate, Scenes, Security; room tabs per menu entry with "All" last
-- **Rooms** managed on the panel: add, rename, reorder and delete rooms, move devices between them,
+- **MQTT**: virtual devices show values of MQTT topics (e.g. boiler pressure in bar), broker set up in the settings
+- **Light groups**: several lights of a room as one tile
+- **Rooms** managed on the panel: add, rename, reorder and delete rooms, sort and move devices,
   change display names; optionally hide the "General" room
 - **Scenes per room and schedules** (e.g. weekdays 06:30 "Comfort", daily 22:30 "Eco")
 - **Languages**: English, German, French, Italian, Spanish – selectable in the settings
@@ -49,7 +51,11 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
   (same as `-I`), then restart Homebridge. Port and PIN are in Homebridge's `config.json`
   under `bridge`.
 
-PySide6 is installed with pip: Bookworm automatically gets version 6.8, Trixie the current one.
+- Optional: an MQTT broker (e.g. Mosquitto) for virtual devices
+
+PySide6 and paho-mqtt are installed with pip: Bookworm automatically gets PySide6 6.8, Trixie the
+current one. After updating an existing installation run `deploy/install.sh` (or
+`.venv/bin/pip install -r requirements.txt`) once, so paho-mqtt gets installed.
 
 ## Installation
 
@@ -92,6 +98,7 @@ In the app (icon at the bottom left), stored in `~/.config/smarthome-panel/setti
 | Rooms | Show the "General" room (on/off) | saved immediately |
 | Homebridge | Connect to Homebridge (on/off) | saved with **Apply** |
 | Homebridge | Address (IP or host name), port, PIN | saved with **Apply**, try **Test connection** first |
+| MQTT | Connect to an MQTT broker, address, port, protocol, user name, password, Test | saved with **Apply** |
 | System | Restart app, Restart Raspberry Pi | buttons with a confirmation dialog |
 
 Entries are validated (port 1–65535, PIN as 123-45-678, valid IP address or host name).

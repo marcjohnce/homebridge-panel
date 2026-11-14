@@ -6,7 +6,8 @@ The panel can override it; overrides and the room order are stored in settings.j
 
     "rooms": {"order": ["Living Room", "Kitchen"], "devices": {"hap:...": "Kitchen"},
               "names": {"hap:...": "Coffee"}, "kinds": {"hap:...": "window"}, "hidden": ["hap:..."],
-              "outdoor": {"hap:...": true}, "areas": {"hap:...": "climate"}}
+              "outdoor": {"hap:...": true}, "areas": {"hap:...": "climate"},
+              "device_order": {"Kitchen": ["hap:...", "hap:..."]}}
 
 Hidden devices are left out of the home screen (tiles, menu status, alarms, temperatures)
 and are only listed in the settings.
@@ -37,6 +38,11 @@ class RoomLayout:
         self.names = self._strings(data.get("names"))
         self.kinds = self._strings(data.get("kinds"))
         self.areas = self._strings(data.get("areas"))         # menu area chosen on the panel
+        order = data.get("device_order", {})
+        # manual order of the devices per room; devices not listed follow in the default order
+        self.device_order: dict[str, list[str]] = (
+            {str(r): [str(i) for i in ids] for r, ids in order.items() if isinstance(ids, list)}
+            if isinstance(order, dict) else {})
         hidden = data.get("hidden", [])
         self.hidden: set[str] = {str(h) for h in hidden} if isinstance(hidden, list) else set()
         outdoor = data.get("outdoor", {})
@@ -53,7 +59,8 @@ class RoomLayout:
     def to_dict(self) -> dict[str, Any]:
         return {"order": list(self.order), "devices": dict(self.assign),
                 "names": dict(self.names), "kinds": dict(self.kinds), "hidden": sorted(self.hidden),
-                "outdoor": dict(self.outdoor), "areas": dict(self.areas)}
+                "outdoor": dict(self.outdoor), "areas": dict(self.areas),
+                "device_order": {r: list(ids) for r, ids in self.device_order.items()}}
 
     @property
     def default_room(self) -> str:
@@ -102,6 +109,8 @@ class RoomLayout:
         if err or new == old:
             return new, err
         self.order = [new if r == old else r for r in rooms]
+        if old in self.device_order:
+            self.device_order[new] = self.device_order.pop(old)
         for dev_id, room in device_rooms.items():
             if room == old:
                 self.assign[dev_id] = new
@@ -117,6 +126,7 @@ class RoomLayout:
             return tr("Devices without a room are collected in \"{name}\". Move them to other rooms first.") \
                 .format(name=name)
         self.order = [r for r in rooms if r != name]
+        self.device_order.pop(name, None)
         for dev_id in members:
             self._set(dev_id, self.default_room, base_rooms.get(dev_id, BUILTIN_DEFAULT))
         return None
@@ -138,6 +148,19 @@ class RoomLayout:
             self.order = rooms
         self._set(dev_id, room, base)
         return None
+
+    def device_rank(self, room: str, dev_id: str) -> int:
+        ids = self.device_order.get(room, [])
+        return ids.index(dev_id) if dev_id in ids else len(ids) + 10_000
+
+    def move_device(self, room: str, dev_id: str, delta: int, room_ids: list[str]) -> None:
+        """room_ids: the devices of the room in their current order."""
+        if dev_id not in room_ids:
+            return
+        ids = list(room_ids)
+        i = ids.index(dev_id)
+        ids.insert(max(0, min(len(ids) - 1, i + delta)), ids.pop(i))
+        self.device_order[room] = ids
 
     def check_device_name(self, name: str) -> tuple[str, str | None]:
         name = " ".join(str(name).split())

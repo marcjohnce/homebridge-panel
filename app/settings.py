@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .config import AppConfig, HapBackendConfig
+from .config import AppConfig, HapBackendConfig, MqttConfig, VirtualDevice
 from .i18n import LANGUAGES, tr
 
 
@@ -35,7 +35,7 @@ class Field:
     key: str
     section: str
     label: str
-    kind: str              # choice | toggle | number | host | pin | action | page
+    kind: str              # choice | toggle | number | host | pin | text | password | action | page
     default: Any
     help: str = ""
     options: tuple[tuple[Any, str], ...] = field(default_factory=tuple)
@@ -49,6 +49,7 @@ SECTIONS = [
     Section("display", "Display", instant=True),
     Section("rooms", "Rooms", instant=True),
     Section("homebridge", "Homebridge", instant=False),
+    Section("mqtt", "MQTT", instant=False),
     Section("system", "System", instant=True),
 ]
 
@@ -74,6 +75,18 @@ FIELDS = [
           help="Found in the Homebridge config under \"bridge\" → \"port\""),
     Field("hap_pin", "homebridge", "PIN", "pin", "031-45-154",
           help="Format 123-45-678, found under \"bridge\" → \"pin\""),
+    Field("mqtt_enabled", "mqtt", "Connect to an MQTT broker", "toggle", False,
+          help="For virtual devices that show values of MQTT topics"),
+    Field("mqtt_host", "mqtt", "Address", "host", "127.0.0.1",
+          help="IP address or name of the broker, e.g. Mosquitto"),
+    Field("mqtt_port", "mqtt", "Port", "number", 1883, min=1, max=65535,
+          help="Usually 1883, with TLS 8883"),
+    Field("mqtt_protocol", "mqtt", "Protocol", "choice", "tcp",
+          options=(("tcp", "MQTT"), ("tls", "MQTT over TLS"), ("websocket", "WebSocket"))),
+    Field("mqtt_user", "mqtt", "User name", "text", "", help="Leave empty if the broker needs no login"),
+    Field("mqtt_password", "mqtt", "Password", "password", ""),
+    Field("mqtt_test", "mqtt", "Test MQTT connection", "action", None,
+          help="Tries the entered values without saving them", button="Test"),
     # Actions are buttons, not stored values. The controller runs them (Controller.run_action).
     Field("restart_app", "system", "Restart app", "action", None,
           help="Reloads the panel and reconnects to Homebridge",
@@ -127,6 +140,11 @@ def validate(key: str, value: Any) -> tuple[Any, str | None]:
         if not _HOST_RE.match(v) or v.replace(".", "").isdigit():
             return v, tr("Invalid address, e.g. 192.168.1.20 or homebridge.local")
         return v, None
+    if f.kind in ("text", "password"):
+        v = str(value)
+        if len(v) > 200:
+            return v, tr("At most {n} characters").format(n=200)
+        return v, None
     if f.kind == "pin":
         digits = re.sub(r"\D", "", str(value))
         if len(digits) != 8:
@@ -147,6 +165,8 @@ class SettingsStore:
         self.path = Path(path) if path else default_path()
         self.values: dict[str, Any] = {f.key: f.default for f in FIELDS if f.key not in NOT_STORED}
         self.rooms: dict[str, Any] = {}      # see app/rooms.py
+        self.virtual: list[dict[str, Any]] = []   # virtual devices (MQTT), see config.VirtualDevice
+        self.groups: list[dict[str, Any]] = []    # light groups, see Controller
         self.load()
 
     def load(self) -> None:
@@ -158,6 +178,10 @@ class SettingsStore:
             return
         if isinstance(data.get("rooms"), dict):
             self.rooms = data["rooms"]
+        if isinstance(data.get("virtual"), list):
+            self.virtual = [v for v in data["virtual"] if isinstance(v, dict)]
+        if isinstance(data.get("groups"), list):
+            self.groups = [g for g in data["groups"] if isinstance(g, dict)]
         for key, value in data.items():
             if key in FIELDS_BY_KEY:
                 v, err = validate(key, value)
@@ -186,7 +210,8 @@ class SettingsStore:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         fd, tmp = tempfile.mkstemp(dir=self.path.parent, prefix=".settings-")
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            json.dump({**self.values, "rooms": self.rooms}, fh, indent=2, ensure_ascii=False)
+            json.dump({**self.values, "rooms": self.rooms, "virtual": self.virtual, "groups": self.groups},
+                      fh, indent=2, ensure_ascii=False)
         os.replace(tmp, self.path)
 
     def schema(self) -> list[dict[str, Any]]:
@@ -204,8 +229,9 @@ class SettingsStore:
         return out
 
 
-def apply_to_config(cfg: AppConfig, values: dict[str, Any]) -> AppConfig:
-    """Builds the effective configuration: the panel settings define the bridge "homebridge".
+def apply_to_config(cfg: AppConfig, values: dict[str, Any], virtual: list[dict[str, Any]] | None = None) -> AppConfig:
+    """Builds the effective configuration: the panel settings define the bridge "homebridge"
+    and the MQTT broker; virtual devices set up on the panel are added to those of config.yaml.
 
     Further bridges from config.yaml (e.g. child bridges) are kept; an entry there
     named "homebridge" is replaced by the panel setting.
@@ -218,4 +244,15 @@ def apply_to_config(cfg: AppConfig, values: dict[str, Any]) -> AppConfig:
         eff.hap = [primary, *others]
     else:
         eff.hap = others
+    if values.get("mqtt_enabled"):
+        eff.mqtt = MqttConfig(host=values["mqtt_host"], port=values["mqtt_port"], protocol=values["mqtt_protocol"],
+                              username=values.get("mqtt_user") or None, password=values.get("mqtt_password") or None)
+    known = {v.id for v in eff.virtual}
+    for v in virtual or []:
+        try:
+            dev = VirtualDevice.model_validate(v)
+        except ValueError:
+            continue
+        if dev.id not in known:
+            eff.virtual.append(dev)
     return eff

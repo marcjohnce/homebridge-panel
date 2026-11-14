@@ -12,7 +12,7 @@ from ..models import ALARM_KINDS
 CATEGORIES = ("light", "climate", "scenes", "security")
 CATEGORY_OF_TYPE = {"light": "light", "plug": "light", "switch": "light", "blind": "light",
                     "thermostat": "climate", "sensor": "climate", "fan": "climate",
-                    "security": "security"}
+                    "security": "security", "value": "climate"}
 
 
 def category(d: dict[str, Any]) -> str:
@@ -39,6 +39,16 @@ def _open_for(since: float | None) -> str:
     if minutes < 60:
         return tr("Open for {n} min").format(n=minutes)
     return tr("Open for {n} h").format(n=minutes // 60)
+
+
+def value_text(d: dict[str, Any]) -> str:
+    """Virtual device: "1.6 bar" (number with its decimals and unit) or the text received."""
+    v, m = d.get("state", {}).get("value"), d.get("meta", {})
+    if v is None:
+        return tr("No reading")
+    text = fmt_number(float(v), int(m.get("decimals", 1)), group=False) if isinstance(v, (int, float)) \
+        and not isinstance(v, bool) else str(v)
+    return f"{text} {m['unit']}".strip() if m.get("unit") else text
 
 
 def security_text(d: dict[str, Any]) -> str:
@@ -100,6 +110,8 @@ def state_text(d: dict[str, Any]) -> str:
     if not d.get("reachable", True):
         return tr("Not reachable")
     s = d.get("state", {})
+    if d["type"] == "value":
+        return value_text(d)
     if d["type"] == "security":
         return security_text(d)
     if d["type"] == "sensor":
@@ -126,6 +138,9 @@ def state_text(d: dict[str, Any]) -> str:
         return tr("Now {temp} °C").format(temp=temp)
     if not s.get("on"):
         return tr("Off")
+    if d.get("meta", {}).get("group"):
+        text = tr("{on} of {n} on").format(on=s.get("on_count", 0), n=s.get("count", 0))
+        return f"{text}, {pct(s['brightness'])}" if s.get("brightness") is not None else text
     if s.get("brightness") is not None:
         return pct(s["brightness"])
     if s.get("speed") is not None:

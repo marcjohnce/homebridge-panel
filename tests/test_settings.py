@@ -42,7 +42,7 @@ def test_schema_contains_all_fields(tmp_path):
     schema = SettingsStore(tmp_path / "s.json").schema()
     keys = [f["key"] for sec in schema for f in sec["fields"]]
     assert keys == [f.key for f in FIELDS]
-    assert {sec["id"]: sec["instant"] for sec in schema} == {"display": True, "rooms": True, "homebridge": False, "system": True}
+    assert {sec["id"]: sec["instant"] for sec in schema} == {"display": True, "rooms": True, "homebridge": False, "mqtt": False, "system": True}
     system = next(sec for sec in schema if sec["id"] == "system")
     assert [(f["key"], f["kind"], f["button"]) for f in system["fields"]] == [
         ("restart_app", "action", "Restart"), ("reboot", "action", "Restart")]
@@ -102,3 +102,15 @@ def test_blind_texts():
     assert b(position=35, moving="closing") == "Closing … 35%"
     assert b(position=35, moving="opening") == "Opening … 35%"
     assert b(position=35, obstructed=True) == "Obstructed"
+
+
+def test_mqtt_settings_and_virtual_devices_in_config():
+    vals = {"hap_enabled": False, "hap_host": "h", "hap_port": 1, "hap_pin": "111-11-111",
+            "mqtt_enabled": True, "mqtt_host": "broker", "mqtt_port": 8883, "mqtt_protocol": "tls",
+            "mqtt_user": "panel", "mqtt_password": ""}
+    eff = apply_to_config(AppConfig(), vals, [{"id": "v1", "name": "Pressure", "topic": "a/b", "unit": "bar"},
+                                              {"broken": True}])
+    assert eff.mqtt.host == "broker" and eff.mqtt.protocol == "tls" and eff.mqtt.password is None
+    assert [v.id for v in eff.virtual] == ["v1"]
+    assert apply_to_config(AppConfig(), {**vals, "mqtt_enabled": False}).mqtt is None
+    assert validate("mqtt_password", "x" * 201)[1] and validate("mqtt_user", "")[1] is None

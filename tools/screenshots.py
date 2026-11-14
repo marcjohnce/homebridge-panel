@@ -117,7 +117,7 @@ def main() -> int:
         rooms = page.findChild(QObject, "roomsPage")
         keyboard = rooms.findChild(QObject, "textKeyboard")
         QMetaObject.invokeMethod(keyboard, "edit", Q_ARG("QVariant", tr("Rename room")),
-                                 Q_ARG("QVariant", "Kitchen"), Q_ARG("QVariant", None))
+                                 Q_ARG("QVariant", "Kitchen"), Q_ARG("QVariant", None), Q_ARG("QVariant", None))
         shot(f"{theme}-room-keyboard")
         QMetaObject.invokeMethod(keyboard, "close")
         rooms.setProperty("tab", 1)
@@ -127,6 +127,11 @@ def main() -> int:
         QMetaObject.invokeMethod(editor, "edit", Q_ARG("QVariant", door))
         shot(f"{theme}-device-editor")
         QMetaObject.invokeMethod(editor, "close")
+        for name in ("virtualEditor", "groupEditor"):
+            dialog = rooms.findChild(QObject, name)
+            QMetaObject.invokeMethod(dialog, "edit", Q_ARG("QVariant", None))
+            shot(f"{theme}-{name}")
+            QMetaObject.invokeMethod(dialog, "close")
         page.setProperty("subPage", "")
         win.setProperty("settingsOpen", False)
     win.setProperty("idle", True)

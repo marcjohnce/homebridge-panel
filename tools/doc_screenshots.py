@@ -396,6 +396,14 @@ def main() -> int:
     ], "Edit device"), out, "device-editor")
     p.key(Qt.Key.Key_Escape)
     wait(300)
+    root = p.engine.rootObjects()[0]
+    for name, title, image in (("virtualEditor", "Virtual device (MQTT)", "virtual-device"),
+                               ("groupEditor", "Light group", "light-group")):
+        dialog = root.findChild(QObject, name)
+        QMetaObject.invokeMethod(dialog, "edit", Q_ARG("QVariant", None))
+        save(annotate(p.grab(), [], title), out, image)
+        QMetaObject.invokeMethod(dialog, "close")
+        wait(300)
     p.win.setProperty("settingsOpen", False)
     wait(300)
     p.win.setProperty("settingsOpen", True)

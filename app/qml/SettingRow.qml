@@ -149,7 +149,8 @@ Item {
             implicitHeight: Theme.s(48)
             activeFocusOnTab: true
             Accessible.role: Accessible.Button
-            Accessible.name: qsTr("Change %1, currently %2").arg(root.field.label).arg(String(root.value))
+            Accessible.name: qsTr("Change %1, currently %2").arg(root.field.label)
+                .arg(root.field.kind === "password" ? "" : String(root.value))
             Keys.onReturnPressed: root.editRequested()
 
             Row {
@@ -159,7 +160,7 @@ Item {
                 spacing: 6
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: String(root.value)
+                    text: root.field.kind === "password" ? "•".repeat(String(root.value).length) : String(root.value)
                     color: Theme.ink
                     font.pixelSize: Theme.s(18)
                     font.weight: Font.Light

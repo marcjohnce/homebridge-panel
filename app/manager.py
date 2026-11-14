@@ -38,6 +38,8 @@ class DeviceManager:
     # ---------- lifecycle ----------
     async def start(self) -> None:
         for b in self.backends.values():
+            if hasattr(b, "changed"):        # push backends (MQTT): refresh as soon as a value arrives
+                b.changed = lambda b=b: asyncio.ensure_future(self.refresh(b))
             await b.start()
         await self.refresh_all()
         self._task = asyncio.create_task(self._poll_loop(), name="poll")

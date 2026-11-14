@@ -427,3 +427,18 @@ def test_washer_state_texts():
     assert state_text({**d, "type": "switch", "state": {"on": True}}) == "On"     # no power measurement
     assert category({**d, "meta": {"appliance": "fan"}}) == "climate"
     assert category({**d, "meta": {"appliance": "fan", "area": "security"}}) == "security"
+
+
+def test_mqtt_payload_extraction():
+    from app.backends.mqtt import extract
+    assert extract("1.62", "") == 1.62 and extract("1,5", "") == 1.5 and extract("on", "") == "on"
+    assert extract('{"a": {"p": 2}}', "a.p") == 2.0 and extract('{"x": 1}', "y") is None
+    assert extract("no json", "x") is None
+
+
+def test_value_text():
+    from app.qt.format import value_text
+    d = {"type": "value", "state": {"value": 1.6213}, "meta": {"unit": "bar", "decimals": 2}}
+    assert value_text(d) == "1.62 bar"
+    assert value_text({**d, "state": {"value": None}}) == "No reading"
+    assert value_text({**d, "state": {"value": "ok"}, "meta": {}}) == "ok"

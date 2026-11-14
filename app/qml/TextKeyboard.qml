@@ -12,6 +12,8 @@ Popup {
     property bool shift: false
     property bool symbols: false
     property int maxLength: 24
+    property bool autoCapitalize: true   // off for topics, user names and passwords
+    property bool secret: false          // passwords: dots instead of the letters
     // called with the text; returns an error message, or "" to close
     property var acceptFn: null
 
@@ -23,18 +25,25 @@ Popup {
         default: return ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
         }
     }
-    readonly property var symbolRows: ["1234567890", "-/&()'.,+", "éèêàçùòìíóá"]
+    // digits and the characters MQTT topics, host names, user names and passwords need, then accents
+    readonly property var symbolRows: ["1234567890", "-/_#+.:@&*", "()',!?$%=~", "éèêàçùòìíóá"]
     readonly property var rows: symbols ? symbolRows : letterRows
     readonly property real unit: (availableWidth - 10 * keySpacing) / 11
     readonly property int keySpacing: 6
 
-    function edit(heading, text, accept) {
+    // opts: { hint, maxLength (24), autoCapitalize (true), secret (false) }
+    function edit(heading, text, accept, opts) {
+        const o = opts || {};
+        hint = o.hint || "";
+        maxLength = o.maxLength || 24;
+        autoCapitalize = o.autoCapitalize !== false;
+        secret = !!o.secret;
         title = heading;
         error = "";
         symbols = false;
         acceptFn = accept;
         input.text = text;
-        shift = text === "";
+        shift = autoCapitalize && text === "";
         open();
         input.forceActiveFocus();
         input.selectAll();
@@ -54,7 +63,7 @@ Popup {
             input.remove(input.selectionStart, input.selectionEnd);
         else if (input.cursorPosition > 0)
             input.remove(input.cursorPosition - 1, input.cursorPosition);
-        shift = input.text === "";
+        shift = autoCapitalize && input.text === "";
     }
     function done() {
         const err = acceptFn ? acceptFn(input.text) : "";
@@ -107,6 +116,8 @@ Popup {
                 anchors.rightMargin: 16
                 verticalAlignment: TextInput.AlignVCenter
                 maximumLength: root.maxLength
+                echoMode: root.secret ? TextInput.PasswordEchoOnEdit : TextInput.Normal
+                inputMethodHints: Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
                 color: Theme.ink
                 selectionColor: Theme.goldSoft
                 selectedTextColor: Theme.ink
@@ -172,7 +183,7 @@ Popup {
                         onPressed: root.backspace()
                         onHeld: {
                             input.text = "";
-                            root.shift = true;
+                            root.shift = root.autoCapitalize;
                         }
                     }
                 }

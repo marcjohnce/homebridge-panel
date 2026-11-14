@@ -39,16 +39,12 @@ Popup {
             close();
     }
     function editName() {
-        keyboard.hint = qsTr("Leave empty to use the name from Homebridge");
-        keyboard.maxLength = 40;
         keyboard.edit(qsTr("Display name"), draftName, text => {
             root.draftName = text.trim() === "" ? root.device.baseName : text.trim().replace(/\s+/g, " ");
             return "";
-        });
+        }, { hint: qsTr("Leave empty to use the name from Homebridge"), maxLength: 40 });
     }
     function newRoom() {
-        keyboard.hint = "";
-        keyboard.maxLength = 24;
         keyboard.edit(qsTr("New room"), "", text => {
             const err = panel.roomEditor.addRoom(text);
             if (err === "")
