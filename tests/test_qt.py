@@ -393,6 +393,27 @@ def test_room_marks(qapp, tmp_path):
     ctl.shutdown()
 
 
+def test_room_marks_follow_switching(qapp, tmp_path):
+    """The dot and the "n on" summary follow a light at once, not only after a room change."""
+    ctl = make_controller(tmp_path)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 19)
+    ctl.selectCategory("light")
+    kitchen = next(d for d in ctl.devices.all() if d["room"] == "Kitchen" and d["type"] != "blind")
+    if kitchen["state"].get("on"):
+        ctl.toggle(kitchen["id"])
+        assert pump_until(lambda: "Kitchen" not in ctl.roomMarks)
+    changes = []
+    ctl.summaryChanged.connect(lambda: changes.append(dict(ctl.roomMarks)))
+    on_before = ctl.summary["light"]
+    ctl.toggle(kitchen["id"])
+    assert pump_until(lambda: any(c.get("Kitchen") == "on" for c in changes))
+    assert ctl.summary["light"] != on_before
+    ctl.toggle(kitchen["id"])
+    assert pump_until(lambda: "Kitchen" not in changes[-1])
+    ctl.shutdown()
+
+
 def test_device_editor_name_kind_room_and_hide_general(qapp, tmp_path):
     ctl = make_controller(tmp_path)
     ctl.start()

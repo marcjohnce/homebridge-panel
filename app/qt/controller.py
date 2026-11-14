@@ -879,6 +879,9 @@ class Controller(QObject):
                 self.refresh_groups()
             if structural:
                 self._refresh_rooms()
+            else:
+                # an on/off change: room dots and "n on" / "n heating" in the menu follow at once
+                self.summaryChanged.emit()
             self.deviceUpdated.emit(d["id"])
             for gid in groups:
                 self.deviceUpdated.emit(gid)        # open group detail follows its lights
