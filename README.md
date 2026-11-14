@@ -33,7 +33,8 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
   combined into one tile; outdoor sensors shown as outdoor temperature
 - **Security**: window, door, glass break, leak and motion sensors; open windows and alarms first,
   a leak or glass break wakes the panel and shows a message
-- **Menu** Lights, Climate, Security; room tabs per menu entry with "All" last
+- **Menu** Lights, Climate, Security; room tabs per menu entry with "All" last; a dot marks
+  rooms with lights on (Lights) or an open window or alarm (Security)
 - **MQTT**: virtual devices show values of MQTT topics (e.g. boiler pressure in bar), broker set up in the settings
 - **Light groups**: several lights of a room as one tile
 - **Rooms** managed on the panel: add, rename, reorder and delete rooms, sort and move devices,
@@ -41,7 +42,7 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 - **Scenes and schedules** in `config.yaml` (e.g. weekdays 06:30 "Comfort", daily 22:30 "Eco");
   the panel has no scenes view for now
 - **Languages**: English, German, French, Italian, Spanish, Portuguese – selectable in the settings
-- **Light / dark / automatic** appearance and a **screen saver** with a large clock
+- **Light / dark / dark blue / automatic** appearance and a **screen saver** with a large clock
 - **Settings page** for appearance, screen saver and the Homebridge connection (address, port, PIN)
   with keypad, connection test and apply without restart; **restart** the app or the Raspberry Pi
 - Optimized for **1280×800** and **720×720**; also works on 800×480, 1024×600, 1280×720 and portrait displays
@@ -93,7 +94,7 @@ In the app (icon at the bottom left), stored in `~/.config/smarthome-panel/setti
 
 | Section | Setting | Behavior |
 |---|---|---|
-| Display | Appearance: Automatic (dark 7 pm – 7 am), Light, Dark | saved immediately |
+| Display | Appearance: Automatic (dark 7 pm – 7 am), Light, Dark, Dark blue | saved immediately |
 | Display | Language: System, English, Deutsch, Français, Italiano, Español, Português | saved immediately |
 | Display | Screen saver after: never, 1, 2, 5, 15 minutes | saved immediately |
 | Rooms | Rooms and devices: rooms, display names, kind of sensors, switches and plugs (TV, washing machine …), menu entry, outdoor sensors, hidden devices, room of each device | saved immediately |

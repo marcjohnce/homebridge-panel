@@ -47,6 +47,12 @@ def _emit_safely(signal: Any, *args: Any) -> None:
         pass
 
 
+
+def _is_on_light(d: dict[str, Any]) -> bool:
+    """A light, switch or plug of the Lights menu that is on (blinds do not count)."""
+    return (category(d) == "light" and d["type"] != "blind" and d["reachable"]
+            and bool(d.get("state", {}).get("on")))
+
 class AsyncRunner:
     """Dedicated asyncio loop in a background thread so the UI never blocks."""
 
@@ -1016,8 +1022,7 @@ class Controller(QObject):
     def summary(self) -> dict[str, str]:
         """Short status per menu area, e.g. {"light": "3 on", "security": "2 alerts"}."""
         m = self._model
-        on = m.count(lambda d: category(d) == "light" and d["type"] != "blind" and d["reachable"]
-                     and bool(d.get("state", {}).get("on")))
+        on = m.count(_is_on_light)
         heating = m.count(lambda d: d["type"] == "thermostat" and d["reachable"] and d.get("state", {}).get("heating"))
         alerts = self.securityCount
         return {
@@ -1025,6 +1030,19 @@ class Controller(QObject):
             "climate": tr("{n} heating").format(n=heating) if heating else "",
             "security": (tr("1 alert") if alerts == 1 else tr("{n} alerts").format(n=alerts)) if alerts else "",
         }
+
+    @Property("QVariantMap", notify=summaryChanged)
+    def roomMarks(self) -> dict[str, str]:
+        """Dot before a room tab: "alert" under Security (open window or door, alarm; motion
+        not yet), "on" under Lights (a light or switch is on)."""
+        if self._category == "security":
+            hit = lambda d: alert_level(d) > 0 and d.get("meta", {}).get("security") != "motion"  # noqa: E731
+            mark = "alert"
+        elif self._category == "light":
+            hit, mark = _is_on_light, "on"
+        else:
+            return {}
+        return {d["room"]: mark for d in self._model.shown() if hit(d)}
 
     @Property(int, notify=summaryChanged)
     def securityCount(self) -> int:

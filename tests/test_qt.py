@@ -370,6 +370,28 @@ def test_security_alarm_and_open_since(qapp, tmp_path):
     ctl.shutdown()
 
 
+def test_room_marks(qapp, tmp_path):
+    """Red dot under Security (no motion yet), accent dot under Lights, none under Climate."""
+    ctl = make_controller(tmp_path)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 19)
+    ctl.selectCategory("security")
+    window = next(d for d in ctl.devices.all() if d["name"] == "Bedroom Window")   # open
+    assert ctl.roomMarks == {window["room"]: "alert"}
+    ctl._on_message({"type": "device", "device": {**window, "state": {"triggered": False}}})
+    assert ctl.roomMarks == {}
+    motion = {**{k: v for k, v in window.items() if k != "baseKind"}, "state": {"triggered": True}, "meta": {**window.get("meta", {}), "security": "motion"}}
+    ctl._on_message({"type": "device", "device": motion})
+    assert ctl.securityCount == 1 and ctl.roomMarks == {}       # motion: no dot yet
+    ctl.selectCategory("light")
+    lit = {d["room"] for d in ctl.devices.all() if d["type"] != "blind" and d["state"].get("on")
+           and d["room"] in ctl.rooms}
+    assert lit and set(ctl.roomMarks) >= lit and set(ctl.roomMarks.values()) == {"on"}
+    ctl.selectCategory("climate")
+    assert ctl.roomMarks == {}
+    ctl.shutdown()
+
+
 def test_device_editor_name_kind_room_and_hide_general(qapp, tmp_path):
     ctl = make_controller(tmp_path)
     ctl.start()

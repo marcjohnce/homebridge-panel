@@ -31,7 +31,7 @@ Rectangle {
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             text: Qt.formatTime(root.now, "hh:mm")
-            color: Theme.dark ? "#BEB9B0" : Theme.ink
+            color: Theme.idleInk
             font.pixelSize: Math.min(200, root.height * 0.28)
             font.weight: Font.ExtraLight
         }
@@ -54,7 +54,7 @@ Rectangle {
             }
             Text {
                 text: qsTr("%1 °C outdoors").arg(panel.outdoorTemp)
-                color: Theme.dark ? "#BEB9B0" : Theme.ink
+                color: Theme.idleInk
                 font.pixelSize: 24
                 font.weight: Font.Light
             }
@@ -72,7 +72,7 @@ Rectangle {
             }
             Text {
                 text: qsTr("%1 °C indoors").arg(panel.indoorTemp)
-                color: Theme.dark ? "#BEB9B0" : Theme.ink
+                color: Theme.idleInk
                 font.pixelSize: 24
                 font.weight: Font.Light
             }

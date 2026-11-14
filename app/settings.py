@@ -56,7 +56,7 @@ SECTIONS = [
 FIELDS = [
     Field("theme", "display", "Appearance", "choice", "auto",
           help="Automatic: dark from 7 pm to 7 am",
-          options=(("auto", "Automatic"), ("light", "Light"), ("dark", "Dark"))),
+          options=(("auto", "Automatic"), ("light", "Light"), ("dark", "Dark"), ("blue", "Dark blue"))),
     # language names stay in their own language; only "System" is translated
     Field("language", "display", "Language", "choice", "auto",
           help="System: language of the operating system",

@@ -19,8 +19,8 @@ ApplicationWindow {
 
     Binding {
         target: Theme
-        property: "dark"
-        value: panel.theme === "dark"
+        property: "name"
+        value: panel.theme
     }
     Binding {
         target: Theme

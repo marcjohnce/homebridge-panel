@@ -87,6 +87,11 @@ Tiles leave out the room from the device name when the room is shown anyway
 | Climate | heating, temperature, humidity, air pressure and light sensors, fans |
 | Security | window, door, glass break, leak and motion sensors – alarms and open windows first |
 
+A dot before a room tab shows where something is going on: under *Lights* a dot in the accent
+colour marks rooms with at least one light, switch or plug on (blinds don't count); under
+*Security* a red dot marks rooms with an open window or door or an alarm (motion does not count
+yet). *Climate* and *All* have no dots.
+
 ![Climate](images/home-climate.png)
 
 | # | Element | What it does |
@@ -227,7 +232,7 @@ devices:
 
 | # | Element | What it does |
 |---|---|---|
-| 1 | Display | *Appearance* (Automatic, Light, Dark), *Language* and *Screen saver after*. Saved immediately |
+| 1 | Display | *Appearance* (Automatic, Light, Dark, Dark blue), *Language* and *Screen saver after*. Saved immediately |
 | 2 | Rooms and devices | Opens the room management (see below); shows the number of rooms |
 | 3 | Homebridge | *Connect to Homebridge*, *Address*, *Port* and *PIN*. Changes are collected until you apply them |
 | 4 | Test connection | Tries the entered address, port and PIN without saving and reports how many devices were found |
@@ -370,3 +375,12 @@ underneath.
 ![Home screen, dark](images/home-dark.png)
 
 ![Thermostat, dark](images/heating-dark.png)
+
+## Dark blue theme
+
+Dark blue with a light blue accent instead of gold. Heating stays orange and alarms red.
+*Automatic* still switches between light and dark.
+
+![Home screen, dark blue](images/home-blue.png)
+
+![Thermostat, dark blue](images/heating-blue.png)

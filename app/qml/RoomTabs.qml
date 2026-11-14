@@ -28,6 +28,7 @@ ListView {
         required property string modelData
         text: modelData === "" ? qsTr("All") : modelData
         selected: panel.currentRoom === modelData
+        mark: panel.roomMarks[modelData] ?? ""
         onClicked: panel.selectRoom(modelData)
     }
 }

@@ -454,6 +454,16 @@ def main() -> int:
     save(annotate(p.grab(), [], "Thermostat, dark"), out, "heating-dark")
     p.close()
 
+    # Dark blue theme, Lights with the room dots
+    p = Panel(DETAIL_SIZE, theme="blue")
+    p.ctl.selectCategory("light")
+    p.ctl.selectRoom("Living Room")
+    wait(300)
+    save(annotate(p.grab(), [], "Home screen, dark blue"), out, "home-blue")
+    p.win.setProperty("openDevice", p.device_id("Living Room Heating"))
+    save(annotate(p.grab(), [], "Thermostat, dark blue"), out, "heating-blue")
+    p.close()
+
     # Another language
     p = Panel(DETAIL_SIZE, lang="de")
     save(annotate(p.grab(), [], "Home screen in German"), out, "home-de")
