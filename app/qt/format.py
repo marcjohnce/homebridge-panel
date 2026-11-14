@@ -127,6 +127,8 @@ def state_text(d: dict[str, Any]) -> str:
     s = d.get("state", {})
     if d["type"] == "value":
         return value_text(d)
+    if d.get("meta", {}).get("choice"):         # switch group: the switch that is on
+        return s.get("active_name") or tr("Off")
     if d["type"] == "security":
         return security_text(d)
     if d["type"] == "sensor":
@@ -169,5 +171,7 @@ def state_text(d: dict[str, Any]) -> str:
 
 def has_detail(d: dict[str, Any]) -> bool:
     caps = d.get("capabilities", [])
+    if d.get("meta", {}).get("choice"):
+        return True
     return d["type"] in ("thermostat", "sensor", "blind") or any(
         c in caps for c in ("brightness", "color", "color_temp", "speed"))

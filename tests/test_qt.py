@@ -18,6 +18,7 @@ from PySide6.QtCore import QCoreApplication  # noqa: E402
 from PySide6.QtGui import QGuiApplication  # noqa: E402
 
 from app.config import AppConfig  # noqa: E402
+from app.qt.format import category  # noqa: E402
 from app.qt.controller import Controller  # noqa: E402
 from app.settings import SettingsStore  # noqa: E402
 
@@ -566,6 +567,53 @@ def test_light_group(qapp, tmp_path):
     ed.deleteGroup(gid)
     assert not any(d.get("meta", {}).get("group") for d in ctl.devices.all())
     assert not any(ctl.device(i)["grouped"] for i in ids)
+    ctl.shutdown()
+
+
+def test_switch_group(qapp, tmp_path):
+    """Only one switch on at a time; tapping steps to the next one (then "all off" if allowed)."""
+    ctl = make_controller(tmp_path)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 19)
+    ed = ctl.roomEditor
+    ids = [d["id"] for d in ed.switches if d["room"] == "General"]       # TV Plug, Washing Machine
+    assert len(ids) == 2
+    assert ed.saveSwitchGroup({"name": "Pick", "room": "General", "members": ids[:1]}) != ""   # at least two
+    assert ed.saveSwitchGroup({"name": "Pick", "room": "Kitchen", "members": ids}) != ""       # one room only
+    assert ed.saveSwitchGroup({"name": "Pick", "room": "General", "members": ids, "area": "climate"}) == ""
+    gid = "choice:" + ctl.store.switch_groups[0]["id"]
+    g = ctl.device(gid)
+    assert g["meta"]["choice"] and [o["id"] for o in g["meta"]["options"]] == ids
+    assert all(ctl.device(i)["grouped"] for i in ids) and category(g) == "climate"
+    assert next(d for d in ed.devices if d["id"] == gid)["switchGroup"]["name"] == "Pick"
+
+    def state():
+        return [bool(ctl.device(i)["state"].get("on")) for i in ids]
+
+    ctl.setAttrs(gid, {"select": ids[0]})
+    assert pump_until(lambda: state() == [True, False])
+    assert pump_until(lambda: ctl.device(gid)["stateText"] == ctl.device(gid)["meta"]["options"][0]["name"])
+    assert ctl.device(gid)["state"]["on"] is True                      # highlighted: "all off" allowed
+    ctl.toggle(gid)                                                     # next switch
+    assert pump_until(lambda: state() == [False, True])
+    ctl.toggle(gid)                                                     # after the last: all off
+    assert pump_until(lambda: state() == [False, False])
+    assert pump_until(lambda: ctl.device(gid)["stateText"] == "Off")
+    ctl.toggle(gid)                                                     # from off: the first
+    assert pump_until(lambda: state() == [True, False])
+
+    # without "all off": never highlighted, the last steps back to the first
+    gid_raw = ctl.store.switch_groups[0]["id"]
+    assert ed.saveSwitchGroup({"id": gid_raw, "name": "Pick", "room": "General", "members": ids,
+                               "allowOff": False}) == ""
+    assert ctl.device(gid)["state"]["on"] is False and ctl.device(gid)["stateText"] != "Off"
+    ctl.setAttrs(gid, {"on": False})                                    # ignored
+    ctl.toggle(gid)
+    assert pump_until(lambda: state() == [False, True])
+    ctl.toggle(gid)
+    assert pump_until(lambda: state() == [True, False])
+    ed.deleteSwitchGroup(gid_raw)
+    assert ctl.device(gid) == {} and not any(ctl.device(i)["grouped"] for i in ids)
     ctl.shutdown()
 
 

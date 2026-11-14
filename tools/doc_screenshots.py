@@ -464,6 +464,40 @@ def main() -> int:
     save(annotate(p.grab(), [], "Thermostat, dark blue"), out, "heating-blue")
     p.close()
 
+    # Switch group: three irrigation circuits of which only one runs at a time
+    p = Panel(DETAIL_SIZE)
+    for n, name in enumerate(("Garden Lawn", "Garden Beds", "Garden Hedge")):
+        p.ctl._on_message({"type": "device", "device": {
+            "id": f"demo:irrigation{n}", "name": name, "type": "switch", "backend": "demo", "room": "Garden",
+            "icon": "switch", "state": {"on": n == 0}, "capabilities": ["on"], "reachable": True}})
+    p.ctl.roomEditor.saveSwitchGroup({"name": "Irrigation", "room": "Garden", "area": "light",
+                                      "members": [f"demo:irrigation{n}" for n in range(3)]})
+    gid = "choice:" + p.ctl.store.switch_groups[0]["id"]
+    p.ctl.selectCategory("light")
+    p.ctl.selectRoom("Garden")
+    wait(300)
+    save(annotate(p.grab(), [
+        (1, [p.rect(f"tile:{gid}")], "Switch group: shows the switch that is on; tap for the next one", "right"),
+    ], "Switch group"), out, "switch-group-tile")
+    p.win.setProperty("openDevice", gid)
+    wait(400)
+    save(annotate(p.grab(), [
+        (1, [p.rect("choiceOptions")], "Tap to switch this one on and the others off", "top"),
+        (2, [p.rect("choiceOff")], "All off (if allowed)", "right"),
+    ], "Switch group"), out, "switch-group")
+    p.win.setProperty("openDevice", "")
+    p.win.setProperty("settingsOpen", True)
+    wait(300)
+    rooms_row = p.rect("row:rooms_page")
+    p.click(rooms_row.center().x(), rooms_row.center().y())
+    wait(400)
+    dev = next(d for d in p.ctl.roomEditor.devices if d["id"] == gid)
+    QMetaObject.invokeMethod(p.engine.rootObjects()[0].findChild(QObject, "switchGroupEditor"), "edit",
+                             Q_ARG("QVariant", dev))
+    wait(400)
+    save(annotate(p.grab(), [], "Switch group"), out, "switch-group-editor")
+    p.close()
+
     # Another language
     p = Panel(DETAIL_SIZE, lang="de")
     save(annotate(p.grab(), [], "Home screen in German"), out, "home-de")

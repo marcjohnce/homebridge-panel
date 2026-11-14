@@ -318,6 +318,21 @@ can do. *Hide the single lights* shows only the group on the home screen.
 
 ![Light group](images/light-group.png)
 
+**Switch groups** combine switches or plugs of one room of which only one may be on at a time,
+e.g. irrigation circuits or fan levels. The tile shows the name of the switch that is on; a tap
+switches to the next one (the others are switched off first). The arrow opens the choice of all
+switches. With *Allow all off* the order is first, second, …, last, all off; the tile is
+highlighted while one is on, and the choice has an *All off* button. Without it one switch is
+always on and the tile is used like an option switch, never highlighted. The order of the
+switches is set with the arrows in the dialog; *Show under* puts the group under another menu
+entry (e.g. *Climate* for fan levels).
+
+![Switch group tile](images/switch-group-tile.png)
+
+![Switch group choice](images/switch-group.png)
+
+![Switch group dialog](images/switch-group-editor.png)
+
 Names, kinds and rooms set here take precedence over `name:`, `security:` and `room:` in
 `config.yaml`. Scenes keep working with the original names. Setting a value back to the one from
 `config.yaml` or Homebridge removes the override again.

@@ -37,6 +37,8 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
   rooms with lights on (Lights) or an open window or alarm (Security)
 - **MQTT**: virtual devices show values of MQTT topics (e.g. boiler pressure in bar), broker set up in the settings
 - **Light groups**: several lights of a room as one tile
+- **Switch groups**: several switches of a room of which only one is on (e.g. irrigation circuits); a tap
+  switches to the next one
 - **Rooms** managed on the panel: add, rename, reorder and delete rooms, sort and move devices,
   change display names; optionally hide the "General" room
 - **Scenes and schedules** in `config.yaml` (e.g. weekdays 06:30 "Comfort", daily 22:30 "Eco");

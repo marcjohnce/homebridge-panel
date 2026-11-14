@@ -12,6 +12,7 @@ Rectangle {
     readonly property bool isThermostat: dev.type === "thermostat"
     readonly property bool isSensor: dev.type === "sensor"
     readonly property bool isBlind: dev.type === "blind"
+    readonly property bool isChoice: !!(dev.meta && dev.meta.choice)
     readonly property bool heatingNow: isThermostat && dev.reachable && dev.state.heating
 
     color: Theme.page
@@ -85,7 +86,8 @@ Rectangle {
         Loader {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            sourceComponent: root.isThermostat ? thermostatComponent : root.isSensor ? sensorComponent
+            sourceComponent: root.isChoice ? choiceComponent
+                           : root.isThermostat ? thermostatComponent : root.isSensor ? sensorComponent
                            : root.isBlind ? blindComponent : lightComponent
         }
     }
@@ -107,6 +109,12 @@ Rectangle {
     Component {
         id: sensorComponent
         SensorView {
+            dev: root.dev
+        }
+    }
+    Component {
+        id: choiceComponent
+        ChoiceControl {
             dev: root.dev
         }
     }

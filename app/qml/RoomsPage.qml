@@ -29,6 +29,8 @@ Rectangle {
             virtualEditor.edit(d);
         else if (d.group)
             groupEditor.edit(d);
+        else if (d.switchGroup)
+            switchGroupEditor.edit(d);
         else
             deviceEditor.edit(d);
     }
@@ -251,6 +253,12 @@ Rectangle {
                         text: qsTr("Light group")
                         onClicked: groupEditor.edit(null)
                     }
+                    PillButton {
+                        objectName: "addSwitchGroup"
+                        iconName: "plus"
+                        text: qsTr("Switch group")
+                        onClicked: switchGroupEditor.edit(null)
+                    }
                 }
 
                 Repeater {
@@ -392,6 +400,12 @@ Rectangle {
     LightGroupEditor {
         id: groupEditor
         objectName: "groupEditor"
+        keyboard: keyboard
+    }
+
+    SwitchGroupEditor {
+        id: switchGroupEditor
+        objectName: "switchGroupEditor"
         keyboard: keyboard
     }
 

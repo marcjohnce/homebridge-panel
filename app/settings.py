@@ -167,6 +167,7 @@ class SettingsStore:
         self.rooms: dict[str, Any] = {}      # see app/rooms.py
         self.virtual: list[dict[str, Any]] = []   # virtual devices (MQTT), see config.VirtualDevice
         self.groups: list[dict[str, Any]] = []    # light groups, see Controller
+        self.switch_groups: list[dict[str, Any]] = []   # switch groups (one switch on at a time)
         self.load()
 
     def load(self) -> None:
@@ -182,6 +183,8 @@ class SettingsStore:
             self.virtual = [v for v in data["virtual"] if isinstance(v, dict)]
         if isinstance(data.get("groups"), list):
             self.groups = [g for g in data["groups"] if isinstance(g, dict)]
+        if isinstance(data.get("switch_groups"), list):
+            self.switch_groups = [g for g in data["switch_groups"] if isinstance(g, dict)]
         for key, value in data.items():
             if key in FIELDS_BY_KEY:
                 v, err = validate(key, value)
@@ -210,7 +213,8 @@ class SettingsStore:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         fd, tmp = tempfile.mkstemp(dir=self.path.parent, prefix=".settings-")
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            json.dump({**self.values, "rooms": self.rooms, "virtual": self.virtual, "groups": self.groups},
+            json.dump({**self.values, "rooms": self.rooms, "virtual": self.virtual, "groups": self.groups,
+                       "switch_groups": self.switch_groups},
                       fh, indent=2, ensure_ascii=False)
         os.replace(tmp, self.path)
 

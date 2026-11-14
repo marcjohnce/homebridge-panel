@@ -376,6 +376,7 @@ class RoomsBridge(QObject):
         devs = self._ctl._model.ordered(self._ctl._model.all())     # same order as the tiles
         virtual = {f"mqtt:{v['id']}": v for v in self._store.virtual}
         groups = {f"group:{g['id']}": g for g in self._store.groups}
+        switch_groups = {f"choice:{g['id']}": g for g in self._store.switch_groups}
         out = []
         for d in devs:
             kinds = d.get("meta", {}).get("kinds", [])
@@ -385,6 +386,7 @@ class RoomsBridge(QObject):
                         "grouped": bool(d.get("grouped")),
                         # virtual device (MQTT) and light group: edited in their own dialogs
                         "virtual": v or None, "group": g or None,
+                        "switchGroup": switch_groups.get(d["id"]),
                         "kind": next((d["meta"][k] for k in KIND_KEYS if k in d.get("meta", {})), ""),
                         "hidden": bool(d.get("hidden")),
                         "area": d.get("meta", {}).get("area", ""),
@@ -487,6 +489,43 @@ class RoomsBridge(QObject):
     @Slot(str)
     def deleteGroup(self, gid: str) -> None:
         self._store.groups = [g for g in self._store.groups if g.get("id") != gid]
+        self._store.save()
+        self._ctl.refresh_groups()
+        self._commit()
+
+    # ---------- switch groups ----------
+    @Property("QVariantList", notify=changed)
+    def switches(self) -> list[dict[str, Any]]:
+        """Switches and plugs that can join a switch group."""
+        m = self._ctl._model
+        return [{"id": d["id"], "name": d["name"], "icon": d["icon"], "room": d["room"]}
+                for d in m.ordered(m.all()) if d["type"] in ("switch", "plug") and not d.get("meta", {}).get("choice")]
+
+    @Slot("QVariantMap", result=str)
+    def saveSwitchGroup(self, values: dict[str, Any]) -> str:
+        name = " ".join(str(values.get("name", "")).split())
+        room = str(values.get("room", ""))
+        members = list(dict.fromkeys(str(x) for x in values.get("members", [])))
+        area = str(values.get("area", ""))
+        if not name:
+            return tr("Enter a name")
+        if len(members) < 2:
+            return tr("Choose at least two switches")
+        switches = {d["id"]: d for d in self.switches}
+        if any(m not in switches or switches[m]["room"] != room for m in members):
+            return tr("All switches of a group must be in its room")
+        gid = str(values.get("id") or "") or "s" + secrets.token_hex(3)
+        group = {"id": gid, "name": name, "room": room, "members": members, "hide": bool(values.get("hide", True)),
+                 "allow_off": bool(values.get("allowOff", True)), "area": area if area in AREAS else ""}
+        self._store.switch_groups = [g for g in self._store.switch_groups if g.get("id") != gid] + [group]
+        self._store.save()
+        self._ctl.refresh_groups()
+        self._commit()
+        return ""
+
+    @Slot(str)
+    def deleteSwitchGroup(self, gid: str) -> None:
+        self._store.switch_groups = [g for g in self._store.switch_groups if g.get("id") != gid]
         self._store.save()
         self._ctl.refresh_groups()
         self._commit()
@@ -697,8 +736,27 @@ class Controller(QObject):
             m.upsert({"id": gid, "name": g["name"], "type": "light", "backend": "group", "room": g["room"],
                       "icon": "group", "state": state, "capabilities": caps, "reachable": bool(reachable),
                       "order": 100, "meta": meta})
+        for g in self.store.switch_groups:
+            members = [x for x in (m.get(i) for i in g.get("members", [])) if x]
+            if g.get("hide", True):
+                grouped |= {x["id"] for x in members}
+            active = next((x for x in members if x["reachable"] and x["state"].get("on")), None)
+            allow_off = bool(g.get("allow_off", True))
+            # without "All off" the group is used like an option switch: never highlighted
+            state = {"on": allow_off and active is not None, "active": active["id"] if active else "",
+                     "active_name": short_name(active["name"], g["room"]) if active else ""}
+            meta = {"choice": True, "members": [x["id"] for x in members], "allow_off": allow_off,
+                    "options": [{"id": x["id"], "name": short_name(x["name"], g["room"]),
+                                 "reachable": x["reachable"]} for x in members]}
+            if g.get("area"):
+                meta["area"] = g["area"]
+            gid = f"choice:{g['id']}"
+            ids.add(gid)
+            m.upsert({"id": gid, "name": g["name"], "type": "switch", "backend": "group", "room": g["room"],
+                      "icon": "choice", "state": state, "capabilities": ["on"],
+                      "reachable": any(x["reachable"] for x in members), "order": 100, "meta": meta})
         for d in m.all():
-            if d.get("meta", {}).get("group") and d["id"] not in ids:
+            if (d.get("meta", {}).get("group") or d.get("meta", {}).get("choice")) and d["id"] not in ids:
                 m.remove(d["id"])
         if grouped != m.grouped:
             m.grouped = grouped
@@ -815,7 +873,8 @@ class Controller(QObject):
         elif kind == "device":
             d = self._stamp(msg["device"])
             structural = self._model.upsert(d)
-            groups = [f"group:{g['id']}" for g in self.store.groups if d["id"] in g.get("members", [])]
+            groups = [f"group:{g['id']}" for g in self.store.groups if d["id"] in g.get("members", [])] \
+                + [f"choice:{g['id']}" for g in self.store.switch_groups if d["id"] in g.get("members", [])]
             if groups:
                 self.refresh_groups()
             if structural:
@@ -911,6 +970,9 @@ class Controller(QObject):
         if d.get("meta", {}).get("group"):          # a group: all lights on, or all off if any is on
             self.setAttrs(dev_id, {"on": not d["state"].get("on")})
             return
+        if d.get("meta", {}).get("choice"):         # a switch group: on to the next switch
+            self._select(d, self._next_choice(d))
+            return
         if not d["reachable"]:
             self.toast.emit(tr("{name} is not reachable. Check the device and Homebridge.").format(name=d["name"]))
             return
@@ -921,6 +983,12 @@ class Controller(QObject):
         attrs = {k: (int(v) if isinstance(v, float) and v.is_integer() and k != "target_temp" else v)
                  for k, v in dict(attrs).items()}
         d = self._model.get(dev_id)
+        if d and d.get("meta", {}).get("choice"):
+            # {"select": id} switches that one on and the others off; {"on": false}: all off
+            target = str(attrs.get("select", "")) if "select" in attrs else ("" if attrs.get("on") is False else None)
+            if target is not None:
+                self._select(d, target)
+            return
         if d and d.get("meta", {}).get("group"):
             for member in d["meta"]["members"]:
                 md = self._model.get(member)
@@ -931,6 +999,36 @@ class Controller(QObject):
                     self._command(lambda m, member=member, own=own: m.command(member, own))
             return
         self._command(lambda m: m.command(dev_id, attrs))
+
+    def _next_choice(self, d: dict[str, Any]) -> str:
+        """Next switch of a switch group: after the last one comes "all off" (if allowed), then the first."""
+        ids = [o["id"] for o in d["meta"]["options"] if o["reachable"]]
+        if not ids:
+            return ""
+        cur = d["state"].get("active", "")
+        if cur not in ids:
+            return ids[0]
+        i = ids.index(cur) + 1
+        if i < len(ids):
+            return ids[i]
+        return "" if d["meta"].get("allow_off") else ids[0]
+
+    def _select(self, d: dict[str, Any], target: str) -> None:
+        """Switch group: switches the other members off first, then the chosen one on."""
+        meta = d["meta"]
+        if not target and not meta.get("allow_off"):
+            return
+        if target and target not in meta["members"]:
+            return
+        others = [x for x in meta["members"] if x != target
+                  and (md := self._model.get(x)) and md["reachable"] and md["state"].get("on")]
+
+        async def run(m):  # noqa: ANN001, ANN202
+            for x in others:
+                await m.command(x, {"on": False})
+            if target:
+                await m.command(target, {"on": True})
+        self._command(run)
 
     @Slot(str)
     def runScene(self, scene_id: str) -> None:
