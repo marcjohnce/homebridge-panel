@@ -31,7 +31,7 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 - **Sensors**: temperature, humidity, air pressure (Eve), light level, air quality, CO₂, fine dust (PM2.5/PM10)
   and VOC; bad air or high CO₂ shown in red; sensors of one device
   combined into one tile; outdoor sensors shown as outdoor temperature
-- **Security**: window, door, glass break, leak, motion, smoke and CO sensors; open windows and alarms
+- **Security**: window, door, glass break, leak, motion, presence, smoke and CO sensors; open windows and alarms
   first, a leak, glass break, smoke or CO alarm wakes the panel and shows a message
 - **Menu** Lights, Climate, Security; room tabs per menu entry with "All" last; a dot marks
   rooms with lights on (Lights) or an open window or alarm (Security)

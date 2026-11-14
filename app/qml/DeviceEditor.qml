@@ -15,9 +15,9 @@ Popup {
     property bool draftHidden
     property bool draftOutdoor
     property bool draftQuiet
-    // window, door, contact and motion sensors can be kept out of security alerts (not alarms)
+    // window, door, contact, motion and presence sensors can be kept out of security alerts (not alarms)
     readonly property bool canQuiet: !!device.canQuiet
-        && ["window", "door", "contact", "motion"].indexOf(draftKind || device.kind || "") >= 0
+        && ["window", "door", "contact", "motion", "presence"].indexOf(draftKind || device.kind || "") >= 0
     property string draftArea
     property string error
 

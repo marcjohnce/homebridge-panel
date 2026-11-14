@@ -142,8 +142,8 @@ DEVICE_TYPE_BY_SERVICE: dict[str, DeviceType] = {
 SECURITY_SERVICES = {
     "ContactSensor": ("ContactSensorState", 1, "contact", ("window", "door", "contact", "glassbreak")),  # 1 = open
     "LeakSensor": ("LeakDetected", 1, "leak", ("leak",)),
-    "MotionSensor": ("MotionDetected", True, "motion", ("motion", "glassbreak")),
-    "OccupancySensor": ("OccupancyDetected", 1, "motion", ("motion", "glassbreak")),
+    "MotionSensor": ("MotionDetected", True, "motion", ("motion", "presence", "glassbreak")),
+    "OccupancySensor": ("OccupancyDetected", 1, "presence", ("presence", "motion", "glassbreak")),
     "SmokeSensor": ("SmokeDetected", 1, "smoke", ("smoke",)),
     "CarbonMonoxideSensor": ("CarbonMonoxideDetected", 1, "co", ("co",)),
 }

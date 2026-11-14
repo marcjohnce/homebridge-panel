@@ -131,6 +131,9 @@ PT: dict[str, str] = {
     'PIN to disarm': 'PIN para desarmar',
     'Switching to {mode} …': 'A mudar para {mode} …',
     'Wrong PIN': 'PIN incorreto',
+    "Presence": "Presença",
+    "Present": "Presença detetada",
+    "Nobody there": "Ninguém",
     "No alerts": "Sem avisos",
     "Security alerts": "Avisos de segurança",
     "Off: only shown, e.g. a motion sensor used for automations – no alert, no red dot":

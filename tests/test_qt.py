@@ -463,6 +463,36 @@ def test_quiet_security_sensor(qapp, tmp_path):
     ctl.shutdown()
 
 
+def test_presence_sensor(qapp, tmp_path):
+    """Occupancy sensors: kind "presence", quiet by default; alerts can be switched on (while armed)."""
+    from app.backends.hap import HapBackend
+    from app.hap_types import snapshot_to_state
+    U = "{:08X}-0000-1000-8000-0026BB765291".format
+    data = {"accessories": [{"aid": 3, "services": [
+        {"iid": 10, "type": U(0x86), "characteristics": [{"iid": 11, "type": U(0x71), "value": 1, "perms": ["pr"]}]}]}]}
+    (snap,) = HapBackend.parse_accessories(data)
+    assert snapshot_to_state(snap)[3] == {"security": "presence", "kinds": ["presence", "motion", "glassbreak"]}
+
+    ctl = make_controller(tmp_path)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 21)
+    ctl._on_message({"type": "device", "device": {
+        "id": "demo:presence", "name": "Office Presence", "type": "security", "backend": "demo", "room": "Office",
+        "icon": "presence", "state": {"triggered": True}, "capabilities": [], "reachable": True,
+        "meta": {"security": "presence", "kinds": ["presence", "motion", "glassbreak"]}}})
+    d = ctl.device("demo:presence")
+    assert d["quiet"] and d["stateText"] == "Present" and d["icon"] == "presence"
+    alarm = next(x for x in ctl.devices.all() if x["type"] == "alarm")
+    ctl.setAttrs(alarm["id"], {"mode": "away"})
+    assert pump_until(lambda: ctl.device(alarm["id"])["state"].get("armed"))
+    assert ctl.securityCount == 1                                   # armed: only the open window
+    assert ctl.roomEditor.saveDevice("demo:presence", {"quiet": False}) == ""
+    assert ctl.securityCount == 2 and ctl.store.rooms["quiet"] == {"demo:presence": False}
+    assert ctl.roomEditor.saveDevice("demo:presence", {"quiet": True}) == ""
+    assert ctl.securityCount == 1 and "demo:presence" not in ctl.store.rooms.get("quiet", {})
+    ctl.shutdown()
+
+
 def test_room_marks_follow_switching(qapp, tmp_path):
     """The dot and the "n on" summary follow a light at once, not only after a room change."""
     ctl = make_controller(tmp_path)
