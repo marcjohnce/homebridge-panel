@@ -222,6 +222,18 @@ Rectangle {
         }
     }
 
+    Loader {
+        anchors.fill: parent
+        active: root.subPage === "batteries_page"
+        sourceComponent: BatteriesPage {
+            objectName: "batteriesPage"
+            onClosed: {
+                root.subPage = "";
+                root.forceActiveFocus();
+            }
+        }
+    }
+
     Keypad {
         id: keypad
         objectName: "keypad"

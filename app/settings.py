@@ -66,6 +66,8 @@ FIELDS = [
     # Pages open a sub-page of the settings (SettingsPage.qml); their data is stored separately
     Field("rooms_page", "rooms", "Rooms and devices", "page", None,
           help="Create rooms, rename devices and choose their room"),
+    Field("batteries_page", "rooms", "Batteries", "page", None,
+          help="Charge of all battery powered devices"),
     Field("show_general", "rooms", "Show the “General” room", "toggle", True,
           help="Off: devices without a room only appear under “All”"),
     Field("hap_enabled", "homebridge", "Connect to Homebridge", "toggle", True),

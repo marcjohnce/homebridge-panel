@@ -76,10 +76,11 @@ Rectangle {
             backText: root.dev.room || ""
             title: root.dev.name || ""
             note: !root.dev.reachable ? qsTr("Not reachable")
+                : root.dev.batteryLow ? qsTr("%1 – replace soon").arg(root.dev.batteryText)
                 : root.heatingNow ? qsTr("Heating now")
                 : (root.isBlind && root.dev.state.obstructed) ? qsTr("Obstructed")
                 : (root.isSensor && root.dev.meta && root.dev.meta.outdoor) ? qsTr("Outdoors") : ""
-            noteColor: root.heatingNow ? Theme.heat2 : (root.isBlind && root.dev.state.obstructed) ? Theme.err : Theme.muted
+            noteColor: root.dev.reachable && root.dev.batteryLow ? Theme.err : root.heatingNow ? Theme.heat2 : (root.isBlind && root.dev.state.obstructed) ? Theme.err : Theme.muted
             onBack: root.closed()
         }
 

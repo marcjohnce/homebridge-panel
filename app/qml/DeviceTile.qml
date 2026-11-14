@@ -21,6 +21,7 @@ Rectangle {
     required property bool modeOff
     required property int alertLevel     // security: 2 alarm, 1 open / motion
     required property bool warning       // sensors: bad air quality or high CO₂
+    required property bool batteryLow    // battery below 10 % or reported as low
 
     property bool showRoom: false
     property int columns: 4
@@ -47,7 +48,8 @@ Rectangle {
 
     activeFocusOnTab: true
     Accessible.role: Accessible.Button
-    Accessible.name: qsTr("%1: %2").arg(shortName).arg(stateText)
+    Accessible.name: batteryLow ? qsTr("%1: %2, battery almost empty").arg(shortName).arg(stateText)
+                                : qsTr("%1: %2").arg(shortName).arg(stateText)
     Accessible.checkable: !thermostat && !sensor && !security
     Accessible.checked: isOn
     Keys.onSpacePressed: activate()
@@ -142,6 +144,21 @@ Rectangle {
             color: root.alertLevel === 1 || root.warning ? Theme.err : root.heating && !root.isOn ? Theme.heat2 : root.sub
             opacity: root.isOn ? 0.72 : 1
         }
+    }
+
+    // battery almost empty: small red battery top right (left of the arrow if there is one)
+    LineIcon {
+        objectName: "battery:" + root.deviceId
+        visible: root.batteryLow
+        anchors.top: parent.top
+        anchors.topMargin: Theme.s(16)
+        anchors.right: parent.right
+        anchors.rightMargin: root.hasDetail && !root.thermostat && !root.sensor ? Theme.s(48) : Theme.s(14)
+        width: Theme.s(26)
+        height: Theme.s(26)
+        lineWidth: 1.5
+        name: "battery"
+        color: root.isOn || root.alarm ? root.ink : Theme.err
     }
 
     Item {

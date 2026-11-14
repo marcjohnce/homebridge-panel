@@ -39,6 +39,7 @@ SERVICE_TYPES: dict[str, str] = {
     "83": "LeakSensor",
     "85": "MotionSensor",
     "86": "OccupancySensor",
+    "96": "Battery",
     EVE_WEATHER_SERVICE: "EveWeather",
     EVE_AIR_PRESSURE_SERVICE: "AirPressureSensor",
 }
@@ -90,10 +91,25 @@ CHAR_TYPES: dict[str, str] = {
     "70": "LeakDetected",
     "22": "MotionDetected",
     "71": "OccupancyDetected",
+    "68": "BatteryLevel",
+    "79": "StatusLowBattery",
     EVE_AIR_PRESSURE: "AirPressure",
 }
 SENSOR_CHARS = {"CurrentTemperature", "CurrentRelativeHumidity", "CurrentAmbientLightLevel", "AirPressure",
                 "AirQuality", "PM2_5Density", "PM10Density", "VOCDensity", "CarbonDioxideDetected", "CarbonDioxideLevel"}
+
+# Battery of a battery powered accessory: a service of its own whose values are attached to
+# every device of the accessory (some sensors also carry StatusLowBattery themselves)
+BATTERY_CHARS = {"BatteryLevel", "StatusLowBattery"}
+LOW_BATTERY_LEVEL = 10      # below this a battery counts as almost empty
+
+
+def attach_battery(snaps: list["ServiceSnapshot"], battery: dict[str, "Char"]) -> None:
+    """Adds the battery characteristics of an accessory to its devices (own values win)."""
+    for snap in snaps:
+        for name, ch in battery.items():
+            snap.chars.setdefault(name, ch)
+
 
 DEVICE_TYPE_BY_SERVICE: dict[str, DeviceType] = {
     "Lightbulb": DeviceType.LIGHT,
@@ -170,7 +186,7 @@ def merge_sensors(group_key: str, accessory: str, services: list[ServiceSnapshot
     chars: dict[str, Char] = {}
     for svc in services:
         for name, ch in svc.chars.items():
-            if name in SENSOR_CHARS and name not in chars:
+            if (name in SENSOR_CHARS or name in BATTERY_CHARS) and name not in chars:
                 chars[name] = ch
     name = services[0].name if len(services) == 1 else (accessory or services[0].name)
     return ServiceSnapshot(key=f"{group_key}.sensors", service_type="Sensor", name=name,
@@ -308,6 +324,12 @@ def snapshot_to_state(s: ServiceSnapshot) -> tuple[DeviceType, dict[str, Any], l
     if "CurrentTemperature" in c:
         state["current_temp"] = _num(s.get("CurrentTemperature"))
         caps.append("current_temp")
+
+    level = _num(s.get("BatteryLevel"))
+    if level is not None:
+        state["battery"] = int(round(level))
+    if "StatusLowBattery" in c:
+        state["battery_low"] = int(s.get("StatusLowBattery", 0) or 0) == 1
 
     return dtype, state, caps, meta
 

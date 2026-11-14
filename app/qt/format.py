@@ -6,6 +6,7 @@ import time
 from typing import Any
 
 from ..i18n import fmt_number, tr
+from ..hap_types import LOW_BATTERY_LEVEL
 from ..models import ALARM_KINDS
 
 # Menu areas of the home screen and the device types shown in them
@@ -23,6 +24,19 @@ def category(d: dict[str, Any]) -> str:
     if meta.get("appliance") == "fan":
         return "climate"
     return CATEGORY_OF_TYPE.get(d["type"], "light")
+
+
+def battery_low(d: dict[str, Any]) -> bool:
+    """Battery almost empty: below 10 % or the device itself reports a low battery."""
+    s = d.get("state", {})
+    level = s.get("battery")
+    return bool(s.get("battery_low")) or (level is not None and level < LOW_BATTERY_LEVEL)
+
+
+def battery_text(d: dict[str, Any]) -> str:
+    """"Battery 7 %" or "Battery low" (devices that only report low / not low)."""
+    level = d.get("state", {}).get("battery")
+    return tr("Battery {pct} %").format(pct=level) if level is not None else tr("Battery low")
 
 
 def alert_level(d: dict[str, Any]) -> int:

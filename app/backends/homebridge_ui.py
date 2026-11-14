@@ -20,7 +20,7 @@ import httpx
 
 from ..config import HomebridgeUiBackendConfig
 from ..hap_types import (CHAR_TYPES, DEVICE_TYPE_BY_SERVICE, SENSOR_SERVICES, SERVICE_TYPES, Char, ServiceSnapshot,
-                         merge_sensors, short_uuid)
+                         attach_battery, merge_sensors, short_uuid)
 from ..i18n import tr
 from .base import Backend, BackendError
 
@@ -86,12 +86,16 @@ class HomebridgeUiBackend(Backend):
     def parse_accessories(data: list[dict[str, Any]]) -> list[ServiceSnapshot]:
         result: list[ServiceSnapshot] = []
         sensors: dict[str, list[ServiceSnapshot]] = {}
+        devices: dict[str, list[ServiceSnapshot]] = {}     # per accessory, to attach the battery
+        batteries: dict[str, dict[str, Char]] = {}
         for svc in data:
             stype = svc.get("type")
-            if stype not in DEVICE_TYPE_BY_SERVICE and stype not in SENSOR_SERVICES:
+            if stype == "BatteryService":
+                stype = "Battery"
+            if stype not in DEVICE_TYPE_BY_SERVICE and stype not in SENSOR_SERVICES and stype != "Battery":
                 # custom services (e.g. Eve air pressure) are identified by their UUID
                 stype = SERVICE_TYPES.get(short_uuid(svc.get("uuid", "")), stype)
-            if stype not in DEVICE_TYPE_BY_SERVICE and stype not in SENSOR_SERVICES:
+            if stype not in DEVICE_TYPE_BY_SERVICE and stype not in SENSOR_SERVICES and stype != "Battery":
                 continue
             uid = svc["uniqueId"]
             chars: dict[str, Char] = {}
@@ -105,18 +109,25 @@ class HomebridgeUiBackend(Backend):
                     ref=(uid, ctype), min=ch.get("minValue"), max=ch.get("maxValue"),
                     step=ch.get("minStep"),
                 )
+            instance = (svc.get("instance") or {}).get("username", "")
+            group = f"{instance}:{svc['aid']}" if svc.get("aid") is not None else uid
+            if stype == "Battery":
+                batteries.setdefault(group, {}).update(
+                    {k: v for k, v in chars.items() if k in ("BatteryLevel", "StatusLowBattery")})
+                continue
             info = svc.get("accessoryInformation") or {}
             name = svc.get("serviceName") or info.get("Name") or stype
             snap = ServiceSnapshot(key=uid, service_type=stype, name=name, chars=chars,
                                    accessory=info.get("Name", ""))
             if stype in SENSOR_SERVICES:
-                instance = (svc.get("instance") or {}).get("username", "")
-                group = f"{instance}:{svc['aid']}" if svc.get("aid") is not None else uid
                 sensors.setdefault(group, []).append(snap)
             else:
-                result.append(snap)
+                devices.setdefault(group, []).append(snap)
         for group, snaps in sensors.items():
-            result.append(merge_sensors(group, snaps[0].accessory, snaps))
+            devices.setdefault(group, []).append(merge_sensors(group, snaps[0].accessory, snaps))
+        for group, snaps in devices.items():
+            attach_battery(snaps, batteries.get(group, {}))
+            result += snaps
         return result
 
     async def write(self, writes: list[tuple[Char, Any]]) -> None:

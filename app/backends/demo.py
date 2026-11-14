@@ -25,7 +25,8 @@ _DEVICES = [
       ("TargetTemperature", 21.0, True, dict(min=10, max=30, step=0.5)), ("CurrentTemperature", 19.6, False, {})]),
     ("heating-bath", "Thermostat", "Bathroom Heating",
      [("TargetHeatingCoolingState", 0, True, dict(min=0, max=3)), ("CurrentHeatingCoolingState", 0, False, {}),
-      ("TargetTemperature", 22.0, True, dict(min=10, max=30, step=0.5)), ("CurrentTemperature", 18.4, False, {})]),
+      ("TargetTemperature", 22.0, True, dict(min=10, max=30, step=0.5)), ("CurrentTemperature", 18.4, False, {}),
+      ("BatteryLevel", 7, False, {})]),                  # radiator thermostat, battery almost empty
     ("fan", "Fan", "Fan",
      [("On", False, True, {}), ("RotationSpeed", 50, True, dict(min=0, max=100))]),
     ("weather-station", "Sensor", "Weather Station",
@@ -42,10 +43,13 @@ _DEVICES = [
       ("PositionState", 2, False, {}), ("HoldPosition", False, True, {}),
       ("CurrentHorizontalTiltAngle", 30, False, {}),
       ("TargetHorizontalTiltAngle", 30, True, dict(min=-90, max=90, step=1))]),
-    ("terrace-door", "ContactSensor", "Terrace Door", [("ContactSensorState", 0, False, {})]),
-    ("bedroom-window", "ContactSensor", "Bedroom Window", [("ContactSensorState", 1, False, {})]),
+    ("terrace-door", "ContactSensor", "Terrace Door", [("ContactSensorState", 0, False, {}),
+                                                        ("BatteryLevel", 62, False, {}), ("StatusLowBattery", 0, False, {})]),
+    ("bedroom-window", "ContactSensor", "Bedroom Window", [("ContactSensorState", 1, False, {}),
+                                                            ("StatusLowBattery", 0, False, {})]),
     ("terrace-glass", "ContactSensor", "Terrace Glass Break", [("ContactSensorState", 0, False, {})]),
-    ("washer-leak", "LeakSensor", "Washing Machine Leak", [("LeakDetected", 0, False, {})]),
+    ("washer-leak", "LeakSensor", "Washing Machine Leak", [("LeakDetected", 0, False, {}),     # battery almost empty
+                                                             ("BatteryLevel", 4, False, {}), ("StatusLowBattery", 1, False, {})]),
     # without HoldPosition and tilt: stop sets the target to the current position
     ("bedroom-blinds", "WindowCovering", "Bedroom Blinds",
      [("CurrentPosition", 0, False, {}), ("TargetPosition", 0, True, dict(min=0, max=100, step=1)),

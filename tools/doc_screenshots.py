@@ -498,6 +498,25 @@ def main() -> int:
     save(annotate(p.grab(), [], "Switch group"), out, "switch-group-editor")
     p.close()
 
+    # Batteries: red battery on the tile, list in the settings
+    p = Panel(DETAIL_SIZE)
+    p.ctl.selectCategory("security")
+    p.ctl.selectRoom("")
+    wait(300)
+    leak = p.device_id("Washing Machine Leak")
+    save(annotate(p.grab(), [
+        (1, [p.rect(f"battery:{leak}")], "Battery almost empty", "right"),
+    ], "Battery almost empty"), out, "battery-tile")
+    p.win.setProperty("settingsOpen", True)
+    wait(300)
+    row = p.rect("row:batteries_page")
+    p.click(row.center().x(), row.center().y())
+    wait(400)
+    save(annotate(p.grab(), [
+        (1, [p.rect(f"batteryRow:{leak}")], "Almost empty ones first, in red", "right"),
+    ], "Batteries"), out, "batteries")
+    p.close()
+
     # Another language
     p = Panel(DETAIL_SIZE, lang="de")
     save(annotate(p.grab(), [], "Home screen in German"), out, "home-de")

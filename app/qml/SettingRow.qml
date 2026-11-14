@@ -115,11 +115,26 @@ Item {
         id: pageComponent
         Row {
             spacing: 6
+            readonly property bool lowBatteries: root.field.key === "batteries_page" && panel.lowBatteryCount > 0
+            LineIcon {
+                anchors.verticalCenter: parent.verticalCenter
+                visible: parent.lowBatteries
+                width: Theme.s(24)
+                height: Theme.s(24)
+                lineWidth: 1.5
+                name: "battery"
+                color: Theme.err
+            }
             Text {
                 anchors.verticalCenter: parent.verticalCenter
-                text: root.field.key === "rooms_page" ? panel.roomEditor.summary : ""
-                color: Theme.muted
+                text: root.field.key === "rooms_page" ? panel.roomEditor.summary
+                    : root.field.key === "batteries_page"
+                      ? (panel.lowBatteryCount > 0 ? qsTr("%1 almost empty").arg(panel.lowBatteryCount)
+                         : panel.batteries.length > 0 ? qsTr("All OK") : qsTr("No battery devices"))
+                    : ""
+                color: parent.lowBatteries ? Theme.err : Theme.muted
                 font.pixelSize: Theme.s(16)
+                font.weight: parent.lowBatteries ? Font.Medium : Font.Normal
             }
             LineIcon {
                 anchors.verticalCenter: parent.verticalCenter
