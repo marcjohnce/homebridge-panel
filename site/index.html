@@ -148,6 +148,31 @@ section{padding:clamp(80px,10vw,140px) 0}
 .daynight-points p{color:var(--day-muted);font-size:1.02rem}
 @media (max-width:820px){.daynight-points{grid-template-columns:1fr}}
 
+/* security */
+.sec-grid{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:clamp(18px,2.4vw,30px);align-items:start}
+.sec-side{display:grid;gap:clamp(18px,2.4vw,30px)}
+.sec-grid figcaption{margin-top:14px}
+.sec-grid figcaption h3{font-size:1.2rem}
+.sec-grid figcaption p{color:var(--muted);font-size:1rem;margin-top:2px}
+.sec-points{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(20px,3vw,40px);margin-top:clamp(40px,5vw,64px);list-style:none}
+.sec-points li{border-top:1px solid var(--line);padding-top:18px}
+.sec-points h3{font-size:1.2rem;margin-bottom:6px}
+.sec-points p{color:var(--muted);font-size:1rem}
+.sec-note{color:var(--muted);font-size:.92rem;margin-top:clamp(28px,3vw,40px);max-width:52em}
+@media (max-width:900px){.sec-grid{grid-template-columns:1fr}.sec-points{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:520px){.sec-points{grid-template-columns:1fr}}
+
+/* device types */
+.types{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 clamp(24px,4vw,56px);list-style:none}
+.types li{border-top:1px solid #cdd0d4;padding:20px 0 22px;display:grid;grid-template-columns:34px minmax(0,1fr);gap:4px 14px}
+.types svg{width:26px;height:26px;color:var(--gold-deep);grid-row:span 2;margin-top:2px}
+.types h3{font-size:1.15rem;font-weight:400}
+.types p{color:var(--day-muted);font-size:.98rem;line-height:1.5}
+.types-foot{display:flex;flex-wrap:wrap;gap:12px 40px;justify-content:space-between;border-top:1px solid #cdd0d4;padding-top:22px;margin-top:4px;color:var(--day-muted);font-size:1rem}
+.types-foot strong{font-weight:400;color:var(--day-ink)}
+@media (max-width:900px){.types{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.types{grid-template-columns:1fr}}
+
 /* sizes lineup */
 .lineup{display:flex;align-items:flex-end;gap:clamp(14px,2.2vw,32px);padding-bottom:28px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:thin}
 .lineup{--u:clamp(.12px,calc((min(100vw,1180px) - 2*var(--gutter) - 4*clamp(14px,2.2vw,32px) - 60px)/4544),.215px)}
@@ -252,6 +277,8 @@ footer a{color:var(--ink)}
     <nav aria-label="Main">
       <ul>
         <li><a href="#controls" data-i18n="nav.controls">Controls</a></li>
+        <li><a href="#security" data-i18n="nav.security">Security</a></li>
+        <li><a href="#devices" data-i18n="nav.devices">Devices</a></li>
         <li><a href="#screens" data-i18n="nav.screens">Screens</a></li>
         <li><a href="#how" data-i18n="nav.how">How it works</a></li>
         <li><a href="#install" data-i18n="nav.install">Install</a></li>
@@ -342,8 +369,8 @@ footer a{color:var(--ink)}
         <figcaption><h3 data-i18n="c.sensor">Air and climate sensors</h3><p data-i18n="c.sensor.p">Temperature, humidity, pressure, light, CO₂, fine dust and VOC. Bad air shows up in red.</p></figcaption>
       </figure></div>
       <div class="control c-security"><figure>
-        <div class="device"><div class="screen"><img src="assets/screens/dark-home-security.webp" width="1280" height="800" loading="lazy" alt="Security view: bedroom window open, washing machine leak sensor dry, terrace door closed"></div></div>
-        <figcaption><h3 data-i18n="c.sec">Security that speaks up</h3><p data-i18n="c.sec.p">Open windows come first. A leak or broken glass wakes the panel and shows a message.</p></figcaption>
+        <div class="device"><div class="screen"><img src="assets/screens/dark-valve.webp" width="1280" height="800" loading="lazy" alt="Garden sprinkler running with 10 minutes left and run time buttons from 5 to 60 minutes"></div></div>
+        <figcaption><h3 data-i18n="c.valve">Water on a timer</h3><p data-i18n="c.valve.p">Sprinklers and valves with a run time and the minutes left. Switch groups run one irrigation circuit at a time.</p></figcaption>
       </figure></div>
     </div>
   </div>
@@ -367,8 +394,69 @@ footer a{color:var(--ink)}
     <ul class="daynight-points">
       <li><h3 data-i18n="dn.p1">Screen saver with a clock</h3><p data-i18n="dn.p1.p">After one to fifteen minutes the panel fades to a large clock with indoor and outdoor temperature.</p></li>
       <li><h3 data-i18n="dn.p2">Rooms set up on the panel</h3><p data-i18n="dn.p2.p">Add, rename and reorder rooms, move devices and change names right on the touchscreen.</p></li>
-      <li><h3 data-i18n="dn.p3">Scenes on a schedule</h3><p data-i18n="dn.p3.p">“Comfort” on weekdays at 06:30, “Eco” every night at 22:30 – or whatever your home needs.</p></li>
+      <li><h3 data-i18n="dn.p3">Light, dark or dark blue</h3><p data-i18n="dn.p3.p">Pick the look that suits the room, or let the panel switch between day and night on its own.</p></li>
     </ul>
+  </div>
+</section>
+
+<!-- SECURITY -->
+<section id="security">
+  <div class="wrap">
+    <div class="split">
+      <h2 data-i18n="sec.title">Keeps an eye on your home.</h2>
+      <p class="lede" data-i18n="sec.lede">Arm your HomeKit alarm system, see every open window at a glance and get told right away when a detector goes off – on the screen you pass every day.</p>
+    </div>
+    <div class="sec-grid">
+      <figure>
+        <div class="device"><div class="screen"><img src="assets/screens/dark-alarm-system.webp" width="1280" height="800" loading="lazy" alt="Alarm system armed in Away mode, with buttons for Home, Away, Night and Disarmed"></div></div>
+        <figcaption><h3 data-i18n="sec.f1">Alarm system with modes</h3><p data-i18n="sec.f1.p">Home, Away and Night with one tap. Disarming can be protected with a PIN.</p></figcaption>
+      </figure>
+      <div class="sec-side">
+        <figure>
+          <div class="device"><div class="screen"><img src="assets/screens/dark-smoke-alarm.webp" width="1280" height="800" loading="lazy" alt="Security view with the hall smoke detector in red and the message Smoke detected"></div></div>
+          <figcaption><h3 data-i18n="sec.f2">Alarms wake the panel</h3><p data-i18n="sec.f2.p">Smoke, CO, water or broken glass light up in red with a message.</p></figcaption>
+        </figure>
+        <figure>
+          <div class="device"><div class="screen"><img src="assets/screens/dark-alarm-pin.webp" width="1280" height="800" loading="lazy" alt="Keypad asking for the PIN to disarm the alarm system"></div></div>
+          <figcaption><h3 data-i18n="sec.f3">PIN where it matters</h3><p data-i18n="sec.f3.p">With a PIN set, disarming the alarm and opening the garage door ask for it.</p></figcaption>
+        </figure>
+      </div>
+    </div>
+    <ul class="sec-points">
+      <li><h3 data-i18n="sec.p1">Open windows first</h3><p data-i18n="sec.p1.p">Windows, doors and alerts always lead the list. A dot marks every room with a warning.</p></li>
+      <li><h3 data-i18n="sec.p2">Motion only when armed</h3><p data-i18n="sec.p2.p">Motion sensors count only while the alarm is on. Single sensors can be kept out of the alerts.</p></li>
+      <li><h3 data-i18n="sec.p3">Garage door with a check</h3><p data-i18n="sec.p3.p">See if it's open, and open or close it after a confirmation.</p></li>
+      <li><h3 data-i18n="sec.p4">Batteries under watch</h3><p data-i18n="sec.p4.p">A red battery shows up before a detector goes quiet. All batteries are listed in the settings.</p></li>
+    </ul>
+    <p class="sec-note" data-i18n="sec.note">The panel shows and controls the sensors and alarm system you already have in HomeKit. It doesn't replace a certified alarm system or smoke alarm.</p>
+  </div>
+</section>
+
+<!-- DEVICE TYPES -->
+<section class="day" id="devices">
+  <div class="wrap">
+    <div class="split">
+      <h2 data-i18n="dev.title">Works with what you already have.</h2>
+      <p class="lede" data-i18n="dev.lede">If a Homebridge plugin brings it into HomeKit as one of these types, it shows up on the panel – whatever the brand.</p>
+    </div>
+    <ul class="types">
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z"/></svg><h3 data-i18n="t.light">Lights and light groups</h3><p data-i18n="t.light.p">On/off, brightness, colour, white tone</p></li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><rect x="5" y="4" width="14" height="16" rx="3"/><path d="M10 10v2M14 10v2M10 16h4"/></svg><h3 data-i18n="t.plug">Plugs and switches</h3><p data-i18n="t.plug.p">On/off, “in use”, switch groups that run one at a time</p></li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M10 14.5V5a2 2 0 014 0v9.5a4 4 0 11-4 0z"/></svg><h3 data-i18n="t.heat">Thermostats and heater-coolers</h3><p data-i18n="t.heat.p">Dial for the target temperature, Off, Heat and Auto</p></li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1.6"/><path d="M12 10.4C12 6 14 4 16 4.5s1.5 4-2.6 6.2M13.4 12.8c3.8 2.2 4.6 4.9 3.2 6.4s-4.2-.6-4.2-5.2M10.6 12.8C6.8 15 4 14.4 3.6 12.4s3.2-2.9 7-.4"/></svg><h3 data-i18n="t.fan">Fans</h3><p data-i18n="t.fan.p">On/off and speed</p></li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M4 4h16M5 4v13h14V4M5 8h14M5 12h14M12 17v3"/></svg><h3 data-i18n="t.blinds">Blinds and shutters</h3><p data-i18n="t.blinds.p">Position by dragging, stop, slat angle</p></li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6v10H3z"/><path d="M7 20v-7h10v7M7 16h10"/></svg><h3 data-i18n="t.garage">Garage doors</h3><p data-i18n="t.garage.p">State, open and close after a confirmation</p></li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M12 13v8M12 13l-5-6M12 13l5-6M12 13V4M8 21h8"/></svg><h3 data-i18n="t.valve">Valves and irrigation</h3><p data-i18n="t.valve.p">Open/close, run time, minutes left</p></li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M12 3c3 4 6 7 6 10.5a6 6 0 01-12 0C6 10 9 7 12 3z"/></svg><h3 data-i18n="t.climate">Climate and air sensors</h3><p data-i18n="t.climate.p">Temperature, humidity, air pressure, light, air quality, CO₂, fine dust, VOC</p></li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="1"/><path d="M12 3v18M5 12h14"/></svg><h3 data-i18n="t.sec">Security sensors</h3><p data-i18n="t.sec.p">Window, door, glass break, leak, motion, presence, smoke, CO</p></li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/><rect x="9.5" y="10.5" width="5" height="4" rx=".6"/><path d="M10.5 10.5V9a1.5 1.5 0 013 0v1.5"/></svg><h3 data-i18n="t.alarm">Alarm system</h3><p data-i18n="t.alarm.p">Arm Home, Away or Night, disarm optionally with a PIN</p></li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M5 12a7 7 0 0114 0M8 12a4 4 0 018 0"/><circle cx="12" cy="12" r="1.2"/><path d="M12 13.5V20"/></svg><h3 data-i18n="t.mqtt">MQTT values</h3><p data-i18n="t.mqtt.p">Any topic as a tile, e.g. boiler pressure in bar</p></li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><rect x="3" y="8" width="16" height="8" rx="1.5"/><path d="M21 11v2"/><rect x="5" y="10" width="3" height="4" fill="currentColor" stroke="none"/></svg><h3 data-i18n="t.bat">Batteries</h3><p data-i18n="t.bat.p">Low battery on the tile, full list in the settings</p></li>
+    </ul>
+    <div class="types-foot">
+      <p data-i18n="dev.no"><strong>Not supported yet:</strong> door locks and cameras.</p>
+      <p data-i18n="dev.native">Native HomeKit devices without Homebridge need a plugin first.</p>
+    </div>
   </div>
 </section>
 
@@ -518,7 +606,7 @@ cd ~/homebridge-panel
     "tab.light":"Licht","tab.climate":"Klima","tab.security":"Sicherheit",
     "note.light":"Alle Lampen, Steckdosen und Rollos auf einen Blick. Kachel antippen zum Schalten, Pfeil für Helligkeit und Farbe.",
     "note.climate":"Heizkörper, Thermostate, Lüfter und Luftqualität. Was gerade heizt, siehst du sofort.",
-    "note.security":"Fenster, Türen, Wasser- und Glasbruchmelder. Offene Fenster und Alarme stehen immer oben.",
+    "note.security":"Alarmanlage, Fenster, Türen, Rauch-, Wasser- und Glasbruchmelder. Offene Fenster und Alarme stehen immer oben.",
     "wall.title":"Zu Hause an der Wand.","wall.lede":"Ein Raspberry Pi hinter einem HyperPixel 4.0 Square: vier Zoll, 720 × 720 Pixel, klein genug für eine einzelne Akustiklamelle. Das quadratische Layout hält jeden Raum einen Tipp entfernt.","wall.note":"Illustration, maßstabsgetreu.",
     "controls.title":"Für den Finger gemacht, nicht für die Maus.",
     "controls.lede":"Große Flächen, klare Zustände, keine verschachtelten Menüs. Jedes Gerät bekommt eine Bedienung, die sich anfühlt wie das Original.",
@@ -526,12 +614,36 @@ cd ~/homebridge-panel
     "c.light":"Licht und Farbe","c.light.p":"Helligkeitsbalken, Farbrad und Weißton. Mehrere Lampen lassen sich zu einer Kachel gruppieren.",
     "c.blinds":"Rollos zum Ziehen","c.blinds.p":"Auf, Stopp, Zu oder auf eine Position ziehen. Mit Lamellenwinkel, live während der Fahrt.",
     "c.sensor":"Luft- und Klimasensoren","c.sensor.p":"Temperatur, Feuchte, Luftdruck, Helligkeit, CO₂, Feinstaub und VOC. Schlechte Luft erscheint rot.",
-    "c.sec":"Sicherheit, die sich meldet","c.sec.p":"Offene Fenster stehen oben. Wasser oder Glasbruch wecken das Panel und zeigen eine Meldung.",
+    "c.valve":"Wasser mit Zeitschaltung","c.valve.p":"Regner und Ventile mit Laufzeit und Restminuten. Schaltergruppen lassen immer nur einen Bewässerungskreis laufen.",
     "dn.title":"Hell am Tag. Dezent in der Nacht.",
     "dn.lede":"Im Automatikmodus wird das Panel um 19 Uhr dunkel und um 7 Uhr wieder hell – so blendet es nie im dunklen Flur. Zum Vergleichen ziehen.",
     "dn.p1":"Bildschirmschoner mit Uhr","dn.p1.p":"Nach einer bis fünfzehn Minuten blendet das Panel auf eine große Uhr mit Innen- und Außentemperatur über.",
     "dn.p2":"Räume direkt am Panel","dn.p2.p":"Räume anlegen, umbenennen und sortieren, Geräte verschieben und umbenennen – direkt am Touchscreen.",
-    "dn.p3":"Szenen nach Zeitplan","dn.p3.p":"„Komfort“ werktags um 06:30, „Eco“ jeden Abend um 22:30 – oder was dein Zuhause braucht.",
+    "dn.p3":"Hell, dunkel oder dunkelblau","dn.p3.p":"Wähle den Look, der zum Raum passt – oder lass das Panel selbst zwischen Tag und Nacht wechseln.",
+    "nav.security":"Sicherheit","nav.devices":"Geräte",
+    "sec.title":"Behält dein Zuhause im Blick.","sec.lede":"Schalte deine HomeKit-Alarmanlage scharf, sieh jedes offene Fenster auf einen Blick und erfahre sofort, wenn ein Melder auslöst – auf dem Display, an dem du jeden Tag vorbeigehst.",
+    "sec.f1":"Alarmanlage mit Modi","sec.f1.p":"Zuhause, Abwesend und Nacht mit einem Tipp. Das Unscharfschalten lässt sich mit einer PIN schützen.",
+    "sec.f2":"Alarme wecken das Panel","sec.f2.p":"Rauch, CO, Wasser oder Glasbruch leuchten rot und zeigen eine Meldung.",
+    "sec.f3":"PIN, wo es darauf ankommt","sec.f3.p":"Ist eine PIN gesetzt, fragen Unscharfschalten und das Öffnen des Garagentors danach.",
+    "sec.p1":"Offene Fenster zuerst","sec.p1.p":"Fenster, Türen und Meldungen stehen immer oben. Ein Punkt markiert jeden Raum mit Warnung.",
+    "sec.p2":"Bewegung nur, wenn scharf","sec.p2.p":"Bewegungsmelder zählen nur bei scharfer Alarmanlage. Einzelne Sensoren lassen sich von Meldungen ausnehmen.",
+    "sec.p3":"Garagentor mit Rückfrage","sec.p3.p":"Sieh, ob es offen ist, und öffne oder schließe es nach einer Bestätigung.",
+    "sec.p4":"Batterien im Blick","sec.p4.p":"Eine rote Batterie erscheint, bevor ein Melder verstummt. Alle Batterien stehen in den Einstellungen.",
+    "sec.note":"Das Panel zeigt und bedient die Sensoren und die Alarmanlage, die du schon in HomeKit hast. Es ersetzt keine zertifizierte Alarmanlage und keinen Rauchwarnmelder.",
+    "dev.title":"Funktioniert mit dem, was du schon hast.","dev.lede":"Wenn ein Homebridge-Plugin es als einen dieser Typen in HomeKit bringt, erscheint es auf dem Panel – egal von welcher Marke.",
+    "t.light":"Licht und Lichtgruppen","t.light.p":"Ein/aus, Helligkeit, Farbe, Weißton",
+    "t.plug":"Steckdosen und Schalter","t.plug.p":"Ein/aus, „in Betrieb“, Schaltergruppen mit immer nur einem aktiven Kreis",
+    "t.heat":"Thermostate und Heizen/Kühlen","t.heat.p":"Drehregler für die Zieltemperatur, Aus, Heizen und Auto",
+    "t.fan":"Lüfter","t.fan.p":"Ein/aus und Stufe",
+    "t.blinds":"Rollos und Jalousien","t.blinds.p":"Position per Ziehen, Stopp, Lamellenwinkel",
+    "t.garage":"Garagentore","t.garage.p":"Status, öffnen und schließen nach Bestätigung",
+    "t.valve":"Ventile und Bewässerung","t.valve.p":"Auf/zu, Laufzeit, Restminuten",
+    "t.climate":"Klima- und Luftsensoren","t.climate.p":"Temperatur, Feuchte, Luftdruck, Helligkeit, Luftqualität, CO₂, Feinstaub, VOC",
+    "t.sec":"Sicherheitssensoren","t.sec.p":"Fenster, Tür, Glasbruch, Wasser, Bewegung, Anwesenheit, Rauch, CO",
+    "t.alarm":"Alarmanlage","t.alarm.p":"Scharf in Zuhause, Abwesend oder Nacht, unscharf optional mit PIN",
+    "t.mqtt":"MQTT-Werte","t.mqtt.p":"Beliebige Topics als Kachel, z. B. Heizungsdruck in bar",
+    "t.bat":"Batterien","t.bat.p":"Schwache Batterie auf der Kachel, vollständige Liste in den Einstellungen",
+    "dev.no":"<strong>Noch nicht unterstützt:</strong> Türschlösser und Kameras.","dev.native":"Native HomeKit-Geräte ohne Homebridge brauchen zuerst ein Plugin.",
     "sizes.title":"Eine App, jedes Display.",
     "sizes.lede":"Vom klassischen Raspberry Pi Touch Display über 10,1″-Panels bis zum quadratischen Wanddisplay. Das Layout passt sich an – Seitenleiste, Kopfleiste oder Hochformat.",
     "sizes.7":"7″-HDMI-Displays","sizes.10":"10,1″-Panels – empfohlen","sizes.sq":"Quadratisch, z. B. HyperPixel 4.0 – empfohlen","sizes.p":"Hochformat",
@@ -563,7 +675,7 @@ cd ~/homebridge-panel
   var EN={"copied":"Copied",
     "note.light":"Every light, plug and blind at a glance. Tap a tile to switch it, tap the arrow for brightness and colour.",
     "note.climate":"Radiators, thermostats, fans and air quality. You see at once what is heating.",
-    "note.security":"Windows, doors, leak and glass break sensors. Open windows and alarms always come first."};
+    "note.security":"Alarm system, windows, doors, smoke, leak and glass break sensors. Open windows and alarms always come first."};
   var nodes=document.querySelectorAll("[data-i18n]");
   nodes.forEach(function(n){EN[n.dataset.i18n]=EN[n.dataset.i18n]||n.innerHTML;});
   var lang="en", tab="light";
