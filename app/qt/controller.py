@@ -35,6 +35,10 @@ ALL_ROOMS = ""
 NIGHT_FROM, NIGHT_TO = 19, 7
 
 
+# light attribute -> capability a group member needs for it
+GROUP_ATTR_CAPS = {"hue": "color", "saturation": "color", "color_temp": "color_temp", "brightness": "brightness"}
+
+
 def _emit_safely(signal: Any, *args: Any) -> None:
     """Emits from a background callback; the receiver may be gone after a shutdown."""
     try:
@@ -663,11 +667,27 @@ class Controller(QObject):
             if dimmable:
                 state["brightness"] = round(sum(x["state"]["brightness"] for x in dimmable) / len(dimmable))
             caps = ["on"] + (["brightness"] if any("brightness" in x.get("capabilities", []) for x in members) else [])
+            meta: dict[str, Any] = {"group": True, "members": [x["id"] for x in members]}
+            source = on or reachable or members
+            # color (RGB) and white tone (CCT) only if every light of the group has them
+            if members and all("color" in x.get("capabilities", []) for x in members):
+                caps.append("color")
+                first = next((x for x in source if x["state"].get("hue") is not None), None)
+                if first:
+                    state.update(hue=first["state"]["hue"], saturation=first["state"].get("saturation", 0))
+            if members and all("color_temp" in x.get("capabilities", []) for x in members):
+                caps.append("color_temp")
+                temps = [x["state"]["color_temp"] for x in source if x["state"].get("color_temp") is not None]
+                if temps:
+                    state["color_temp"] = round(sum(temps) / len(temps))
+                # the range all lights can do
+                meta.update(min_mired=max(x.get("meta", {}).get("min_mired", 140) for x in members),
+                            max_mired=min(x.get("meta", {}).get("max_mired", 500) for x in members))
             gid = f"group:{g['id']}"
             ids.add(gid)
             m.upsert({"id": gid, "name": g["name"], "type": "light", "backend": "group", "room": g["room"],
                       "icon": "group", "state": state, "capabilities": caps, "reachable": bool(reachable),
-                      "order": 100, "meta": {"group": True, "members": [x["id"] for x in members]}})
+                      "order": 100, "meta": meta})
         for d in m.all():
             if d.get("meta", {}).get("group") and d["id"] not in ids:
                 m.remove(d["id"])
@@ -894,7 +914,9 @@ class Controller(QObject):
             for member in d["meta"]["members"]:
                 md = self._model.get(member)
                 if md and md["reachable"]:
-                    own = {k: v for k, v in attrs.items() if k == "on" or k in md.get("capabilities", [])}
+                    caps = md.get("capabilities", [])
+                    own = {k: v for k, v in attrs.items()
+                           if k == "on" or GROUP_ATTR_CAPS.get(k, k) in caps}
                     self._command(lambda m, member=member, own=own: m.command(member, own))
             return
         self._command(lambda m: m.command(dev_id, attrs))

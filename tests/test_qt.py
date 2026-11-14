@@ -563,3 +563,30 @@ def test_virtual_device_over_mqtt(qapp, tmp_path):
     ctl.selectCategory("climate")
     assert dev_id in ctl.devices._rows
     ctl.shutdown()
+
+
+def test_light_group_color_and_white_tone(qapp, tmp_path):
+    ctl = make_controller(tmp_path)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 18)
+    ed = ctl.roomEditor
+    by_name = {d["name"]: d["id"] for d in ed.lights}
+    strip, ceiling, kitchen = by_name["LED Strip"], by_name["Living Room Ceiling Light"], by_name["Kitchen Light"]
+
+    def group(name):
+        return next(d for d in ctl.devices.all() if d["name"] == name)
+
+    assert ed.saveGroup({"name": "Color", "room": "General", "members": [strip]}) == ""
+    assert ed.saveGroup({"name": "White", "room": "General", "members": [kitchen]}) == ""
+    assert ed.saveGroup({"name": "Mixed", "room": "General", "members": [strip, ceiling], "hide": False}) == ""
+    assert "color" in group("Color")["capabilities"] and "hue" in group("Color")["state"]
+    white = group("White")
+    assert "color_temp" in white["capabilities"] and white["meta"]["min_mired"] == 140
+    assert not {"color", "color_temp"} & set(group("Mixed")["capabilities"])     # only what all lights can do
+
+    ctl.setAttrs(group("Color")["id"], {"on": True, "hue": 200, "saturation": 60})
+    assert pump_until(lambda: ctl.device(strip)["state"]["hue"] == 200)
+    ctl.setAttrs(white["id"], {"on": True, "color_temp": 250})
+    assert pump_until(lambda: ctl.device(kitchen)["state"]["color_temp"] == 250)
+    assert pump_until(lambda: group("White")["state"]["color_temp"] == 250)
+    ctl.shutdown()

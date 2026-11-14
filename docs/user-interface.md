@@ -313,7 +313,9 @@ show values.
 
 **Light groups** combine lights of one room into one tile: it is on when at least one light is
 on, shows e.g. *2 of 3 on, 60%*, a tap switches all lights, and the brightness bar sets them all
-to the same value. *Hide the single lights* shows only the group on the home screen.
+to the same value. If all lights of the group have colors (RGB), the group has the color wheel;
+if all have a white tone (CCT), it has the white tone slider, limited to the range all of them
+can do. *Hide the single lights* shows only the group on the home screen.
 
 ![Light group](images/light-group.png)
 
