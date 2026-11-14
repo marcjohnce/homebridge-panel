@@ -84,6 +84,9 @@ Rectangle {
                     root.setDraft(field.key, text);
                 return err;
             }, { hint: field.help, maxLength: 200, autoCapitalize: false, secret: field.kind === "password" });
+        } else if (field.kind === "code") {
+            // secret digits (alarm PIN): start empty, saved at once; empty = no PIN
+            keypad.edit(field, "", v => root.saveInstant(field.key, v));
         } else {
             keypad.edit(field, value, v => root.setDraft(field.key, v));
         }

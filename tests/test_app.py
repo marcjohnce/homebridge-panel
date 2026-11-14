@@ -446,6 +446,21 @@ def test_smoke_and_co_detectors():
     assert security_text({**d, "state": {}, "meta": {"security": "co"}}) == "No CO"
 
 
+def test_security_system_from_hap():
+    data = {"accessories": [{"aid": 4, "services": [
+        {"iid": 10, "type": U("7E"), "characteristics": [
+            {"iid": 11, "type": U("66"), "value": 4, "perms": ["pr", "ev"]},                  # triggered
+            {"iid": 12, "type": U("67"), "value": 1, "perms": ["pr", "pw", "ev"], "valid-values": [1, 3]}]},
+    ]}]}
+    (snap,) = HapBackend.parse_accessories(data)
+    dtype, st, caps, meta = snapshot_to_state(snap)
+    assert dtype.value == "alarm" and caps == ["mode"] and meta["modes"] == ["away", "off"]
+    assert st == {"triggered": True, "mode": "away", "target": "away", "armed": True, "on": False}
+    assert [(ch.name, v) for ch, v in command_to_writes(snap, {"mode": "off"})] == [("SecuritySystemTargetState", 3)]
+    with pytest.raises(ValueError):
+        command_to_writes(snap, {"mode": "party"})
+
+
 def test_security_kind_override_and_icon():
     cfg = AppConfig.model_validate({"demo": {"enabled": True}, "devices": {
         "Bedroom Window": {"security": "window"}, "Washing Machine Leak": {"security": "window"}}})

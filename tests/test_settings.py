@@ -42,11 +42,17 @@ def test_schema_contains_all_fields(tmp_path):
     schema = SettingsStore(tmp_path / "s.json").schema()
     keys = [f["key"] for sec in schema for f in sec["fields"]]
     assert keys == [f.key for f in FIELDS]
-    assert {sec["id"]: sec["instant"] for sec in schema} == {"display": True, "rooms": True, "homebridge": False, "mqtt": False, "system": True}
+    assert {sec["id"]: sec["instant"] for sec in schema} == {"display": True, "rooms": True, "security": True, "homebridge": False, "mqtt": False, "system": True}
     system = next(sec for sec in schema if sec["id"] == "system")
     assert [(f["key"], f["kind"], f["button"]) for f in system["fields"]] == [
         ("restart_app", "action", "Restart"), ("reboot", "action", "Restart")]
     assert all(f["confirm"] for f in system["fields"])
+
+
+def test_alarm_pin_validation():
+    assert validate("alarm_pin", "") == ("", None)              # no PIN
+    assert validate("alarm_pin", "1234") == ("1234", None)
+    assert validate("alarm_pin", "123")[1] and validate("alarm_pin", "12a4")[1] and validate("alarm_pin", "123456789")[1]
 
 
 def test_actions_are_not_settings(tmp_path):

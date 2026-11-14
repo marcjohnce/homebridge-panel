@@ -28,6 +28,7 @@ from ..rooms import BUILTIN_DEFAULT, RoomLayout
 from ..scheduler import Scheduler
 from ..settings import ACTIONS, SettingsStore, apply_to_config, validate
 from ..models import AREAS, KIND_ICONS, KIND_KEYS
+from . import format as fmt
 from .format import (air_warning, alert_level, battery_low, battery_text, category, fmt_temp, has_detail,
                      short_name, state_text)
 
@@ -189,7 +190,8 @@ class DeviceModel(QAbstractListModel):
                 and self._category in ("", category(d))]
         # alarms first, then open windows/doors; otherwise the order of rooms and devices
         alerts = {d["id"]: alert_level(d) for d in devs}
-        return [d["id"] for d in sorted(self.ordered(devs), key=lambda d: -alerts[d["id"]])]
+        # the alarm system always comes first
+        return [d["id"] for d in sorted(self.ordered(devs), key=lambda d: (d["type"] != "alarm", -alerts[d["id"]]))]
 
     def ordered(self, devs: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Room order, then the manual order in the room (settings), then kind of device,
@@ -636,6 +638,7 @@ class Controller(QObject):
     currentRoomChanged = Signal()
     categoryChanged = Signal()
     summaryChanged = Signal()
+    alarmPinChanged = Signal()
     securityAlarm = Signal(str)       # new leak / glass break / smoke / CO alarm: wake up and show "Security"
     scenesChanged = Signal()
     statusChanged = Signal()
@@ -678,6 +681,7 @@ class Controller(QObject):
         self._started = False
         i18n.set_language(i18n.resolve(store.get("language")))
         self._theme = self._compute_theme()
+        fmt.set_alarm_armed(False)          # module state: a new controller starts disarmed
         self._mgr: DeviceManager | None = None
         self._sched: Scheduler | None = None
         self._pump: asyncio.Task | None = None
@@ -853,6 +857,8 @@ class Controller(QObject):
             self.runner.submit(self._restart(self.effective_config()))
         if "theme" in keys:
             self._update_theme()
+        if "alarm_pin" in keys:
+            self.alarmPinChanged.emit()
         if "language" in keys:
             self.apply_language()
         if "idle_seconds" in keys:
@@ -870,12 +876,15 @@ class Controller(QObject):
             self.refresh_groups()
             self._backends = msg.get("backends", {})
             self._started = "title" in msg
+            self._update_armed()
             self._refresh_rooms()
             self.climateChanged.emit()
             self.statusChanged.emit()
         elif kind == "device":
             d = self._stamp(msg["device"])
             structural = self._model.upsert(d)
+            if d["type"] == "alarm" and self._update_armed():
+                structural = True
             groups = [f"group:{g['id']}" for g in self.store.groups if d["id"] in g.get("members", [])] \
                 + [f"choice:{g['id']}" for g in self.store.switch_groups if d["id"] in g.get("members", [])]
             if groups:
@@ -984,11 +993,37 @@ class Controller(QObject):
             return
         self.setAttrs(dev_id, {"on": not d["state"].get("on")})
 
+    def _update_armed(self) -> bool:
+        """Motion sensors only count while an alarm system is armed. Returns True if that changed."""
+        armed = any(d["state"].get("armed") for d in self._model.all() if d["type"] == "alarm" and d["reachable"])
+        if armed == fmt._alarm_armed:
+            return False
+        fmt.set_alarm_armed(armed)
+        self._model._relayout()
+        self._model.refresh_texts()
+        return True
+
+    @Property(bool, notify=alarmPinChanged)
+    def alarmPinSet(self) -> bool:
+        return bool(self.store.get("alarm_pin"))
+
+    @Slot(str, str, result=str)
+    def disarm(self, dev_id: str, pin: str) -> str:
+        """Disarms an alarm system; with a PIN set in the settings only with that PIN."""
+        want = str(self.store.get("alarm_pin") or "")
+        if want and pin != want:
+            return tr("Wrong PIN")
+        self._command(lambda m: m.command(dev_id, {"mode": "off"}))
+        return ""
+
     @Slot(str, "QVariantMap")
     def setAttrs(self, dev_id: str, attrs: dict[str, Any]) -> None:
         attrs = {k: (int(v) if isinstance(v, float) and v.is_integer() and k != "target_temp" else v)
                  for k, v in dict(attrs).items()}
         d = self._model.get(dev_id)
+        if d and d["type"] == "alarm" and attrs.get("mode") == "off" and self.store.get("alarm_pin"):
+            self.toast.emit(tr("Enter the PIN to disarm"))      # disarming goes through disarm()
+            return
         if d and d.get("meta", {}).get("choice"):
             # {"select": id} switches that one on and the others off; {"on": false}: all off
             target = str(attrs.get("select", "")) if "select" in attrs else ("" if attrs.get("on") is False else None)
@@ -1139,10 +1174,9 @@ class Controller(QObject):
     @Property("QVariantMap", notify=summaryChanged)
     def roomMarks(self) -> dict[str, str]:
         """Dot before a room tab: "alert" under Security (open window or door, alarm; motion
-        not yet), "on" under Lights (a light or switch is on)."""
+        only while the alarm system is armed), "on" under Lights (a light or switch is on)."""
         if self._category == "security":
-            hit = lambda d: alert_level(d) > 0 and d.get("meta", {}).get("security") != "motion"  # noqa: E731
-            mark = "alert"
+            hit, mark = (lambda d: alert_level(d) > 0), "alert"
         elif self._category == "light":
             hit, mark = _is_on_light, "on"
         else:

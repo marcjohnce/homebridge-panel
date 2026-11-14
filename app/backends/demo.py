@@ -51,6 +51,8 @@ _DEVICES = [
     ("washer-leak", "LeakSensor", "Washing Machine Leak", [("LeakDetected", 0, False, {}),     # battery almost empty
                                                              ("BatteryLevel", 4, False, {}), ("StatusLowBattery", 1, False, {})]),
     # without HoldPosition and tilt: stop sets the target to the current position
+    ("alarm", "SecuritySystem", "Alarm System",
+     [("SecuritySystemCurrentState", 3, False, {}), ("SecuritySystemTargetState", 3, True, dict(min=0, max=3))]),
     ("hall-smoke", "SmokeSensor", "Hall Smoke Detector", [("SmokeDetected", 0, False, {}),
                                                            ("BatteryLevel", 80, False, {})]),
     ("bedroom-blinds", "WindowCovering", "Bedroom Blinds",
@@ -106,6 +108,9 @@ class DemoBackend(Backend):
             s.chars["PositionState"].value = 2 if cur.value == tgt else (1 if tgt > cur.value else 0)
             if "TargetHorizontalTiltAngle" in s.chars:
                 s.chars["CurrentHorizontalTiltAngle"].value = s.chars["TargetHorizontalTiltAngle"].value
+        alarm = self._services["alarm"].chars        # the alarm system follows its target (unless triggered)
+        if alarm["SecuritySystemCurrentState"].value != 4:
+            alarm["SecuritySystemCurrentState"].value = alarm["SecuritySystemTargetState"].value
         coffee = self._services["coffee"].chars
         coffee["OutletInUse"].value = bool(coffee["On"].value)
 

@@ -165,7 +165,7 @@ Item {
             activeFocusOnTab: true
             Accessible.role: Accessible.Button
             Accessible.name: qsTr("Change %1, currently %2").arg(root.field.label)
-                .arg(root.field.kind === "password" ? "" : String(root.value))
+                .arg(root.field.kind === "password" || root.field.kind === "code" ? "" : String(root.value))
             Keys.onReturnPressed: root.editRequested()
 
             Row {
@@ -175,7 +175,8 @@ Item {
                 spacing: 6
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: root.field.kind === "password" ? "•".repeat(String(root.value).length) : String(root.value)
+                    text: root.field.kind === "password" ? "•".repeat(String(root.value).length)
+                        : root.field.kind === "code" ? (String(root.value) !== "" ? "••••" : qsTr("None")) : String(root.value)
                     color: Theme.ink
                     font.pixelSize: Theme.s(18)
                     font.weight: Font.Light

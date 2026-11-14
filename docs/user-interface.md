@@ -106,7 +106,7 @@ yet). *Climate* and *All* have no dots.
 
 | # | Element | What it does |
 |---|---|---|
-| 1 | Security | Selected menu entry with the number of alerts (open windows and doors, motion, alarms) |
+| 1 | Security | Selected menu entry with the number of alerts (open windows and doors, alarms; motion only while the alarm system is armed) |
 | 2 | Open window | Red text, e.g. *Open for 25 min*; open windows and doors come first |
 | 3 | Glass break sensor | *No alarm* while quiet |
 
@@ -115,6 +115,20 @@ switches to *Security* and shows a message. Open windows and doors only raise th
 menu.
 
 ![Alarm](images/home-alarm.png)
+
+### Alarm system
+
+An **alarm system** (HomeKit *Security System*, e.g. from an alarm plugin) always comes first
+under *Security*. Its tile shows the state – *Armed – Away*, *Disarmed* or *Alarm triggered!* –
+and is highlighted while armed. A tap opens the modes **Home**, **Away**, **Night** and
+**Disarmed** (only those the plugin offers); a tap on a mode switches to it. If a *PIN to
+disarm* is set under *Settings → Security*, disarming asks for it. A triggered alarm turns the tile red,
+wakes the panel and shows a message like a leak. **Motion sensors** only count as alerts (and
+get the red dot before the room) while the alarm system is armed.
+
+![Alarm system](images/alarm-system.png)
+
+![PIN to disarm](images/alarm-pin.png)
 
 HomeKit has no glass break type: plugins expose such detectors as contact or motion sensors.
 Choose the kind of a contact or motion sensor in [Settings → Rooms and devices](#rooms-and-devices)
@@ -234,6 +248,7 @@ devices:
 |---|---|---|
 | 1 | Display | *Appearance* (Automatic, Light, Dark, Dark blue), *Language* and *Screen saver after*. Saved immediately |
 | 2 | Rooms and devices | Opens the room management (see below); shows the number of rooms |
+| – | Security | *PIN to disarm* the alarm system: 4 to 8 digits, empty for none. Saved immediately |
 | 3 | Homebridge | *Connect to Homebridge*, *Address*, *Port* and *PIN*. Changes are collected until you apply them |
 | 4 | Test connection | Tries the entered address, port and PIN without saving and reports how many devices were found |
 | 5 | Apply | Saves the Homebridge settings and reconnects without restarting the app. Enabled only when something changed |

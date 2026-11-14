@@ -84,6 +84,7 @@ class HapBackend(Backend):
                         min=ch.get("minValue"),
                         max=ch.get("maxValue"),
                         step=ch.get("minStep"),
+                        valid=ch.get("valid-values"),
                     )
                 if stype == "Battery":
                     battery.update({k: v for k, v in chars.items() if k in ("BatteryLevel", "StatusLowBattery")})

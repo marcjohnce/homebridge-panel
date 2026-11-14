@@ -16,6 +16,7 @@ class DeviceType(str, Enum):
     BLIND = "blind"
     SECURITY = "security"     # contact (window, door, glass break), leak, motion, smoke and CO sensors
     VALUE = "value"           # virtual device: a value received over MQTT
+    ALARM = "alarm"           # alarm system (HomeKit SecuritySystem): armed / disarmed / triggered
 
 
 # Icon names used by the UI (see app/qml/Icons.js):
@@ -31,6 +32,7 @@ DEFAULT_ICONS = {
     DeviceType.BLIND: "blinds",
     DeviceType.SECURITY: "contact",
     DeviceType.VALUE: "gauge",
+    DeviceType.ALARM: "alarm",
 }
 
 # Kinds of security sensors. A contact sensor can be a window, a door, a plain contact
