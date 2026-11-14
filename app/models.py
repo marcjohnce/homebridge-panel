@@ -16,6 +16,7 @@ class DeviceType(str, Enum):
     BLIND = "blind"
     SECURITY = "security"     # contact (window, door, glass break), leak, motion, smoke and CO sensors
     VALUE = "value"           # virtual device: a value received over MQTT
+    GARAGE = "garage"         # garage door opener
     VALVE = "valve"           # water valve: generic, irrigation, shower head, faucet
     ALARM = "alarm"           # alarm system (HomeKit SecuritySystem): armed / disarmed / triggered
 
@@ -35,6 +36,7 @@ DEFAULT_ICONS = {
     DeviceType.VALUE: "gauge",
     DeviceType.ALARM: "alarm",
     DeviceType.VALVE: "valve",
+    DeviceType.GARAGE: "garage",
 }
 
 # Kinds of security sensors. A contact sensor can be a window, a door, a plain contact

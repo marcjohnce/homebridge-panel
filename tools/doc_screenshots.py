@@ -516,6 +516,18 @@ def main() -> int:
     save(annotate(p.grab(), [], "PIN to disarm"), out, "alarm-pin")
     p.close()
 
+    # Garage door: confirmation, with the PIN when opening
+    p = Panel(DETAIL_SIZE)
+    p.store.update({"alarm_pin": "1234"})
+    p.ctl.selectCategory("security")
+    p.ctl.selectRoom("")
+    wait(300)
+    tile = p.rect(f"tile:{p.device_id('Garage Door')}")
+    p.click(tile.center().x(), tile.center().y())
+    wait(400)
+    save(annotate(p.grab(), [], "Open the garage door"), out, "garage-confirm")
+    p.close()
+
     # Valve with run time
     p = Panel(DETAIL_SIZE)
     vid = p.device_id("Garden Sprinkler")

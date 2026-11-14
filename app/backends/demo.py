@@ -52,6 +52,8 @@ _DEVICES = [
     ("washer-leak", "LeakSensor", "Washing Machine Leak", [("LeakDetected", 0, False, {}),     # battery almost empty
                                                              ("BatteryLevel", 4, False, {}), ("StatusLowBattery", 1, False, {})]),
     # without HoldPosition and tilt: stop sets the target to the current position
+    ("garage", "GarageDoorOpener", "Garage Door",
+     [("CurrentDoorState", 1, False, {}), ("TargetDoorState", 1, True, {}), ("ObstructionDetected", False, False, {})]),
     ("sprinkler", "Valve", "Garden Sprinkler",
      [("Active", 0, True, {}), ("InUse", 0, False, {}), ("ValveType", 1, False, {}),
       ("SetDuration", 600, True, dict(min=0, max=3600)), ("RemainingDuration", 0, False, {})]),
@@ -117,6 +119,12 @@ class DemoBackend(Backend):
         alarm = self._services["alarm"].chars        # the alarm system follows its target (unless triggered)
         if alarm["SecuritySystemCurrentState"].value != 4:
             alarm["SecuritySystemCurrentState"].value = alarm["SecuritySystemTargetState"].value
+        door = self._services["garage"].chars        # the garage door moves within one poll
+        cur, tgt = door["CurrentDoorState"], door["TargetDoorState"].value
+        if tgt == 0 and cur.value != 0:
+            cur.value = 0 if cur.value == 2 else 2          # opening, then open
+        elif tgt == 1 and cur.value != 1:
+            cur.value = 1 if cur.value == 3 else 3          # closing, then closed
         valve = self._services["sprinkler"].chars    # the sprinkler runs for its set duration
         if valve["Active"].value and self._valve_started is not None:
             # like real valves: a new run time applies to the next run, not the running one

@@ -117,7 +117,7 @@ class DeviceModel(QAbstractListModel):
             case "type": return d["type"]
             case "icon": return d["icon"]
             # gold "on" highlight: not for heating, sensors or blinds (open is not "on")
-            case "isOn": return d["type"] not in ("thermostat", "sensor", "blind") and bool(s.get("on")) and d["reachable"]
+            case "isOn": return d["type"] not in ("thermostat", "sensor", "blind", "garage") and bool(s.get("on")) and d["reachable"]
             case "reachable": return d["reachable"]
             case "heating": return bool(s.get("heating")) and d["reachable"]
             case "stateText": return state_text(d)
@@ -174,7 +174,7 @@ class DeviceModel(QAbstractListModel):
             out.update(baseKind=base_kind, baseIcon=base_icon, icon=icon, meta={**meta, key: kind})
         # security alerts off: set on the panel, by default for presence sensors
         kind = out["meta"].get("security")
-        out["quiet"] = d["type"] == "security" and self.layout.quiet.get(d["id"], kind in QUIET_KINDS)
+        out["quiet"] = d["type"] in ("security", "garage") and self.layout.quiet.get(d["id"], kind in QUIET_KINDS)
         return out
 
     def reassign(self) -> None:
@@ -405,7 +405,7 @@ class RoomsBridge(QObject):
                         "canOutdoor": d["type"] == "sensor" and d.get("state", {}).get("current_temp") is not None,
                         "outdoor": bool(d.get("meta", {}).get("outdoor")),
                         # security sensors (not leak, smoke, CO, glass break) can be kept out of alerts
-                        "canQuiet": d["type"] == "security",
+                        "canQuiet": d["type"] in ("security", "garage"),
                         "quiet": bool(d.get("quiet")),
                         "kinds": [{"value": k, "label": tr(self.KIND_LABELS[k]), "icon": KIND_ICONS[k]}
                                   for k in kinds] if len(kinds) > 1 else []})
@@ -572,6 +572,8 @@ class RoomsBridge(QObject):
             self._layout.set_kind(dev_id, kind, d.get("baseKind", kind))
         self._layout.set_room(dev_id, room, d["baseRoom"], m.device_rooms())
         self._layout.set_hidden(dev_id, hidden)
+        if d["type"] == "garage":
+            self._layout.set_quiet(dev_id, quiet)
         if d["type"] == "security":
             new_kind = kind if kind in meta.get("kinds", []) else meta.get("security", "")
             self._layout.set_quiet(dev_id, quiet, new_kind in QUIET_KINDS)
@@ -652,6 +654,7 @@ class Controller(QObject):
     categoryChanged = Signal()
     summaryChanged = Signal()
     alarmPinChanged = Signal()
+    garageRequested = Signal(str)     # a garage door tile was tapped: ask before opening/closing
     securityAlarm = Signal(str)       # new leak / glass break / smoke / CO alarm: wake up and show "Security"
     scenesChanged = Signal()
     statusChanged = Signal()
@@ -925,7 +928,7 @@ class Controller(QObject):
 
     def _stamp(self, d: dict[str, Any]) -> dict[str, Any]:
         """Remembers since when a window or door is open (shown as "Open for 25 min")."""
-        if d.get("type") == "security":
+        if d.get("type") in ("security", "garage"):
             if d.get("state", {}).get("triggered"):
                 self._since.setdefault(d["id"], time.time())
             else:
@@ -1004,6 +1007,9 @@ class Controller(QObject):
         if not d["reachable"]:
             self.toast.emit(tr("{name} is not reachable. Check the device and Homebridge.").format(name=d["name"]))
             return
+        if d["type"] == "garage":                   # never directly: the panel asks first
+            self.garageRequested.emit(dev_id)
+            return
         self.setAttrs(dev_id, {"on": not d["state"].get("on")})
 
     def _update_armed(self) -> bool:
@@ -1029,6 +1035,15 @@ class Controller(QObject):
         self._command(lambda m: m.command(dev_id, {"mode": "off"}))
         return ""
 
+    @Slot(str, bool, str, result=str)
+    def garageDoor(self, dev_id: str, open_: bool, pin: str) -> str:
+        """Opens or closes a garage door; opening needs the PIN of the alarm system if one is set."""
+        want = str(self.store.get("alarm_pin") or "")
+        if open_ and want and pin != want:
+            return tr("Wrong PIN")
+        self._command(lambda m: m.command(dev_id, {"on": open_}))
+        return ""
+
     @Slot(str, "QVariantMap")
     def setAttrs(self, dev_id: str, attrs: dict[str, Any]) -> None:
         attrs = {k: (int(v) if isinstance(v, float) and v.is_integer() and k != "target_temp" else v)
@@ -1036,6 +1051,9 @@ class Controller(QObject):
         d = self._model.get(dev_id)
         if d and d["type"] == "alarm" and attrs.get("mode") == "off" and self.store.get("alarm_pin"):
             self.toast.emit(tr("Enter the PIN to disarm"))      # disarming goes through disarm()
+            return
+        if d and d["type"] == "garage" and attrs.get("on") and self.store.get("alarm_pin"):
+            self.toast.emit(tr("Enter the PIN to open"))        # opening goes through garageDoor()
             return
         if d and d.get("meta", {}).get("choice"):
             # {"select": id} switches that one on and the others off; {"on": false}: all off
