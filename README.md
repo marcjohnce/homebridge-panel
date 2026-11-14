@@ -1,4 +1,4 @@
-# Smart Home Panel
+# Homebridge panel
 
 Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heating through
 **Homebridge** using the **HomeKit Accessory Protocol (HAP)**. The UI is built with Qt Quick
