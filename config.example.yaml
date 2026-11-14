@@ -65,6 +65,7 @@ devices:
   "Washing Machine Leak":      { room: Bathroom }
   "Hall Smoke Detector":       { room: Hall }
   "Alarm System":              { room: Hall }
+  "Garden Sprinkler":          { room: Garden }
   # "homebridge:12.10":        { hidden: true }
 
 # --- Scenes (icon: moon, sun, film, leaf, home, power) -----------------------------

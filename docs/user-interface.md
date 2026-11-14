@@ -184,6 +184,19 @@ results in one command.
 
 Only the controls the device supports are shown.
 
+## Valves
+
+**Valves** (HomeKit valves: irrigation, shower head, faucet or a generic valve) open and close
+with a tap; the tile is highlighted while open and shows *Running, 8 min left* when the valve
+reports its remaining time. Valves with a run time have an arrow: it opens the run time
+(5, 10, 15, 30 or 60 minutes) and a power button. Irrigation, shower and faucet valves appear under
+*Lights* with the switches, generic valves (e.g. a water shut-off) under *Security*; *Show under*
+changes that per device, and the kind can be changed in the device editor. Several valves of an
+irrigation system are single tiles; to let only one of them run at a time, put them in a
+[switch group](#rooms-and-devices).
+
+![Valve with run time](images/valve.png)
+
 ## Blinds
 
 Window blinds (HomeKit *Window Covering*). Tap the tile to open fully or close, tap "›"

@@ -31,6 +31,8 @@ def category(d: dict[str, Any]) -> str:
         return meta["area"]
     if meta.get("appliance") == "fan":
         return "climate"
+    if d["type"] == "valve":         # water shut-off valves under Security, the others with the switches
+        return "security" if meta.get("valve", "generic") == "generic" else "light"
     return CATEGORY_OF_TYPE.get(d["type"], "light")
 
 
@@ -98,6 +100,16 @@ def security_text(d: dict[str, Any]) -> str:
     if kind == "presence":
         return tr("Present") if hit else tr("Nobody there")
     return tr("Motion") if hit else tr("No motion")
+
+
+def valve_text(s: dict[str, Any]) -> str:
+    """"Closed", "Open", "Running" or "Running, 8 min left"."""
+    if not s.get("on"):
+        return tr("Closed")
+    left = int(s.get("remaining") or 0)
+    if left > 0:
+        return tr("Running, {n} min left").format(n=max(1, -(-left // 60)))
+    return tr("Running") if s.get("in_use") else tr("Open")
 
 
 def alarm_mode_label(mode: str) -> str:
@@ -182,6 +194,8 @@ def state_text(d: dict[str, Any]) -> str:
         return value_text(d)
     if d["type"] == "alarm":
         return alarm_text(s)
+    if d["type"] == "valve":
+        return valve_text(s)
     if d.get("meta", {}).get("choice"):         # switch group: the switch that is on
         return s.get("active_name") or tr("Off")
     if d["type"] == "security":
@@ -228,5 +242,7 @@ def has_detail(d: dict[str, Any]) -> bool:
     caps = d.get("capabilities", [])
     if d.get("meta", {}).get("choice") or d["type"] == "alarm":
         return True
+    if d["type"] == "valve":
+        return "duration" in caps
     return d["type"] in ("thermostat", "sensor", "blind") or any(
         c in caps for c in ("brightness", "color", "color_temp", "speed"))

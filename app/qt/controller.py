@@ -82,7 +82,7 @@ class DeviceModel(QAbstractListModel):
              "stateText", "hasDetail", "targetTemp", "minTemp", "maxTemp", "modeOff", "alertLevel", "warning",
              "batteryLow")
     # order inside a room: per menu area
-    RANK = {"light": 0, "switch": 1, "plug": 1, "blind": 2, "thermostat": 0, "sensor": 1, "fan": 2}
+    RANK = {"light": 0, "switch": 1, "plug": 1, "valve": 1, "blind": 2, "thermostat": 0, "sensor": 1, "fan": 2}
 
     def __init__(self, parent: QObject | None = None, layout: RoomLayout | None = None):
         super().__init__(parent)
@@ -377,7 +377,8 @@ class RoomsBridge(QObject):
                    "switch": "Switch", "plug": "Plug", "tv": "TV", "coffee": "Coffee machine",
                    "washer": "Washing machine", "dishwasher": "Dishwasher", "fan": "Fan",
                    "bulb": "Bulb", "ceiling": "Ceiling lamp", "spot": "Spotlight", "wall": "Wall lamp",
-                   "table": "Table lamp"}
+                   "table": "Table lamp",
+                   "generic": "Valve", "irrigation": "Irrigation", "shower": "Shower head", "faucet": "Faucet"}
     AREA_LABELS = {"": "Automatic", "light": "Lights", "climate": "Climate", "security": "Security"}
 
     @Property("QVariantList", notify=changed)
@@ -508,10 +509,11 @@ class RoomsBridge(QObject):
     # ---------- switch groups ----------
     @Property("QVariantList", notify=changed)
     def switches(self) -> list[dict[str, Any]]:
-        """Switches and plugs that can join a switch group."""
+        """Switches, plugs and valves that can join a switch group."""
         m = self._ctl._model
         return [{"id": d["id"], "name": d["name"], "icon": d["icon"], "room": d["room"]}
-                for d in m.ordered(m.all()) if d["type"] in ("switch", "plug") and not d.get("meta", {}).get("choice")]
+                for d in m.ordered(m.all())
+                if d["type"] in ("switch", "plug", "valve") and not d.get("meta", {}).get("choice")]
 
     @Slot("QVariantMap", result=str)
     def saveSwitchGroup(self, values: dict[str, Any]) -> str:
