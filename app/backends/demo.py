@@ -83,6 +83,7 @@ class DemoBackend(Backend):
         super().__init__(name)
         self._services: dict[str, ServiceSnapshot] = {}
         self._valve_started: float | None = None
+        self._valve_duration = 0
         for key, stype, nm, chars in _DEVICES:
             self._services[key] = ServiceSnapshot(
                 key=key, service_type=stype, name=nm,
@@ -118,7 +119,8 @@ class DemoBackend(Backend):
             alarm["SecuritySystemCurrentState"].value = alarm["SecuritySystemTargetState"].value
         valve = self._services["sprinkler"].chars    # the sprinkler runs for its set duration
         if valve["Active"].value and self._valve_started is not None:
-            left = valve["SetDuration"].value - int(time.monotonic() - self._valve_started)
+            # like real valves: a new run time applies to the next run, not the running one
+            left = self._valve_duration - int(time.monotonic() - self._valve_started)
             valve["RemainingDuration"].value = max(0, left)
             if left <= 0:
                 valve["Active"].value = valve["InUse"].value = 0
@@ -142,6 +144,7 @@ class DemoBackend(Backend):
                 chars["InUse"].value = 1 if value else 0
                 chars["RemainingDuration"].value = chars["SetDuration"].value if value else 0
                 self._valve_started = time.monotonic() if value else None
+                self._valve_duration = chars["SetDuration"].value
             if cname == "TargetPosition" and "PositionState" in chars:
                 cur = chars["CurrentPosition"].value
                 chars["PositionState"].value = 2 if value == cur else (1 if value > cur else 0)

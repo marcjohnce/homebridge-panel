@@ -503,6 +503,9 @@ def test_valve(qapp, tmp_path):
     assert pump_until(lambda: ctl.device(v["id"])["state"]["duration"] == 300)
     ctl.toggle(v["id"])
     assert pump_until(lambda: ctl.device(v["id"])["stateText"].startswith("Running, 5 min left"))
+    ctl.setAttrs(v["id"], {"duration": 1800})       # a new run time applies to the next run
+    assert pump_until(lambda: ctl.device(v["id"])["state"]["duration"] == 1800)
+    assert ctl.device(v["id"])["stateText"] == "Running, 5 min left"
     ctl.toggle(v["id"])
     assert pump_until(lambda: ctl.device(v["id"])["stateText"] == "Closed")
     ctl.shutdown()
