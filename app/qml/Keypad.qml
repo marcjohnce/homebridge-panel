@@ -12,8 +12,8 @@ Popup {
     property bool fresh: true
 
     readonly property string kind: field.kind || "number"
-    readonly property int maxLength: kind === "pin" ? 8 : (kind === "number" ? 5 : 253)
-    readonly property string display: kind === "pin" ? formatPin(entry) : entry
+    readonly property int maxLength: kind === "pin" || kind === "code" ? 8 : (kind === "number" ? 5 : 253)
+    readonly property string display: kind === "pin" ? formatPin(entry) : kind === "code" ? "•".repeat(entry.length) : entry
     readonly property var keys: ["1", "2", "3", "4", "5", "6", "7", "8", "9", kind === "host" ? "." : "", "0", "⌫"]
 
     function formatPin(d) {
@@ -141,7 +141,9 @@ Popup {
                     height: Theme.s(56)
                     radius: 12
                     color: keyMouse.pressed ? Theme.tilePress : Theme.page
-                    visible: modelData !== ""
+                    // an empty key keeps its place in the grid (hidden items would shift the keys after it)
+                    opacity: modelData !== "" ? 1 : 0
+                    enabled: modelData !== ""
                     Accessible.role: Accessible.Button
                     Accessible.name: modelData === "⌫" ? qsTr("Delete") : modelData
 

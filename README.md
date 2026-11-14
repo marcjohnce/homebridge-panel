@@ -37,6 +37,8 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
   rooms with lights on (Lights) or an open window or alarm (Security)
 - **MQTT**: virtual devices show values of MQTT topics (e.g. boiler pressure in bar), broker set up in the settings
 - **Light groups**: several lights of a room as one tile
+- **Alarm system**: arm (Home, Away, Night) and disarm a HomeKit security system, optionally with a PIN;
+  motion sensors only count while it is armed
 - **Batteries**: a red battery on the tile when a device's battery is below 10 % or reported low;
   *Settings → Batteries* lists all battery devices
 - **Switch groups**: several switches of a room of which only one is on (e.g. irrigation circuits); a tap

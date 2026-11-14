@@ -498,6 +498,24 @@ def main() -> int:
     save(annotate(p.grab(), [], "Switch group"), out, "switch-group-editor")
     p.close()
 
+    # Alarm system: modes, PIN to disarm
+    p = Panel(DETAIL_SIZE)
+    p.store.update({"alarm_pin": "1234"})
+    gid = p.device_id("Alarm System")
+    p.ctl.setAttrs(gid, {"mode": "away"})
+    wait(5000)          # the demo alarm system follows its target with the next poll
+    p.win.setProperty("openDevice", gid)
+    wait(400)
+    save(annotate(p.grab(), [
+        (1, [p.rect("alarmState")], "State", "top"),
+        (2, [p.rect("alarmModes")], "Tap a mode to switch to it", "bottom"),
+    ], "Alarm system"), out, "alarm-system")
+    off = p.rect("alarmMode:off")
+    p.click(off.center().x(), off.center().y())
+    wait(400)
+    save(annotate(p.grab(), [], "PIN to disarm"), out, "alarm-pin")
+    p.close()
+
     # Batteries: red battery on the tile, list in the settings
     p = Panel(DETAIL_SIZE)
     p.ctl.selectCategory("security")

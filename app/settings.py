@@ -35,7 +35,7 @@ class Field:
     key: str
     section: str
     label: str
-    kind: str              # choice | toggle | number | host | pin | text | password | action | page
+    kind: str              # choice | toggle | number | host | pin | code | text | password | action | page
     default: Any
     help: str = ""
     options: tuple[tuple[Any, str], ...] = field(default_factory=tuple)
@@ -48,6 +48,7 @@ class Field:
 SECTIONS = [
     Section("display", "Display", instant=True),
     Section("rooms", "Rooms", instant=True),
+    Section("security", "Security", instant=True),
     Section("homebridge", "Homebridge", instant=False),
     Section("mqtt", "MQTT", instant=False),
     Section("system", "System", instant=True),
@@ -70,6 +71,8 @@ FIELDS = [
           help="Charge of all battery powered devices"),
     Field("show_general", "rooms", "Show the “General” room", "toggle", True,
           help="Off: devices without a room only appear under “All”"),
+    Field("alarm_pin", "security", "PIN to disarm", "code", "",
+          help="4 to 8 digits for disarming the alarm system on the panel; empty: no PIN"),
     Field("hap_enabled", "homebridge", "Connect to Homebridge", "toggle", True),
     Field("hap_host", "homebridge", "Address", "host", "127.0.0.1",
           help="IP address or name of the computer running Homebridge"),
@@ -146,6 +149,11 @@ def validate(key: str, value: Any) -> tuple[Any, str | None]:
         v = str(value)
         if len(v) > 200:
             return v, tr("At most {n} characters").format(n=200)
+        return v, None
+    if f.kind == "code":         # secret digits, e.g. the PIN of the alarm system; empty = none
+        v = str(value).strip()
+        if v and (not v.isdigit() or not 4 <= len(v) <= 8):
+            return v, tr("4 to 8 digits, or empty for no PIN")
         return v, None
     if f.kind == "pin":
         digits = re.sub(r"\D", "", str(value))

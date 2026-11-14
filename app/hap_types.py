@@ -40,6 +40,7 @@ SERVICE_TYPES: dict[str, str] = {
     "85": "MotionSensor",
     "86": "OccupancySensor",
     "87": "SmokeSensor",
+    "7E": "SecuritySystem",
     "7F": "CarbonMonoxideSensor",
     "96": "Battery",
     EVE_WEATHER_SERVICE: "EveWeather",
@@ -94,6 +95,8 @@ CHAR_TYPES: dict[str, str] = {
     "22": "MotionDetected",
     "71": "OccupancyDetected",
     "76": "SmokeDetected",
+    "66": "SecuritySystemCurrentState",
+    "67": "SecuritySystemTargetState",
     "69": "CarbonMonoxideDetected",
     "68": "BatteryLevel",
     "79": "StatusLowBattery",
@@ -130,6 +133,7 @@ DEVICE_TYPE_BY_SERVICE: dict[str, DeviceType] = {
     "MotionSensor": DeviceType.SECURITY,
     "OccupancySensor": DeviceType.SECURITY,
     "SmokeSensor": DeviceType.SECURITY,
+    "SecuritySystem": DeviceType.ALARM,
     "CarbonMonoxideSensor": DeviceType.SECURITY,
     "Value": DeviceType.VALUE,          # virtual device from MQTT (app/backends/mqtt.py)
 }
@@ -143,6 +147,11 @@ SECURITY_SERVICES = {
     "SmokeSensor": ("SmokeDetected", 1, "smoke", ("smoke",)),
     "CarbonMonoxideSensor": ("CarbonMonoxideDetected", 1, "co", ("co",)),
 }
+
+# SecuritySystem: current state 0–3 like the target state, 4 = alarm triggered
+ALARM_MODES = {0: "stay", 1: "away", 2: "night", 3: "off"}
+ALARM_MODES_REV = {v: k for k, v in ALARM_MODES.items()}
+ALARM_TRIGGERED = 4
 
 # WindowCovering.PositionState; position 0 = closed, 100 = fully open
 POSITION_STATES = {0: "closing", 1: "opening", 2: "stopped"}
@@ -173,6 +182,7 @@ class Char:
     min: float | None = None
     max: float | None = None
     step: float | None = None
+    valid: list[int] | None = None      # allowed values (HAP "valid-values"), e.g. alarm modes
 
 
 @dataclass
@@ -235,6 +245,19 @@ def snapshot_to_state(s: ServiceSnapshot) -> tuple[DeviceType, dict[str, Any], l
             caps.append("tilt")
             meta.update(min_tilt=tilt.min if tilt.min is not None else -90,
                         max_tilt=tilt.max if tilt.max is not None else 90)
+    elif s.service_type == "SecuritySystem":
+        cur = int(s.get("SecuritySystemCurrentState", 3) or 0)
+        target = ALARM_MODES.get(int(s.get("SecuritySystemTargetState", 3) or 0), "off")
+        state["triggered"] = cur == ALARM_TRIGGERED
+        state["mode"] = target if cur == ALARM_TRIGGERED else ALARM_MODES.get(cur, "off")
+        state["target"] = target
+        state["armed"] = state["mode"] != "off" or state["triggered"]
+        state["on"] = state["armed"] and not state["triggered"]
+        caps.append("mode")
+        t = c.get("SecuritySystemTargetState")
+        valid = t.valid if t is not None and t.valid else list(ALARM_MODES)
+        meta["modes"] = [ALARM_MODES[v] for v in sorted(valid) if v in ALARM_MODES]
+        meta["icon_hint"] = "alarm" if state["armed"] else "alarmOff"
     elif s.service_type == "Value":
         state["value"] = s.get("Value")
         meta.update(unit=s.get("Unit", ""), decimals=int(s.get("Decimals", 1)), icon_hint=s.get("Icon") or "none",
@@ -406,7 +429,11 @@ def command_to_writes(s: ServiceSnapshot, attrs: dict[str, Any]) -> list[tuple[C
             writes.append((ch, _clamp(value, ch, 10, 30)))
         elif key == "mode":
             mode = str(value)
-            if s.service_type == "Thermostat":
+            if s.service_type == "SecuritySystem":
+                if mode not in ALARM_MODES_REV:
+                    raise ValueError(tr("Unknown mode '{mode}'").format(mode=mode))
+                writes.append((need("SecuritySystemTargetState"), ALARM_MODES_REV[mode]))
+            elif s.service_type == "Thermostat":
                 if mode not in THERMOSTAT_MODES_REV:
                     raise ValueError(tr("Unknown mode '{mode}'").format(mode=mode))
                 writes.append((need("TargetHeatingCoolingState"), THERMOSTAT_MODES_REV[mode]))

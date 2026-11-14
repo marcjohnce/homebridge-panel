@@ -60,7 +60,7 @@ Rectangle {
     function activate() {
         if (security || type === "value")
             return;                  // read-only
-        if (thermostat || sensor)
+        if (thermostat || sensor || type === "alarm")     // alarm system: choose the mode in the detail view
             root.openDetail(deviceId);
         else
             panel.toggle(deviceId);

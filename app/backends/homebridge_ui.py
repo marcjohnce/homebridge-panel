@@ -107,7 +107,7 @@ class HomebridgeUiBackend(Backend):
                 chars[ctype] = Char(
                     name=ctype, value=ch.get("value"), writable=bool(ch.get("canWrite")),
                     ref=(uid, ctype), min=ch.get("minValue"), max=ch.get("maxValue"),
-                    step=ch.get("minStep"),
+                    step=ch.get("minStep"), valid=ch.get("validValues") or ch.get("valid-values"),
                 )
             instance = (svc.get("instance") or {}).get("username", "")
             group = f"{instance}:{svc['aid']}" if svc.get("aid") is not None else uid

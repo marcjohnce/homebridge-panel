@@ -34,6 +34,13 @@ var paths = {
     shift: "M12 4.5l7 7.5h-4v6.5H9V12H5z",
     window: "M5 3.5h14v17H5zM12 3.5v17M5 12h14",
     door: "M6.5 20.5V4.5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16M4 20.5h16M14.5 12.5h.01",
+    // alarm system: shield with a closed or open lock; modes home, away, night
+    alarm: "M12 3.5l7 2.5v5.5c0 4.5-3 7.8-7 9-4-1.2-7-4.5-7-9V6zM9.5 11.5v-1a2.5 2.5 0 0 1 5 0v1M9 11.5h6v4.5H9z",
+    alarmOff: "M12 3.5l7 2.5v5.5c0 4.5-3 7.8-7 9-4-1.2-7-4.5-7-9V6zM9.5 11.5v-1a2.5 2.5 0 0 1 5-.5M9 11.5h6v4.5H9z",
+    modeHome: "M4 11l8-7 8 7M6.5 9v11h11V9M10.5 20v-5h3v5",
+    modeAway: "M5 20.5V5a1.5 1.5 0 0 1 1.5-1.5h7A1.5 1.5 0 0 1 15 5v15.5M3 20.5h14M12 12h.01M17 9.5l3.5 2.5L17 14.5M20.5 12H15",
+    modeNight: "M19.5 14.5A8 8 0 1 1 9.5 4.5a6.5 6.5 0 0 0 10 10z",
+    modeOff: "M6.5 11h11v9h-11zM9 11V8a3 3 0 0 1 5.8-1",
     // smoke detector: round ceiling unit with smoke; CO detector: unit with "CO"
     smoke: "M4 5.5h16M6.5 5.5a5.5 2.8 0 0 0 11 0M9 11c-1 1.2 1 2.3 0 3.5s1 2.3 0 3.5M12 11c-1 1.2 1 2.3 0 3.5s1 2.3 0 3.5M15 11c-1 1.2 1 2.3 0 3.5s1 2.3 0 3.5",
     co: "M3.5 12a8.5 8.5 0 1 0 17 0a8.5 8.5 0 1 0-17 0M10.5 10.3a2.2 2.2 0 1 0 0 3.4M14.8 9.8a2.2 2.2 0 1 0 .01 0",

@@ -13,7 +13,15 @@ from ..models import ALARM_KINDS
 CATEGORIES = ("light", "climate", "security")
 CATEGORY_OF_TYPE = {"light": "light", "plug": "light", "switch": "light", "blind": "light",
                     "thermostat": "climate", "sensor": "climate", "fan": "climate",
-                    "security": "security", "value": "climate"}
+                    "security": "security", "value": "climate", "alarm": "security"}
+
+# Motion sensors only raise an alert while an alarm system is armed (set by the controller)
+_alarm_armed = False
+
+
+def set_alarm_armed(armed: bool) -> None:
+    global _alarm_armed
+    _alarm_armed = armed
 
 
 def category(d: dict[str, Any]) -> str:
@@ -40,10 +48,17 @@ def battery_text(d: dict[str, Any]) -> str:
 
 
 def alert_level(d: dict[str, Any]) -> int:
-    """Security sensors: 2 = alarm (leak, glass break, smoke, CO), 1 = open / motion, 0 = quiet."""
-    if d["type"] != "security" or not d.get("reachable", True) or not d.get("state", {}).get("triggered"):
+    """Security sensors: 2 = alarm (leak, glass break, smoke, CO, alarm system triggered),
+    1 = open / motion (motion only while an alarm system is armed), 0 = quiet."""
+    if d["type"] not in ("security", "alarm") or not d.get("reachable", True) \
+            or not d.get("state", {}).get("triggered"):
         return 0
-    return 2 if d.get("meta", {}).get("security") in ALARM_KINDS else 1
+    if d["type"] == "alarm":
+        return 2
+    kind = d.get("meta", {}).get("security")
+    if kind == "motion" and not _alarm_armed:
+        return 0
+    return 2 if kind in ALARM_KINDS else 1
 
 
 def _open_for(since: float | None) -> str:
@@ -79,6 +94,22 @@ def security_text(d: dict[str, Any]) -> str:
     if kind == "co":
         return tr("CO detected") if hit else tr("No CO")
     return tr("Motion") if hit else tr("No motion")
+
+
+def alarm_mode_label(mode: str) -> str:
+    return {"stay": tr("Home"), "away": tr("Away"), "night": tr("Night"), "off": tr("Disarmed")}.get(mode, mode)
+
+
+def alarm_text(s: dict[str, Any]) -> str:
+    """"Armed – Away", "Disarmed", "Alarm triggered!" or "Switching to Night …" while it changes."""
+    if s.get("triggered"):
+        return tr("Alarm triggered!")
+    target, mode = s.get("target", "off"), s.get("mode", "off")
+    if target != mode:
+        return tr("Switching to {mode} …").format(mode=alarm_mode_label(target))
+    if mode == "off":
+        return tr("Disarmed")
+    return tr("Armed – {mode}").format(mode=alarm_mode_label(mode))
 
 
 def fmt_temp(v: Any) -> str:
@@ -145,6 +176,8 @@ def state_text(d: dict[str, Any]) -> str:
     s = d.get("state", {})
     if d["type"] == "value":
         return value_text(d)
+    if d["type"] == "alarm":
+        return alarm_text(s)
     if d.get("meta", {}).get("choice"):         # switch group: the switch that is on
         return s.get("active_name") or tr("Off")
     if d["type"] == "security":
@@ -189,7 +222,7 @@ def state_text(d: dict[str, Any]) -> str:
 
 def has_detail(d: dict[str, Any]) -> bool:
     caps = d.get("capabilities", [])
-    if d.get("meta", {}).get("choice"):
+    if d.get("meta", {}).get("choice") or d["type"] == "alarm":
         return True
     return d["type"] in ("thermostat", "sensor", "blind") or any(
         c in caps for c in ("brightness", "color", "color_temp", "speed"))
