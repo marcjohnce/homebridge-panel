@@ -41,6 +41,7 @@ SERVICE_TYPES: dict[str, str] = {
     "86": "OccupancySensor",
     "87": "SmokeSensor",
     "7E": "SecuritySystem",
+    "D0": "Valve",
     "7F": "CarbonMonoxideSensor",
     "96": "Battery",
     EVE_WEATHER_SERVICE: "EveWeather",
@@ -96,6 +97,10 @@ CHAR_TYPES: dict[str, str] = {
     "71": "OccupancyDetected",
     "76": "SmokeDetected",
     "66": "SecuritySystemCurrentState",
+    "D2": "InUse",
+    "D3": "SetDuration",
+    "D4": "RemainingDuration",
+    "D5": "ValveType",
     "67": "SecuritySystemTargetState",
     "69": "CarbonMonoxideDetected",
     "68": "BatteryLevel",
@@ -134,6 +139,7 @@ DEVICE_TYPE_BY_SERVICE: dict[str, DeviceType] = {
     "OccupancySensor": DeviceType.SECURITY,
     "SmokeSensor": DeviceType.SECURITY,
     "SecuritySystem": DeviceType.ALARM,
+    "Valve": DeviceType.VALVE,
     "CarbonMonoxideSensor": DeviceType.SECURITY,
     "Value": DeviceType.VALUE,          # virtual device from MQTT (app/backends/mqtt.py)
 }
@@ -147,6 +153,9 @@ SECURITY_SERVICES = {
     "SmokeSensor": ("SmokeDetected", 1, "smoke", ("smoke",)),
     "CarbonMonoxideSensor": ("CarbonMonoxideDetected", 1, "co", ("co",)),
 }
+
+# Valve.ValveType
+VALVE_TYPES = {0: "generic", 1: "irrigation", 2: "shower", 3: "faucet"}
 
 # SecuritySystem: current state 0–3 like the target state, 4 = alarm triggered
 ALARM_MODES = {0: "stay", 1: "away", 2: "night", 3: "off"}
@@ -245,6 +254,16 @@ def snapshot_to_state(s: ServiceSnapshot) -> tuple[DeviceType, dict[str, Any], l
             caps.append("tilt")
             meta.update(min_tilt=tilt.min if tilt.min is not None else -90,
                         max_tilt=tilt.max if tilt.max is not None else 90)
+    elif s.service_type == "Valve":
+        state["on"] = int(s.get("Active", 0) or 0) == 1
+        state["in_use"] = int(s.get("InUse", 0) or 0) == 1
+        caps.append("on")
+        if "SetDuration" in c:
+            state["duration"] = int(_num(s.get("SetDuration")) or 0)
+            caps.append("duration")
+        if "RemainingDuration" in c:
+            state["remaining"] = int(_num(s.get("RemainingDuration")) or 0)
+        meta.update(valve=VALVE_TYPES.get(int(s.get("ValveType", 0) or 0), "generic"), kinds=list(VALVE_TYPES.values()))
     elif s.service_type == "SecuritySystem":
         cur = int(s.get("SecuritySystemCurrentState", 3) or 0)
         target = ALARM_MODES.get(int(s.get("SecuritySystemTargetState", 3) or 0), "off")
@@ -427,6 +446,9 @@ def command_to_writes(s: ServiceSnapshot, attrs: dict[str, Any]) -> list[tuple[C
             name = "TargetTemperature" if s.service_type == "Thermostat" else "HeatingThresholdTemperature"
             ch = need(name)
             writes.append((ch, _clamp(value, ch, 10, 30)))
+        elif key == "duration":                  # valve: run time in seconds
+            ch = need("SetDuration")
+            writes.append((ch, int(_clamp(value, ch, 0, 3600))))
         elif key == "mode":
             mode = str(value)
             if s.service_type == "SecuritySystem":

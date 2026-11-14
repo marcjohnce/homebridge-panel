@@ -461,6 +461,28 @@ def test_security_system_from_hap():
         command_to_writes(snap, {"mode": "party"})
 
 
+def test_valve_from_hap():
+    data = {"accessories": [{"aid": 5, "services": [
+        {"iid": 10, "type": U("D0"), "characteristics": [
+            {"iid": 11, "type": U("B0"), "value": 1, "perms": ["pr", "pw"]},
+            {"iid": 12, "type": U("D2"), "value": 1, "perms": ["pr"]},
+            {"iid": 13, "type": U("D5"), "value": 2, "perms": ["pr"]},
+            {"iid": 14, "type": U("D3"), "value": 300, "perms": ["pr", "pw"], "minValue": 0, "maxValue": 3600},
+            {"iid": 15, "type": U("D4"), "value": 125, "perms": ["pr"]}]},
+    ]}]}
+    (snap,) = HapBackend.parse_accessories(data)
+    dtype, st, caps, meta = snapshot_to_state(snap)
+    assert dtype.value == "valve" and caps == ["on", "duration"] and meta["valve"] == "shower"
+    assert st == {"on": True, "in_use": True, "duration": 300, "remaining": 125}
+    assert [(ch.name, v) for ch, v in command_to_writes(snap, {"on": False, "duration": 900})] == \
+        [("Active", 0), ("SetDuration", 900)]
+    from app.qt.format import category, has_detail, state_text
+    d = {"type": "valve", "reachable": True, "state": st, "capabilities": caps, "meta": meta}
+    assert state_text(d) == "Running, 3 min left" and has_detail(d) and category(d) == "light"
+    assert category({**d, "meta": {"valve": "generic"}}) == "security"
+    assert state_text({**d, "state": {"on": False}}) == "Closed"
+
+
 def test_security_kind_override_and_icon():
     cfg = AppConfig.model_validate({"demo": {"enabled": True}, "devices": {
         "Bedroom Window": {"security": "window"}, "Washing Machine Leak": {"security": "window"}}})

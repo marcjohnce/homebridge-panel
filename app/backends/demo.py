@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import copy
 import random
+import time
 from typing import Any
 
 from ..hap_types import Char, ServiceSnapshot
@@ -51,6 +52,9 @@ _DEVICES = [
     ("washer-leak", "LeakSensor", "Washing Machine Leak", [("LeakDetected", 0, False, {}),     # battery almost empty
                                                              ("BatteryLevel", 4, False, {}), ("StatusLowBattery", 1, False, {})]),
     # without HoldPosition and tilt: stop sets the target to the current position
+    ("sprinkler", "Valve", "Garden Sprinkler",
+     [("Active", 0, True, {}), ("InUse", 0, False, {}), ("ValveType", 1, False, {}),
+      ("SetDuration", 600, True, dict(min=0, max=3600)), ("RemainingDuration", 0, False, {})]),
     ("alarm", "SecuritySystem", "Alarm System",
      [("SecuritySystemCurrentState", 3, False, {}), ("SecuritySystemTargetState", 3, True, dict(min=0, max=3))]),
     ("hall-smoke", "SmokeSensor", "Hall Smoke Detector", [("SmokeDetected", 0, False, {}),
@@ -78,6 +82,7 @@ class DemoBackend(Backend):
     def __init__(self, name: str = "demo"):
         super().__init__(name)
         self._services: dict[str, ServiceSnapshot] = {}
+        self._valve_started: float | None = None
         for key, stype, nm, chars in _DEVICES:
             self._services[key] = ServiceSnapshot(
                 key=key, service_type=stype, name=nm,
@@ -111,6 +116,13 @@ class DemoBackend(Backend):
         alarm = self._services["alarm"].chars        # the alarm system follows its target (unless triggered)
         if alarm["SecuritySystemCurrentState"].value != 4:
             alarm["SecuritySystemCurrentState"].value = alarm["SecuritySystemTargetState"].value
+        valve = self._services["sprinkler"].chars    # the sprinkler runs for its set duration
+        if valve["Active"].value and self._valve_started is not None:
+            left = valve["SetDuration"].value - int(time.monotonic() - self._valve_started)
+            valve["RemainingDuration"].value = max(0, left)
+            if left <= 0:
+                valve["Active"].value = valve["InUse"].value = 0
+                self._valve_started = None
         coffee = self._services["coffee"].chars
         coffee["OutletInUse"].value = bool(coffee["On"].value)
 
@@ -126,6 +138,10 @@ class DemoBackend(Backend):
                 chars["TargetPosition"].value = chars["CurrentPosition"].value
                 continue
             chars[cname].value = value
+            if key == "sprinkler" and cname == "Active":
+                chars["InUse"].value = 1 if value else 0
+                chars["RemainingDuration"].value = chars["SetDuration"].value if value else 0
+                self._valve_started = time.monotonic() if value else None
             if cname == "TargetPosition" and "PositionState" in chars:
                 cur = chars["CurrentPosition"].value
                 chars["PositionState"].value = 2 if value == cur else (1 if value > cur else 0)

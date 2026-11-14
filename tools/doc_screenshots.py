@@ -516,6 +516,20 @@ def main() -> int:
     save(annotate(p.grab(), [], "PIN to disarm"), out, "alarm-pin")
     p.close()
 
+    # Valve with run time
+    p = Panel(DETAIL_SIZE)
+    vid = p.device_id("Garden Sprinkler")
+    p.ctl.toggle(vid)
+    wait(600)
+    p.win.setProperty("openDevice", vid)
+    wait(400)
+    save(annotate(p.grab(), [
+        (1, [p.rect("valveState")], "State with the remaining time", "top"),
+        (2, [p.rect("valveDurations")], "Run time", "left"),
+        (3, [p.rect("valvePower")], "Open / close", "bottom"),
+    ], "Valve"), out, "valve")
+    p.close()
+
     # Batteries: red battery on the tile, list in the settings
     p = Panel(DETAIL_SIZE)
     p.ctl.selectCategory("security")

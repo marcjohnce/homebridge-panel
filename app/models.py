@@ -16,6 +16,7 @@ class DeviceType(str, Enum):
     BLIND = "blind"
     SECURITY = "security"     # contact (window, door, glass break), leak, motion, smoke and CO sensors
     VALUE = "value"           # virtual device: a value received over MQTT
+    VALVE = "valve"           # water valve: generic, irrigation, shower head, faucet
     ALARM = "alarm"           # alarm system (HomeKit SecuritySystem): armed / disarmed / triggered
 
 
@@ -33,6 +34,7 @@ DEFAULT_ICONS = {
     DeviceType.SECURITY: "contact",
     DeviceType.VALUE: "gauge",
     DeviceType.ALARM: "alarm",
+    DeviceType.VALVE: "valve",
 }
 
 # Kinds of security sensors. A contact sensor can be a window, a door, a plain contact
@@ -55,8 +57,11 @@ APPLIANCE_ICONS = {k: k for k in APPLIANCE_KINDS}
 # Lamp kinds of lights; only the icon changes (lamp: in config.yaml)
 LAMP_KINDS = ("bulb", "ceiling", "spot", "wall", "table")
 LAMP_ICONS = {"bulb": "light", "ceiling": "ceiling", "spot": "spot", "wall": "wall", "table": "table"}
-KIND_ICONS = {**SECURITY_ICONS, **APPLIANCE_ICONS, **LAMP_ICONS}
-KIND_KEYS = ("security", "appliance", "lamp")     # meta keys that hold a device's kind
+# Kinds of valves (HomeKit ValveType); generic valves (e.g. water shut-off) go under "Security"
+VALVE_KINDS = ("generic", "irrigation", "shower", "faucet")
+VALVE_ICONS = {"generic": "valve", "irrigation": "sprinkler", "shower": "shower", "faucet": "faucet"}
+KIND_ICONS = {**SECURITY_ICONS, **APPLIANCE_ICONS, **LAMP_ICONS, **VALVE_ICONS}
+KIND_KEYS = ("security", "appliance", "lamp", "valve")     # meta keys that hold a device's kind
 AREAS = ("light", "climate", "security")      # menu areas a device can be moved to     # triggered = alarm; the others are only "open" / "motion"
 
 

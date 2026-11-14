@@ -41,6 +41,7 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
   motion sensors only count while it is armed; single sensors can be kept out of the alerts
 - **Batteries**: a red battery on the tile when a device's battery is below 10 % or reported low;
   *Settings → Batteries* lists all battery devices
+- **Valves**: irrigation, shower, faucet and generic valves; open/close, remaining time, run time
 - **Switch groups**: several switches of a room of which only one is on (e.g. irrigation circuits); a tap
   switches to the next one
 - **Rooms** managed on the panel: add, rename, reorder and delete rooms, sort and move devices,
