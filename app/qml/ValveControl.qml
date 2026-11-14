@@ -43,16 +43,17 @@ ColumnLayout {
         color: Theme.muted
         font.pixelSize: Theme.s(15)
     }
-    Flow {
+    // a row of equally wide buttons: the bold selected one must not change widths or wrap
+    Row {
         objectName: "valveDurations"
         Layout.alignment: Qt.AlignHCenter
-        Layout.maximumWidth: root.width
         spacing: 10
         Repeater {
             model: root.durations
             PillButton {
                 required property int modelData
                 objectName: "duration:" + modelData
+                implicitWidth: Math.min(Theme.s(104), (root.width - 40) / root.durations.length)
                 text: qsTr("%1 min").arg(modelData)
                 primary: Math.round((root.st.duration || 0) / 60) === modelData
                 onClicked: panel.setAttrs(root.dev.id, { duration: modelData * 60 })
