@@ -111,6 +111,17 @@ section{padding:clamp(80px,10vw,140px) 0}
 .split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(32px,6vw,90px);align-items:end;margin-bottom:clamp(40px,5vw,64px)}
 @media (max-width:820px){.split{grid-template-columns:1fr;align-items:start}}
 
+
+/* on the wall mockup */
+.onwall{padding-top:0}
+.onwall figure{margin:0}
+.onwall .shot{border-radius:clamp(10px,1.4vw,18px);overflow:hidden;box-shadow:0 30px 80px -20px rgba(0,0,0,.6)}
+.onwall .shot img{width:100%}
+.onwall figcaption{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(24px,5vw,80px);margin-top:clamp(28px,3.5vw,44px);align-items:start}
+.onwall figcaption h2{margin:0}
+.onwall figcaption small{display:block;color:var(--muted);font-size:.92rem;margin-top:12px}
+@media (max-width:820px){.onwall figcaption{grid-template-columns:1fr}}
+
 /* controls */
 .controls{display:grid;grid-template-columns:repeat(12,1fr);gap:clamp(18px,2.4vw,30px)}
 .control figure{margin:0}
@@ -292,6 +303,20 @@ footer a{color:var(--ink)}
   </div>
 </section>
 
+<!-- ON THE WALL -->
+<section class="onwall" id="wall">
+  <div class="wrap">
+    <figure>
+      <div class="shot"><img src="assets/wall-hyperpixel-square.webp" srcset="assets/wall-hyperpixel-square-1200.webp 1200w, assets/wall-hyperpixel-square.webp 2400w" sizes="(max-width:1180px) 100vw, 1084px" width="2400" height="1500" loading="lazy" alt="A square 4-inch touchscreen showing the panel's home screen, mounted on a wall of light oak acoustic slats with black felt between them"></div>
+      <figcaption>
+        <h2 data-i18n="wall.title">At home on the wall.</h2>
+        <div><p class="lede" data-i18n="wall.lede">A Raspberry Pi behind a HyperPixel 4.0 Square: four inches, 720 × 720 pixels, small enough to sit on a single acoustic slat. The square layout keeps every room one tap away.</p>
+        <small data-i18n="wall.note">Illustration, drawn to scale.</small></div>
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
 <!-- CONTROLS -->
 <section id="controls">
   <div class="wrap">
@@ -358,7 +383,7 @@ footer a{color:var(--ink)}
       <div class="unit" style="--px:800"><div class="device"><div class="screen" style="--ar:800/480"><img src="assets/screens/dark-800x480-home-light.webp" width="800" height="480" loading="lazy" alt="Home screen at 800 by 480"></div></div><p class="label"><strong>800 × 480</strong><span>Raspberry Pi Touch Display</span></p></div>
       <div class="unit" style="--px:1024"><div class="device"><div class="screen" style="--ar:1024/600"><img src="assets/screens/dark-1024x600-home-light.webp" width="1024" height="600" loading="lazy" alt="Home screen at 1024 by 600"></div></div><p class="label"><strong>1024 × 600</strong><span data-i18n="sizes.7">7″ HDMI displays</span></p></div>
       <div class="unit" style="--px:1280"><div class="device"><div class="screen"><img src="assets/screens/dark-home-light.webp" width="1280" height="800" loading="lazy" alt="Home screen at 1280 by 800"></div></div><p class="label"><strong>1280 × 800</strong><span data-i18n="sizes.10">10.1″ panels – recommended</span></p></div>
-      <div class="unit" style="--px:720"><div class="device"><div class="screen" style="--ar:1"><img src="assets/screens/dark-720x720-home-light.webp" width="720" height="720" loading="lazy" alt="Home screen on a square 720 by 720 display"></div></div><p class="label"><strong>720 × 720</strong><span data-i18n="sizes.sq">Square – recommended</span></p></div>
+      <div class="unit" style="--px:720"><div class="device"><div class="screen" style="--ar:1"><img src="assets/screens/dark-720x720-home-light.webp" width="720" height="720" loading="lazy" alt="Home screen on a square 720 by 720 display"></div></div><p class="label"><strong>720 × 720</strong><span data-i18n="sizes.sq">Square, e.g. HyperPixel 4.0 – recommended</span></p></div>
       <div class="unit" style="--px:720"><div class="device"><div class="screen" style="--ar:720/1280"><img src="assets/screens/dark-720x1280-home-light.webp" width="720" height="1280" loading="lazy" alt="Home screen in portrait at 720 by 1280"></div></div><p class="label"><strong>720 × 1280</strong><span data-i18n="sizes.p">Portrait</span></p></div>
     </div>
     <p class="lineup-note" data-i18n="sizes.note">Drawn to pixel scale. 1280 × 720 (Touch Display 2) works as well.</p>
@@ -494,6 +519,7 @@ cd ~/homebridge-panel
     "note.light":"Alle Lampen, Steckdosen und Rollos auf einen Blick. Kachel antippen zum Schalten, Pfeil für Helligkeit und Farbe.",
     "note.climate":"Heizkörper, Thermostate, Lüfter und Luftqualität. Was gerade heizt, siehst du sofort.",
     "note.security":"Fenster, Türen, Wasser- und Glasbruchmelder. Offene Fenster und Alarme stehen immer oben.",
+    "wall.title":"Zu Hause an der Wand.","wall.lede":"Ein Raspberry Pi hinter einem HyperPixel 4.0 Square: vier Zoll, 720 × 720 Pixel, klein genug für eine einzelne Akustiklamelle. Das quadratische Layout hält jeden Raum einen Tipp entfernt.","wall.note":"Illustration, maßstabsgetreu.",
     "controls.title":"Für den Finger gemacht, nicht für die Maus.",
     "controls.lede":"Große Flächen, klare Zustände, keine verschachtelten Menüs. Jedes Gerät bekommt eine Bedienung, die sich anfühlt wie das Original.",
     "c.heat":"Heizung mit Drehregler","c.heat.p":"Ring ziehen oder − und + tippen. Aus, Heizen und Auto liegen einen Tipp auseinander, und das Panel zeigt, wann der Raum heizt.",
@@ -508,7 +534,7 @@ cd ~/homebridge-panel
     "dn.p3":"Szenen nach Zeitplan","dn.p3.p":"„Komfort“ werktags um 06:30, „Eco“ jeden Abend um 22:30 – oder was dein Zuhause braucht.",
     "sizes.title":"Eine App, jedes Display.",
     "sizes.lede":"Vom klassischen Raspberry Pi Touch Display über 10,1″-Panels bis zum quadratischen Wanddisplay. Das Layout passt sich an – Seitenleiste, Kopfleiste oder Hochformat.",
-    "sizes.7":"7″-HDMI-Displays","sizes.10":"10,1″-Panels – empfohlen","sizes.sq":"Quadratisch – empfohlen","sizes.p":"Hochformat",
+    "sizes.7":"7″-HDMI-Displays","sizes.10":"10,1″-Panels – empfohlen","sizes.sq":"Quadratisch, z. B. HyperPixel 4.0 – empfohlen","sizes.p":"Hochformat",
     "sizes.note":"Im Pixelmaßstab dargestellt. 1280 × 720 (Touch Display 2) funktioniert ebenfalls.",
     "lang.title":"Spricht deine Sprache.",
     "lang.lede":"Deutsch, Englisch, Französisch, Italienisch, Spanisch und Portugiesisch – in den Einstellungen umschalten, und das ganze Panel folgt, Datum inklusive.",
