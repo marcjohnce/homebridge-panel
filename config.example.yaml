@@ -63,6 +63,7 @@ devices:
   "Terrace Glass Break":       { room: Living Room, security: glassbreak }
   "Bedroom Window":            { room: Bedroom, security: window }
   "Washing Machine Leak":      { room: Bathroom }
+  "Hall Smoke Detector":       { room: Hall }
   # "homebridge:12.10":        { hidden: true }
 
 # --- Scenes (icon: moon, sun, film, leaf, home, power) -----------------------------

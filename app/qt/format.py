@@ -40,7 +40,7 @@ def battery_text(d: dict[str, Any]) -> str:
 
 
 def alert_level(d: dict[str, Any]) -> int:
-    """Security sensors: 2 = alarm (leak, glass break), 1 = open / motion, 0 = quiet."""
+    """Security sensors: 2 = alarm (leak, glass break, smoke, CO), 1 = open / motion, 0 = quiet."""
     if d["type"] != "security" or not d.get("reachable", True) or not d.get("state", {}).get("triggered"):
         return 0
     return 2 if d.get("meta", {}).get("security") in ALARM_KINDS else 1
@@ -74,6 +74,10 @@ def security_text(d: dict[str, Any]) -> str:
         return tr("Glass break detected") if hit else tr("No alarm")
     if kind == "leak":
         return tr("Water detected") if hit else tr("Dry")
+    if kind == "smoke":
+        return tr("Smoke detected") if hit else tr("No smoke")
+    if kind == "co":
+        return tr("CO detected") if hit else tr("No CO")
     return tr("Motion") if hit else tr("No motion")
 
 

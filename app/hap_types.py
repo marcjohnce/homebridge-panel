@@ -39,6 +39,8 @@ SERVICE_TYPES: dict[str, str] = {
     "83": "LeakSensor",
     "85": "MotionSensor",
     "86": "OccupancySensor",
+    "87": "SmokeSensor",
+    "7F": "CarbonMonoxideSensor",
     "96": "Battery",
     EVE_WEATHER_SERVICE: "EveWeather",
     EVE_AIR_PRESSURE_SERVICE: "AirPressureSensor",
@@ -91,6 +93,8 @@ CHAR_TYPES: dict[str, str] = {
     "70": "LeakDetected",
     "22": "MotionDetected",
     "71": "OccupancyDetected",
+    "76": "SmokeDetected",
+    "69": "CarbonMonoxideDetected",
     "68": "BatteryLevel",
     "79": "StatusLowBattery",
     EVE_AIR_PRESSURE: "AirPressure",
@@ -125,6 +129,8 @@ DEVICE_TYPE_BY_SERVICE: dict[str, DeviceType] = {
     "LeakSensor": DeviceType.SECURITY,
     "MotionSensor": DeviceType.SECURITY,
     "OccupancySensor": DeviceType.SECURITY,
+    "SmokeSensor": DeviceType.SECURITY,
+    "CarbonMonoxideSensor": DeviceType.SECURITY,
     "Value": DeviceType.VALUE,          # virtual device from MQTT (app/backends/mqtt.py)
 }
 
@@ -134,6 +140,8 @@ SECURITY_SERVICES = {
     "LeakSensor": ("LeakDetected", 1, "leak", ("leak",)),
     "MotionSensor": ("MotionDetected", True, "motion", ("motion", "glassbreak")),
     "OccupancySensor": ("OccupancyDetected", 1, "motion", ("motion", "glassbreak")),
+    "SmokeSensor": ("SmokeDetected", 1, "smoke", ("smoke",)),
+    "CarbonMonoxideSensor": ("CarbonMonoxideDetected", 1, "co", ("co",)),
 }
 
 # WindowCovering.PositionState; position 0 = closed, 100 = fully open

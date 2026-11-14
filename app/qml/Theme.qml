@@ -33,7 +33,7 @@ QtObject {
     readonly property color knob: pick("#FFFFFF", "#F2EFE9", "#F0F5FB")
     readonly property color ok: pick("#5E9C7B", "#6FB08C", "#6FB08C")
     readonly property color err: pick("#C4584B", "#D86A5C", "#D86A5C")
-    // security alarm tile (leak, glass break) with white text
+    // security alarm tile (leak, glass break, smoke, CO) with white text
     readonly property color alarm: pick("#B4473B", "#A9443A", "#A9443A")
     // big clock and texts of the screen saver
     readonly property color idleInk: pick(ink, "#BEB9B0", "#B3C0D3")

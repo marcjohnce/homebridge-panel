@@ -118,7 +118,7 @@ ApplicationWindow {
         function onToast(message) {
             toast.show(message);
         }
-        // leak or glass break: wake up, show "Security" and the message
+        // leak, glass break, smoke or CO: wake up, show "Security" and the message
         function onSecurityAlarm(message) {
             window.idle = false;
             window.openDevice = "";
