@@ -109,11 +109,14 @@ def test_controller_demo_model_and_commands(qapp, tmp_path):
     ctl.selectRoom("")
     assert model.rowCount() == 8 and ctl.category == "light"      # lights, plugs, blinds
     ctl.selectCategory("climate")
+    ctl.selectRoom("")                     # all rooms
     assert model.rowCount() == 6 and "Kitchen" not in ctl.rooms
     ctl.selectCategory("security")
+    ctl.selectRoom("")                     # all rooms
     assert model.rowCount() == 4 and ctl.securityCount == 1       # the bedroom window is open
     assert ctl.devices.get(model._rows[0])["name"] == "Bedroom Window"     # alerts first
     ctl.selectCategory("")
+    ctl.selectRoom("")                     # all rooms
     assert model.rowCount() == 18
 
     errors = []
@@ -401,6 +404,7 @@ def test_hidden_device_only_in_settings(qapp, tmp_path):
     fan = next(d for d in ed.devices if d["name"] == "Fan")
     assert ed.addRoom("Attic") == "" and ed.saveDevice(fan["id"], {"name": "", "kind": "", "room": "Attic", "hidden": False}) == ""
     ctl.selectCategory("climate")
+    ctl.selectRoom("")                     # all rooms
     rows = ctl.devices.rowCount()
     assert "Attic" in ctl.rooms
     assert ed.saveDevice(fan["id"], {"name": "", "kind": "", "room": "Attic", "hidden": True}) == ""
@@ -447,12 +451,14 @@ def test_appliance_kind_and_menu_area(qapp, tmp_path):
     assert d["icon"] == "washer" and d["stateText"] == "Running"
 
     ctl.selectCategory("climate")
+    ctl.selectRoom("")                     # all rooms
     climate = ctl.devices.rowCount()
     assert ed.saveDevice(washer["id"], {"kind": "fan"}) == ""          # a switched fan belongs to Climate
     assert ctl.devices.rowCount() == climate + 1 and ctl.device(washer["id"])["icon"] == "fan"
     assert ed.saveDevice(washer["id"], {"area": "security"}) == ""     # moved by hand
     assert ctl.devices.rowCount() == climate
     ctl.selectCategory("security")
+    ctl.selectRoom("")                     # all rooms
     assert washer["id"] in ctl.devices._rows
     assert ed.saveDevice(washer["id"], {"area": "", "kind": "plug"}) == ""
     assert washer["id"] not in ed._layout.kinds and washer["id"] not in ed._layout.areas
@@ -505,6 +511,7 @@ def test_manual_device_order_per_room(qapp, tmp_path):
     ed.moveDevice(last["id"], -99)
     assert room()[0] == before[-1]
     ctl.selectCategory("light")
+    ctl.selectRoom("")                     # all rooms
     ctl.selectRoom("General")
     model = ctl.devices
     first = model.data(model.index(0), list(model.roleNames())[model.ROLES.index("name")])
@@ -526,6 +533,7 @@ def test_light_group(qapp, tmp_path):
     group = next(d for d in ctl.devices.all() if d.get("meta", {}).get("group"))
     assert group["state"]["count"] == 2 and all(ctl.device(i)["grouped"] for i in ids)
     ctl.selectCategory("light")
+    ctl.selectRoom("")                     # all rooms
     assert group["id"] in ctl.devices._rows and not set(ids) & set(ctl.devices._rows)
 
     ctl.toggle(group["id"])                                             # on if any was off …
@@ -561,6 +569,7 @@ def test_virtual_device_over_mqtt(qapp, tmp_path):
     assert d["room"] == "Kitchen" and d["icon"] == "none" and d["type"] == "value"
     assert "Received" in ed.lastValue(dev_id)
     ctl.selectCategory("climate")
+    ctl.selectRoom("")                     # all rooms
     assert dev_id in ctl.devices._rows
     ctl.shutdown()
 
@@ -589,4 +598,16 @@ def test_light_group_color_and_white_tone(qapp, tmp_path):
     ctl.setAttrs(white["id"], {"on": True, "color_temp": 250})
     assert pump_until(lambda: ctl.device(kitchen)["state"]["color_temp"] == 250)
     assert pump_until(lambda: group("White")["state"]["color_temp"] == 250)
+    ctl.shutdown()
+
+
+def test_menu_switch_selects_first_room(qapp, tmp_path):
+    ctl = make_controller(tmp_path)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 18)
+    assert ctl.currentRoom == ctl.rooms[0]                  # at start
+    ctl.selectRoom("")
+    assert ctl.currentRoom == ""
+    ctl.selectCategory("security")
+    assert ctl.currentRoom == ctl.rooms[0] != ""            # not "All"
     ctl.shutdown()

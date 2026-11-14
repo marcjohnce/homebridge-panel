@@ -45,7 +45,7 @@ Start the app at a given size in a window with `.venv/bin/python -m app --size 8
 | 3 | Menu | Chooses what the tiles show: [Lights](#menu), [Climate](#menu), [Scenes](#scenes), [Security](#security). Each entry shows a short status, e.g. *2 on*, *1 heating* or *1 alert* in red. The top bar shows the menu as icons with a red count on *Security* |
 | 4 | Connection status | Green: all bridges connected. Red: a bridge is not reachable (details under Settings → Info) |
 | 5 | Settings | Opens the [settings page](#settings) |
-| 6 | Rooms | Filter the tiles by room. Only rooms with devices of the chosen menu entry appear; *All* comes last and shows every device with its room above the name |
+| 6 | Rooms | Filter the tiles by room. Only rooms with devices of the chosen menu entry appear. Choosing a menu entry selects the first room; *All* comes last and shows every device with its room above the name |
 | 7 | Device that is on | Gold tiles are switched on. Tap a tile to switch it on or off (blinds: open or close) |
 | 8 | Open controls | Opens brightness, color or speed controls. A long press on the tile does the same |
 

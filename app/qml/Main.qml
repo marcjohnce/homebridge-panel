@@ -124,6 +124,7 @@ ApplicationWindow {
             window.openDevice = "";
             window.settingsOpen = false;
             panel.selectCategory("security");
+            panel.selectRoom("");               // the alarm may be in any room
             toast.show(message);
         }
         function onRestarting(message) {

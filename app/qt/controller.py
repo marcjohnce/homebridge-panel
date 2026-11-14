@@ -82,6 +82,7 @@ class DeviceModel(QAbstractListModel):
         self._all: dict[str, dict[str, Any]] = {}
         self._rows: list[str] = []
         self._room = ALL_ROOMS
+        self._room_auto = True        # follow the first room until one is chosen
         self._category = "light"     # "" = every device (tests, tools)
         self._ids = {Qt.ItemDataRole.UserRole + 1 + i: n for i, n in enumerate(self.ROLES)}
 
@@ -616,6 +617,7 @@ class Controller(QObject):
         self._room_editor = RoomsBridge(store, self)
         self._rooms: list[str] = []
         self._room = ALL_ROOMS
+        self._room_auto = True        # follow the first room until one is chosen
         self._category = "light"
         self._scenes = [{**s.model_dump(include={"id", "name", "icon", "room"}), "count": len(s.actions)}
                         for s in base_cfg.scenes]
@@ -856,10 +858,15 @@ class Controller(QObject):
 
     def _refresh_rooms(self) -> None:
         rooms = self._tab_rooms()
-        if self._room != ALL_ROOMS and self._room not in rooms:
-            self._room = ALL_ROOMS
-            self._model.set_room(ALL_ROOMS)
-            self.currentRoomChanged.emit()
+        # after switching the menu entry (or at start) the first room is selected; "All" only
+        # when chosen or when there are no rooms
+        if self._room_auto or (self._room != ALL_ROOMS and self._room not in rooms):
+            target = rooms[0] if rooms else ALL_ROOMS
+            if target != self._room:
+                self._room = target
+                self._model.set_room(target)
+                self.currentRoomChanged.emit()
+                self.scenesChanged.emit()
         if rooms != self._rooms:
             self._rooms = rooms
             self.roomsChanged.emit()
@@ -937,6 +944,7 @@ class Controller(QObject):
         if cat == self._category:
             return
         self._category = cat
+        self._room_auto = True
         self._model.set_category(cat, self._room)
         self.categoryChanged.emit()
         self._refresh_rooms()
@@ -944,6 +952,7 @@ class Controller(QObject):
 
     @Slot(str)
     def selectRoom(self, room: str) -> None:
+        self._room_auto = False
         if room != self._room:
             self._room = room
             self._model.set_room(room)

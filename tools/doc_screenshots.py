@@ -85,6 +85,7 @@ class Panel:
         self.win = Shiboken.wrapInstance(Shiboken.getCppPointer(self.engine.rootObjects()[0])[0], QQuickWindow)
         self.ctl.start()
         wait(1500)
+        self.ctl.selectRoom("")     # "All", so the screenshots show every kind of tile
 
     def device_id(self, name: str) -> str:
         return next(d["id"] for d in self.ctl.devices.all() if d["name"] == name)
@@ -244,18 +245,21 @@ def menu_views(p: Panel, out: Path, size: str, suffix: str = "") -> None:
     """Climate, scenes and security as chosen in the menu."""
     p.win.setProperty("openDevice", "")
     p.ctl.selectCategory("climate")
+    p.ctl.selectRoom("")
     save(annotate(p.grab(), [
         (1, [p.rect("category:climate")], "Climate", "left" if not suffix else "top"),
         (2, [p.rect(f"tile:{p.device_id('Living Room Heating')}")], "Heating tile"),
         (3, [p.rect(f"tile:{p.device_id('Weather Station')}")], "Sensor tile"),
     ], f"Climate – {size}"), out, f"home-climate{suffix}")
     p.ctl.selectCategory("scenes")
+    p.ctl.selectRoom("")
     save(annotate(p.grab(), [
         (1, [p.rect("category:scenes")], "Scenes", "left" if not suffix else "top"),
         (2, [p.rect("scene:movie")], "Scene of a room (tap to run)"),
         (3, [p.rect("scene:all-off")], "Scene for the whole house"),
     ], f"Scenes – {size}"), out, f"home-scenes{suffix}")
     p.ctl.selectCategory("security")
+    p.ctl.selectRoom("")
     save(annotate(p.grab(), [
         (1, [p.rect("category:security")], "Security with number of alerts", "left" if not suffix else "top"),
         (2, [p.rect(f"tile:{p.device_id('Bedroom Window')}")], "Open window (shown first)"),
@@ -270,6 +274,7 @@ def menu_views(p: Panel, out: Path, size: str, suffix: str = "") -> None:
     ], f"Alarm – {size}"), out, f"home-alarm{suffix}")
     p.ctl._on_message({"type": "device", "device": {**d, "state": {"triggered": False}}})
     p.ctl.selectCategory("light")
+    p.ctl.selectRoom("")
 
 
 def detail_views(p: Panel, out: Path, suffix: str, size: str) -> None:
