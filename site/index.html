@@ -327,6 +327,7 @@ footer a{color:var(--ink)}
         <li data-i18n="hero.f4">Open source</li>
         <li data-i18n="hero.f2">Raspberry Pi 4 and 5</li>
         <li data-i18n="hero.f3">Six languages</li>
+        <li data-i18n="hero.f5">Works with Homebridge 1.x and 2.x</li>
       </ul>
     </div>
     <div class="hero-stage">
@@ -567,7 +568,7 @@ cd ~/homebridge-panel
           <li data-i18n="req.1">Raspberry Pi 4 or 5<small>Pi 3 works, too</small></li>
           <li data-i18n="req.2">Raspberry Pi OS Bookworm or Trixie, 64-bit</li>
           <li data-i18n="req.3">A touchscreen<small>800 × 480 up to 1280 × 800, square or portrait</small></li>
-          <li data-i18n="req.4">Homebridge in insecure mode</li>
+          <li data-i18n="req.4">Homebridge 1.x or 2.x in insecure mode</li>
           <li data-i18n="req.5">Optional: an MQTT broker<small>e.g. Mosquitto, for virtual devices</small></li>
         </ul>
       </aside>
@@ -634,7 +635,7 @@ cd ~/homebridge-panel
     "hero.title":"Dein Homebridge. An der Wand.",
     "hero.lede":"Ein ruhiges Touch-Panel für den Raspberry Pi. Licht, Heizung, Rollos, Sensoren und Alarme – einen Fingertipp entfernt, genau dort, wo du sie brauchst.",
     "hero.cta":"Auf dem Pi installieren","hero.cta2":"Quellcode ansehen",
-    "hero.f1":"Läuft lokal, ohne Cloud","hero.f2":"Raspberry Pi 4 und 5","hero.f3":"Sechs Sprachen","hero.f4":"Open Source",
+    "hero.f1":"Läuft lokal, ohne Cloud","hero.f2":"Raspberry Pi 4 und 5","hero.f3":"Sechs Sprachen","hero.f4":"Open Source","hero.f5":"Läuft mit Homebridge 1.x und 2.x",
     "tab.light":"Licht","tab.climate":"Klima","tab.security":"Sicherheit",
     "note.light":"Alle Lampen, Steckdosen und Rollos auf einen Blick. Kachel antippen zum Schalten, Pfeil für Helligkeit und Farbe.",
     "note.climate":"Heizkörper, Thermostate, Lüfter und Luftqualität. Was gerade heizt, siehst du sofort.",
@@ -694,7 +695,7 @@ cd ~/homebridge-panel
     "s3":"Verbinden","s3.p":"Einstellungen antippen, Adresse, Port und PIN eingeben, „Verbindung testen“ und dann „Übernehmen“ tippen. Kein Neustart nötig.",
     "copy":"Kopieren","copied":"Kopiert",
     "req.title":"Das brauchst du","req.1":"Raspberry Pi 4 oder 5<small>Pi 3 geht auch</small>","req.2":"Raspberry Pi OS Bookworm oder Trixie, 64 Bit",
-    "req.3":"Ein Touchscreen<small>800 × 480 bis 1280 × 800, quadratisch oder hochkant</small>","req.4":"Homebridge im Insecure Mode","req.5":"Optional: ein MQTT-Broker<small>z. B. Mosquitto, für virtuelle Geräte</small>",
+    "req.3":"Ein Touchscreen<small>800 × 480 bis 1280 × 800, quadratisch oder hochkant</small>","req.4":"Homebridge 1.x oder 2.x im Insecure Mode","req.5":"Optional: ein MQTT-Broker<small>z. B. Mosquitto, für virtuelle Geräte</small>",
     "faq.title":"Fragen und Antworten.",
     "q1":"Warum braucht Homebridge den Insecure Mode?","a1":"Das Panel liest und steuert Geräte über die HAP-Schnittstelle von Homebridge, und die setzt den Insecure Mode voraus. Bedenke: Dann kann jeder in deinem Heimnetz, der die PIN kennt, auf Homebridge zugreifen – nutze es nur in einem Netz, dem du vertraust.",
     "q2":"Funktionieren HomeKit-Geräte ohne Homebridge?","a2":"Nicht direkt. Native HomeKit-Geräte wie Eve brauchen ein verschlüsseltes Pairing, das das Panel nicht enthält. Binde sie per Plugin in Homebridge ein, dann erscheinen sie auf dem Panel.",

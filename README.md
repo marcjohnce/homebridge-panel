@@ -4,6 +4,8 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 **Homebridge** using the **HomeKit Accessory Protocol (HAP)**. The UI is built with Qt Quick
 (QML), the logic in Python with **PySide6**.
 
+**Works with Homebridge 1.x and 2.x.**
+
 ![Home screen at 1280 × 800](docs/images/home-1280x800.png)
 
 **[Project page →](https://marcjohnce.github.io/homebridge-panel/)** · **[User interface guide with annotated screenshots for all screen sizes →](docs/user-interface.md)**
@@ -58,7 +60,7 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 ## Requirements
 
 - Raspberry Pi 4/5 (Pi 3 possible) with Raspberry Pi OS **Bookworm** or **Trixie**, 64-bit
-- Homebridge **in insecure mode**: Homebridge UI → Settings → *Homebridge Insecure Mode*
+- Homebridge **1.x or 2.x** (tested with 1.11 and 2.5) **in insecure mode**: Homebridge UI → Settings → *Homebridge Insecure Mode*
   (same as `-I`), then restart Homebridge. Port and PIN are in Homebridge's `config.json`
   under `bridge`.
 
