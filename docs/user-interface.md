@@ -97,7 +97,8 @@ yet). *Climate* and *All* have no dots.
 
 *Favorites* collects the devices you use most on one page – lights, heating, the door lock, whatever
 you like, from every room. It has no room tabs; each tile shows its room above the name. Mark a
-device with *Favorite* in Settings → Rooms and devices → Devices. The favorites are listed there at
+device with *Favorite* in Settings → Rooms and devices → Devices; light groups, switch groups
+and virtual devices have the same switch in their dialogs. The favorites are listed there at
 the top, where the arrows set their order.
 
 ![Favorites](images/home-favorites.png)

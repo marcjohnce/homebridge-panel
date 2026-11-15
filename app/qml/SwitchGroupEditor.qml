@@ -14,6 +14,7 @@ Popup {
     property var draftMembers: []
     property bool draftHide: true
     property bool draftAllowOff: true
+    property bool draftFavorite
     property string draftArea
     property string error
 
@@ -39,6 +40,7 @@ Popup {
         draftHide = g ? g.hide !== false : true;
         draftAllowOff = g ? g.allow_off !== false : true;
         draftArea = g ? (g.area || "") : "";
+        draftFavorite = d ? !!d.favorite : false;
         error = "";
         open();
     }
@@ -70,7 +72,8 @@ Popup {
     function save() {
         const err = panel.roomEditor.saveSwitchGroup({
             id: device ? device.switchGroup.id : "", name: draftName, room: draftRoom,
-            members: draftMembers, hide: draftHide, allowOff: draftAllowOff, area: draftArea
+            members: draftMembers, hide: draftHide, allowOff: draftAllowOff, area: draftArea,
+            favorite: draftFavorite
         });
         if (err !== "")
             error = err;
@@ -309,6 +312,14 @@ Popup {
                     checked: root.draftHide
                     toggleName: "switchGroupHide"
                     onToggled: root.draftHide = !root.draftHide
+                }
+                ToggleRow {
+                    width: parent.width
+                    label: qsTr("Favorite")
+                    help: qsTr("Shown under Favorites, the start page of the panel")
+                    checked: root.draftFavorite
+                    toggleName: "switchGroupFavorite"
+                    onToggled: root.draftFavorite = !root.draftFavorite
                 }
 
                 Text {
