@@ -51,8 +51,8 @@ def _emit_safely(signal: Any, *args: Any) -> None:
 
 
 def _is_on_light(d: dict[str, Any]) -> bool:
-    """A light, switch or plug of the Lights menu that is on (blinds do not count)."""
-    return (category(d) == "light" and d["type"] != "blind" and d["reachable"]
+    """A light, switch or plug of the Lights menu that is on (blinds, TVs and speakers do not count)."""
+    return (category(d) == "light" and d["type"] in ("light", "switch", "plug") and d["reachable"]
             and bool(d.get("state", {}).get("on")))
 
 class AsyncRunner:
@@ -174,7 +174,8 @@ class DeviceModel(QAbstractListModel):
             out.update(baseKind=base_kind, baseIcon=base_icon, icon=icon, meta={**meta, key: kind})
         # security alerts off: set on the panel, by default for presence sensors
         kind = out["meta"].get("security")
-        out["quiet"] = d["type"] in ("security", "garage") and self.layout.quiet.get(d["id"], kind in QUIET_KINDS)
+        alerts = d["type"] in ("security", "garage") or bool(d.get("meta", {}).get("opening"))
+        out["quiet"] = alerts and self.layout.quiet.get(d["id"], kind in QUIET_KINDS)
         return out
 
     def reassign(self) -> None:
@@ -405,7 +406,7 @@ class RoomsBridge(QObject):
                         "canOutdoor": d["type"] == "sensor" and d.get("state", {}).get("current_temp") is not None,
                         "outdoor": bool(d.get("meta", {}).get("outdoor")),
                         # security sensors (not leak, smoke, CO, glass break) can be kept out of alerts
-                        "canQuiet": d["type"] in ("security", "garage"),
+                        "canQuiet": d["type"] in ("security", "garage") or bool(d.get("meta", {}).get("opening")),
                         "quiet": bool(d.get("quiet")),
                         "kinds": [{"value": k, "label": tr(self.KIND_LABELS[k]), "icon": KIND_ICONS[k]}
                                   for k in kinds] if len(kinds) > 1 else []})
@@ -572,7 +573,7 @@ class RoomsBridge(QObject):
             self._layout.set_kind(dev_id, kind, d.get("baseKind", kind))
         self._layout.set_room(dev_id, room, d["baseRoom"], m.device_rooms())
         self._layout.set_hidden(dev_id, hidden)
-        if d["type"] == "garage":
+        if d["type"] == "garage" or meta.get("opening"):
             self._layout.set_quiet(dev_id, quiet)
         if d["type"] == "security":
             new_kind = kind if kind in meta.get("kinds", []) else meta.get("security", "")
@@ -654,6 +655,7 @@ class Controller(QObject):
     categoryChanged = Signal()
     summaryChanged = Signal()
     alarmPinChanged = Signal()
+    detailRequested = Signal(str)     # show the detail view of a device (e.g. a motorized window)
     garageRequested = Signal(str)     # a garage door tile was tapped: ask before opening/closing
     securityAlarm = Signal(str)       # new leak / glass break / smoke / CO alarm: wake up and show "Security"
     scenesChanged = Signal()
@@ -1009,6 +1011,9 @@ class Controller(QObject):
             return
         if d["type"] == "garage":                   # never directly: the panel asks first
             self.garageRequested.emit(dev_id)
+            return
+        if d.get("meta", {}).get("opening"):        # motorized window / door: open the controls
+            self.detailRequested.emit(dev_id)
             return
         self.setAttrs(dev_id, {"on": not d["state"].get("on")})
 

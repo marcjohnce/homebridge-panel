@@ -68,6 +68,10 @@ devices:
   "Garden Sprinkler":          { room: Garden }
   "Garage Door":               { room: Garage }
   "Living Room TV":            { room: Living Room }
+  "Skylight":                  { room: Bedroom }
+  "Kitchen Speaker":           { room: Kitchen }
+  "Bedroom Air Purifier":      { room: Bedroom }
+  "Bedroom Humidifier":        { room: Bedroom }
   # "homebridge:12.10":        { hidden: true }
 
 # --- Scenes (icon: moon, sun, film, leaf, home, power) -----------------------------

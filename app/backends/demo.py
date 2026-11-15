@@ -52,6 +52,20 @@ _DEVICES = [
     ("washer-leak", "LeakSensor", "Washing Machine Leak", [("LeakDetected", 0, False, {}),     # battery almost empty
                                                              ("BatteryLevel", 4, False, {}), ("StatusLowBattery", 1, False, {})]),
     # without HoldPosition and tilt: stop sets the target to the current position
+    ("skylight", "Window", "Skylight",
+     [("CurrentPosition", 0, False, {}), ("TargetPosition", 0, True, dict(min=0, max=100)),
+      ("PositionState", 2, False, {}), ("ObstructionDetected", False, False, {})]),
+    ("speaker", "SmartSpeaker", "Kitchen Speaker",
+     [("CurrentMediaState", 1, False, {}), ("TargetMediaState", 1, True, {}), ("Volume", 35, True, dict(min=0, max=100)),
+      ("Mute", False, True, {})]),
+    ("purifier", "AirPurifier", "Bedroom Air Purifier",
+     [("Active", 1, True, {}), ("CurrentAirPurifierState", 2, False, {}), ("TargetAirPurifierState", 1, True, {}),
+      ("RotationSpeed", 40, True, dict(min=0, max=100))]),
+    ("humidifier", "HumidifierDehumidifier", "Bedroom Humidifier",
+     [("Active", 1, True, {}), ("CurrentHumidifierDehumidifierState", 2, False, {}),
+      ("TargetHumidifierDehumidifierState", 1, True, dict(min=0, max=2)), ("CurrentRelativeHumidity", 38, False, {}),
+      ("RelativeHumidityHumidifierThreshold", 45, True, dict(min=0, max=100)),
+      ("RelativeHumidityDehumidifierThreshold", 60, True, dict(min=0, max=100)), ("WaterLevel", 70, False, {})]),
     ("television", "Television", "Living Room TV",
      [("Active", 0, True, {}), ("ActiveIdentifier", 1, True, {}), ("RemoteKey", None, True, {}),
       ("Mute", False, True, {}), ("VolumeSelector", None, True, {})]),
@@ -119,7 +133,7 @@ class DemoBackend(Backend):
                 step, lo, hi, digits = _SENSOR_DRIFT[name]
                 ch.value = round(max(lo, min(hi, ch.value + random.uniform(-step, step))), digits)
         for s in self._services.values():
-            if s.service_type != "WindowCovering":
+            if s.service_type not in ("WindowCovering", "Window"):
                 continue
             cur, tgt = s.chars["CurrentPosition"], s.chars["TargetPosition"].value
             diff = tgt - cur.value
@@ -130,6 +144,15 @@ class DemoBackend(Backend):
         alarm = self._services["alarm"].chars        # the alarm system follows its target (unless triggered)
         if alarm["SecuritySystemCurrentState"].value != 4:
             alarm["SecuritySystemCurrentState"].value = alarm["SecuritySystemTargetState"].value
+        spk = self._services["speaker"].chars          # the speaker follows play / pause / stop
+        spk["CurrentMediaState"].value = spk["TargetMediaState"].value
+        pur = self._services["purifier"].chars
+        pur["CurrentAirPurifierState"].value = 2 if pur["Active"].value else 0
+        hum = self._services["humidifier"].chars
+        mode, now = hum["TargetHumidifierDehumidifierState"].value, hum["CurrentRelativeHumidity"].value
+        low, high = hum["RelativeHumidityHumidifierThreshold"].value, hum["RelativeHumidityDehumidifierThreshold"].value
+        hum["CurrentHumidifierDehumidifierState"].value = (
+            0 if not hum["Active"].value else 2 if mode in (0, 1) and now < low else 3 if mode in (0, 2) and now > high else 1)
         door = self._services["garage"].chars        # the garage door moves within one poll
         cur, tgt = door["CurrentDoorState"], door["TargetDoorState"].value
         if tgt == 0 and cur.value != 0:

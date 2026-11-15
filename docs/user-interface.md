@@ -84,8 +84,8 @@ Tiles leave out the room from the device name when the room is shown anyway
 | Menu entry | Shows |
 |---|---|
 | Lights | lights, switches, plugs and blinds |
-| Climate | heating, temperature, humidity, air pressure and light sensors, fans |
-| Security | alarm system, garage doors, window, door, glass break, leak, motion, presence, smoke and CO sensors – alarms and open windows first |
+| Climate | heating, temperature, humidity, air pressure and light sensors, fans, air purifiers, humidifiers |
+| Security | alarm system, garage doors, motorized windows and doors, window, door, glass break, leak, motion, presence, smoke and CO sensors – alarms and open windows first |
 
 A dot before a room tab shows where something is going on: under *Lights* a dot in the accent
 colour marks rooms with at least one light, switch or plug on (blinds don't count); under
@@ -130,6 +130,10 @@ A window, door, contact or motion sensor that is only used for automations can b
 of the alerts: switch off *Security alerts* in [Settings → Rooms and devices](#rooms-and-devices).
 It is still shown under *Security*, but raises no alert, gets no red dot and is marked
 *No alerts* in the device list. Leak, smoke, CO and glass break sensors always alert.
+
+**Motorized windows and doors** (HomeKit window and door, e.g. skylights) appear under *Security*:
+an open one counts as an alert like an open window (can be switched off with *Security alerts*). A
+tap opens their controls – position, open, stop, close – instead of moving them directly.
 
 A **garage door** (HomeKit garage door opener) shows *Closed*, *Open for 12 min*, *Opening …*,
 *Closing …*, *Stopped* or *Obstructed*. An open door counts as an alert like an open window (can
@@ -201,6 +205,29 @@ play/pause) and the volume (louder, mute, quieter) – only what the TV offers. 
 under *Lights* with the switches; *Show under* changes that.
 
 ![Television](images/television.png)
+
+## Speakers
+
+A **speaker** or **smart speaker** (HomeKit speaker, e.g. AirPlay or Sonos plugins) appears under
+*Lights* with the switches. A tap starts or pauses playback (smart speakers) or mutes and unmutes a
+plain speaker; the tile shows *Playing, 40%*, *Paused* or *Muted*. The arrow opens the volume bar,
+play/pause and stop (smart speakers) and mute. The speaker of a television stays part of the
+television.
+
+![Speaker](images/speaker.png)
+
+## Air purifiers and humidifiers
+
+**Air purifiers** appear under *Climate*: a tap switches them on and off, the tile shows *Purifying,
+auto* or *Purifying, 70%*. The arrow opens the speed bar (setting it switches to manual) and
+*Automatic* / *Manual*.
+
+**Humidifiers and dehumidifiers** appear under *Climate* as well: the tile shows *Humidifying, now
+38%*. The arrow opens the current humidity, the mode (*Automatic*, *Humidify*, *Dehumidify* – those
+the device offers), the target humidity with −/+ (*Humidify up to*, *Dehumidify down to*; both in
+automatic mode) and the water level, in red below 10%.
+
+![Humidifier](images/humidifier.png)
 
 ## Valves
 

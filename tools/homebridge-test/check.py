@@ -23,7 +23,9 @@ TYPES = {"Color Light": "light", "White Light": "light", "Plug": "plug", "Switch
          "Thermostat": "thermostat", "Blinds": "blind", "Window": "security", "Leak": "security",
          "Motion": "security", "Presence": "security", "Smoke": "security", "CO": "security",
          "Weather": "sensor", "Air": "sensor", "Light Level": "sensor", "Alarm": "alarm",
-         "Sprinkler": "valve", "Garage": "garage", "Television": "tv"}
+         "Sprinkler": "valve", "Garage": "garage", "Television": "tv", "Skylight": "blind",
+         "Motor Door": "blind", "Speaker": "speaker", "Smart Speaker": "speaker", "Purifier": "purifier",
+         "Humidifier": "humidifier"}
 COMMANDS = [("Color Light", {"on": False}, "on", False), ("Color Light", {"brightness": 25}, "brightness", 25),
             ("Color Light", {"hue": 200, "saturation": 50}, "hue", 200),
             ("White Light", {"color_temp": 400}, "color_temp", 400), ("Plug", {"on": False}, "on", False),
@@ -35,7 +37,13 @@ COMMANDS = [("Color Light", {"on": False}, "on", False), ("Color Light", {"brigh
             ("Garage", {"on": True}, "door", "open"), ("Garage", {"on": False}, "door", "closed"),
             ("Television", {"on": True}, "on", True), ("Television", {"input": 3}, "input_name", "Netflix"),
             ("Television", {"mute": True}, "mute", True), ("Television", {"volume_step": 1}, "mute", True),
-            ("Television", {"remote": "select"}, "on", True)]
+            ("Television", {"remote": "select"}, "on", True),
+            ("Skylight", {"position": 40}, "position", 40), ("Motor Door", {"on": True}, "position", 100),
+            ("Speaker", {"volume": 70}, "volume", 70), ("Speaker", {"on": False}, "mute", True),
+            ("Smart Speaker", {"on": True}, "media", "playing"), ("Smart Speaker", {"media": "stop"}, "media", "stopped"),
+            ("Purifier", {"on": True}, "purifying", True), ("Purifier", {"auto": False, "speed": 70}, "speed", 70),
+            ("Humidifier", {"mode": "dehumidify"}, "mode", "dehumidify"),
+            ("Humidifier", {"dehumidify_target": 55}, "dehumidify_target", 55)]
 
 
 async def run(cfg: AppConfig) -> int:

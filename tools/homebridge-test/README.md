@@ -3,8 +3,8 @@
 A small Homebridge plugin (`plugin/homebridge-panel-test`) with one accessory per device type the
 panel supports: lights (color, white tone), plug, switch, fan, thermostat with battery, blinds,
 window with battery, leak, motion, occupancy, smoke and CO sensors, weather and air quality
-sensors, light sensor, alarm system, valve, garage door and a television with input sources and
-speaker. `check.py` runs the panel's device
+sensors, light sensor, alarm system, valve, garage door, a television with input sources and
+speaker, motorized window and door, speaker, smart speaker, air purifier and humidifier. `check.py` runs the panel's device
 manager against it and checks that every device is recognized and every command arrives.
 
 ```sh
@@ -22,5 +22,5 @@ start its standalone server
 node node_modules/homebridge-config-ui-x/dist/bin/standalone.js`), create a user in the browser
 on port 8581 and run `check.py ui <user> <password>`.
 
-Last run (November 2026, incl. the television): all checks passed with Homebridge 2.5.0 (HAP-NodeJS 2.3.0) over HAP
+Last run (November 2026, 25 device types): all checks passed with Homebridge 2.5.0 (HAP-NodeJS 2.3.0) over HAP
 and over Homebridge UI 5.30.1, and with Homebridge 1.11.4 over HAP.

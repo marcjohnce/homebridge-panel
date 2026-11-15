@@ -69,6 +69,23 @@ class PanelTest {
     const garage = mk("Garage");
     garage.add(S.GarageDoorOpener, "Garage", [[C.CurrentDoorState, 1], [C.TargetDoorState, 1], [C.ObstructionDetected, false]]);
     garage.onSet = (s, Ch, v) => { if (Ch === C.TargetDoorState) s.getCharacteristic(C.CurrentDoorState).value = v; };
+    const win2 = mk("Skylight");
+    win2.add(S.Window, "Skylight", [[C.CurrentPosition, 0], [C.TargetPosition, 0], [C.PositionState, 2]]);
+    win2.onSet = (s, Ch, v) => { if (Ch === C.TargetPosition) s.getCharacteristic(C.CurrentPosition).value = v; };
+    const door2 = mk("Motor Door");
+    door2.add(S.Door, "Motor Door", [[C.CurrentPosition, 0], [C.TargetPosition, 0], [C.PositionState, 2]]);
+    door2.onSet = win2.onSet;
+    mk("Speaker").add(S.Speaker, "Speaker", [[C.Mute, false], [C.Volume, 40]]);
+    const smart = mk("Smart Speaker");
+    smart.add(S.SmartSpeaker, "Smart Speaker", [[C.CurrentMediaState, 1], [C.TargetMediaState, 1], [C.Volume, 30]]);
+    smart.onSet = (s, Ch, v) => { if (Ch === C.TargetMediaState) s.getCharacteristic(C.CurrentMediaState).value = v; };
+    const pur = mk("Purifier");
+    pur.add(S.AirPurifier, "Purifier", [[C.Active, 0], [C.CurrentAirPurifierState, 0], [C.TargetAirPurifierState, 1],
+      [C.RotationSpeed, 40]]);
+    pur.onSet = (s, Ch, v) => { if (Ch === C.Active) s.getCharacteristic(C.CurrentAirPurifierState).value = v ? 2 : 0; };
+    mk("Humidifier").add(S.HumidifierDehumidifier, "Humidifier", [[C.Active, 1],
+      [C.CurrentHumidifierDehumidifierState, 2], [C.TargetHumidifierDehumidifierState, 1], [C.CurrentRelativeHumidity, 38],
+      [C.RelativeHumidityHumidifierThreshold, 45], [C.RelativeHumidityDehumidifierThreshold, 60], [C.WaterLevel, 70]]);
     const tv = mk("Television");
     const tvs = tv.add(S.Television, "Television", [[C.Active, 0], [C.ActiveIdentifier, 1],
       [C.ConfiguredName, "Television"], [C.SleepDiscoveryMode, 1]]);

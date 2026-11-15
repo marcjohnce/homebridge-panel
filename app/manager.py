@@ -147,6 +147,8 @@ class DeviceManager:
         icon_hint = meta.pop("icon_hint", None)
         if dtype == DeviceType.SECURITY:
             icon_hint = SECURITY_ICONS[meta["security"]]
+        elif meta.get("opening"):                   # motorized window / door
+            icon_hint = SECURITY_ICONS[meta["opening"]]
         elif "valve" in meta:
             icon_hint = VALVE_ICONS[meta["valve"]]
         elif "appliance" in meta and meta["appliance"] not in ("switch", "plug"):
