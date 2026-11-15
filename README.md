@@ -4,6 +4,8 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 **Homebridge** using the **HomeKit Accessory Protocol (HAP)**. The UI is built with Qt Quick
 (QML), the logic in Python with **PySide6**.
 
+**Works with Homebridge 1.x and 2.x.**
+
 ![Home screen at 1280 × 800](docs/images/home-1280x800.png)
 
 **[Project page →](https://marcjohnce.github.io/homebridge-panel/)** · **[User interface guide with annotated screenshots for all screen sizes →](docs/user-interface.md)**
@@ -58,7 +60,7 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 ## Requirements
 
 - Raspberry Pi 4/5 (Pi 3 possible) with Raspberry Pi OS **Bookworm** or **Trixie**, 64-bit
-- Homebridge **in insecure mode**: Homebridge UI → Settings → *Homebridge Insecure Mode*
+- Homebridge **1.x or 2.x** (tested with 1.11 and 2.5) **in insecure mode**: Homebridge UI → Settings → *Homebridge Insecure Mode*
   (same as `-I`), then restart Homebridge. Port and PIN are in Homebridge's `config.json`
   under `bridge`.
 
@@ -211,6 +213,12 @@ python tools/doc_screenshots.py         # update the documentation screenshots
 - On the Pi, Qt draws lines and arcs with its GPU curve renderer. On very old models without
   OpenGL ES 3, set `QT_QUICK_BACKEND=software`.
 - Schedules also accept the German weekday abbreviations (`di mi do so`) for older configurations.
+- **A device does not show up?** `python tools/list_services.py` lists every accessory and HomeKit
+  service of the configured bridges and whether the panel supports it. A plugin running as a
+  **child bridge** has its own port and PIN and is not on the main bridge: add it under `hap:` in
+  `config.yaml`.
+- Tested with **Homebridge 2.5** (HAP-NodeJS 2.3), Homebridge 1.11 and Homebridge UI 5.30; `tools/homebridge-test/`
+  has a test plugin with every supported device type and a check script.
 
 ## License
 
