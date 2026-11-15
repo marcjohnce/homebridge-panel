@@ -16,6 +16,7 @@ Popup {
     property int draftDecimals: 1
     property string draftIcon: "gauge"
     property string draftRoom
+    property bool draftFavorite
     property string error
     property string lastValue
 
@@ -35,6 +36,7 @@ Popup {
         draftDecimals = v ? v.decimals : 1;
         draftIcon = v ? v.icon : "gauge";
         draftRoom = d ? d.room : (panel.roomEditor.rooms.find(r => r.isDefault) || { name: "" }).name;
+        draftFavorite = d ? !!d.favorite : false;
         lastValue = d ? panel.roomEditor.lastValue(d.id) : "";
         error = "";
         open();
@@ -42,7 +44,8 @@ Popup {
     function save() {
         const err = panel.roomEditor.saveVirtual({
             id: device ? device.virtual.id : "", name: draftName, unit: draftUnit, topic: draftTopic,
-            jsonKey: draftJsonKey, decimals: draftDecimals, icon: draftIcon, room: draftRoom
+            jsonKey: draftJsonKey, decimals: draftDecimals, icon: draftIcon, room: draftRoom,
+            favorite: draftFavorite
         });
         if (err !== "")
             error = err;
@@ -206,6 +209,14 @@ Popup {
                     }
                 }
 
+                ToggleRow {
+                    width: parent.width
+                    label: qsTr("Favorite")
+                    help: qsTr("Shown under Favorites, the start page of the panel")
+                    checked: root.draftFavorite
+                    toggleName: "virtualFavorite"
+                    onToggled: root.draftFavorite = !root.draftFavorite
+                }
                 Text {
                     width: parent.width
                     visible: root.error !== ""

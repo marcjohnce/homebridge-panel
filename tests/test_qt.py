@@ -999,3 +999,39 @@ def test_software_update(qapp, tmp_path):
     assert pump_until(lambda: calls)
     assert up.installed_tags == ["v0.0.3"] and messages == ["Update installed. Restarting the app …"]
     ctl.shutdown()
+
+
+def test_groups_and_virtual_devices_as_favorites(qapp, tmp_path):
+    ctl = make_controller(tmp_path)
+    ctl.store.update({"mqtt_enabled": True, "mqtt_host": "127.0.0.1", "mqtt_port": 1})
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 29)
+    ed = ctl.roomEditor
+    lights = [d["id"] for d in ed.lights if d["room"] == "General"][:2]
+    switches = [d["id"] for d in ed.switches if d["name"] in ("TV Plug", "Washing Machine")]
+    assert ed.saveGroup({"name": "Both", "room": "General", "members": lights, "favorite": True}) == ""
+    assert ed.saveSwitchGroup({"name": "Pick", "room": "General", "members": switches, "favorite": True}) == ""
+    assert ed.saveVirtual({"name": "Water pressure", "topic": "boiler/pressure", "room": "Kitchen",
+                           "favorite": True}) == ""
+    group = "group:" + ctl.store.groups[0]["id"]
+    choice = "choice:" + ctl.store.switch_groups[0]["id"]
+    virtual = "mqtt:" + ctl.store.virtual[0]["id"]
+    assert pump_until(lambda: ctl.mqtt_backend() is not None and ctl.mqtt_backend().devices, timeout=10)
+    backend = ctl.mqtt_backend()
+    backend._client.loop_stop()                   # no broker here: pretend it answered
+    backend._connected.set()
+    backend.receive("boiler/pressure", "1.6")
+    assert pump_until(lambda: ctl.device(virtual) != {}, timeout=8)
+    assert [d["id"] for d in ed.favorites] == [group, choice, virtual]
+    assert all(d["favorite"] for d in ed.devices if d["id"] in (group, choice, virtual))
+    ctl.selectCategory("favorites")
+    assert ctl.devices._rows == [group, choice, virtual]
+
+    # saving without the flag keeps it; switching it off or deleting removes the favorite
+    assert ed.saveGroup({"id": ctl.store.groups[0]["id"], "name": "Both", "room": "General", "members": lights}) == ""
+    assert ed.saveSwitchGroup({"id": ctl.store.switch_groups[0]["id"], "name": "Pick", "room": "General",
+                               "members": switches, "favorite": False}) == ""
+    ed.deleteVirtual(ctl.store.virtual[0]["id"])
+    assert ed._layout.favorites == [group]
+    assert SettingsStore(tmp_path / "settings.json").rooms["favorites"] == [group]
+    ctl.shutdown()

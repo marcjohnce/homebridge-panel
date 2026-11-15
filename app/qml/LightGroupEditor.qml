@@ -13,6 +13,7 @@ Popup {
     property string draftRoom
     property var draftMembers: []
     property bool draftHide: true
+    property bool draftFavorite
     property string error
 
     readonly property var roomLights: panel.roomEditor.lights.filter(l => l.room === draftRoom)
@@ -26,6 +27,7 @@ Popup {
         draftRoom = g ? g.room : (here || lightRooms[0] || { name: "" }).name;
         draftMembers = g ? g.members.slice() : [];
         draftHide = g ? g.hide : true;
+        draftFavorite = d ? !!d.favorite : false;
         error = "";
         open();
     }
@@ -47,7 +49,7 @@ Popup {
     function save() {
         const err = panel.roomEditor.saveGroup({
             id: device ? device.group.id : "", name: draftName, room: draftRoom,
-            members: draftMembers, hide: draftHide
+            members: draftMembers, hide: draftHide, favorite: draftFavorite
         });
         if (err !== "")
             error = err;
@@ -304,6 +306,14 @@ Popup {
                     }
                 }
 
+                ToggleRow {
+                    width: parent.width
+                    label: qsTr("Favorite")
+                    help: qsTr("Shown under Favorites, the start page of the panel")
+                    checked: root.draftFavorite
+                    toggleName: "groupFavorite"
+                    onToggled: root.draftFavorite = !root.draftFavorite
+                }
                 Text {
                     width: parent.width
                     visible: root.error !== ""

@@ -469,6 +469,8 @@ class RoomsBridge(QObject):
         room = values.get("room")
         if room:
             self._layout._set(f"mqtt:{vid}", str(room), BUILTIN_DEFAULT)
+        if "favorite" in values:
+            self._layout.set_favorite(f"mqtt:{vid}", bool(values["favorite"]))
         self._store.rooms = self._layout.to_dict()
         self._store.save()
         self._ctl.restart_backends()
@@ -479,6 +481,7 @@ class RoomsBridge(QObject):
     def deleteVirtual(self, vid: str) -> None:
         self._store.virtual = [v for v in self._store.virtual if v.get("id") != vid]
         self._layout.assign.pop(f"mqtt:{vid}", None)
+        self._layout.set_favorite(f"mqtt:{vid}", False)
         self._store.rooms = self._layout.to_dict()
         self._store.save()
         self._ctl.restart_backends()
@@ -520,6 +523,8 @@ class RoomsBridge(QObject):
         gid = str(values.get("id") or "") or "g" + secrets.token_hex(3)
         group = {"id": gid, "name": name, "room": room, "members": members, "hide": bool(values.get("hide", True))}
         self._store.groups = [g for g in self._store.groups if g.get("id") != gid] + [group]
+        if "favorite" in values:
+            self._layout.set_favorite(f"group:{gid}", bool(values["favorite"]))
         self._store.save()
         self._ctl.refresh_groups()
         self._commit()
@@ -528,6 +533,7 @@ class RoomsBridge(QObject):
     @Slot(str)
     def deleteGroup(self, gid: str) -> None:
         self._store.groups = [g for g in self._store.groups if g.get("id") != gid]
+        self._layout.set_favorite(f"group:{gid}", False)
         self._store.save()
         self._ctl.refresh_groups()
         self._commit()
@@ -558,6 +564,8 @@ class RoomsBridge(QObject):
         group = {"id": gid, "name": name, "room": room, "members": members, "hide": bool(values.get("hide", True)),
                  "allow_off": bool(values.get("allowOff", True)), "area": area if area in AREAS else ""}
         self._store.switch_groups = [g for g in self._store.switch_groups if g.get("id") != gid] + [group]
+        if "favorite" in values:
+            self._layout.set_favorite(f"choice:{gid}", bool(values["favorite"]))
         self._store.save()
         self._ctl.refresh_groups()
         self._commit()
@@ -566,6 +574,7 @@ class RoomsBridge(QObject):
     @Slot(str)
     def deleteSwitchGroup(self, gid: str) -> None:
         self._store.switch_groups = [g for g in self._store.switch_groups if g.get("id") != gid]
+        self._layout.set_favorite(f"choice:{gid}", False)
         self._store.save()
         self._ctl.refresh_groups()
         self._commit()
