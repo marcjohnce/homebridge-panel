@@ -458,4 +458,17 @@ PT: dict[str, str] = {
     "Shown under Favorites, the start page of the panel": "Aparece em Favoritos, a página inicial do painel",
     "No favorites yet. Mark devices as favorite in Settings → Rooms and devices.":
         "Ainda sem favoritos. Marque dispositivos como favoritos em Definições → Divisões e dispositivos.",
+    "Software update": "Atualização de software",
+    "Install": "Instalar",
+    "Check now": "Verificar agora",
+    "Install version %1 now? The app restarts afterwards.": "Instalar agora a versão %1? A app reinicia depois.",
+    "Only for installations with deploy/install.sh (git)": "Só para instalações com deploy/install.sh (git)",
+    "Looks for a new release on GitHub": "Procura uma nova versão no GitHub",
+    "Looking for updates …": "A procurar atualizações …",
+    "Version {version} is up to date": "A versão {version} está atualizada",
+    "Version {latest} is available (installed: {current})": "A versão {latest} está disponível (instalada: {current})",
+    "Installing version {latest} … The app restarts afterwards.": "A instalar a versão {latest} … A app reinicia depois.",
+    "Update check failed: {error}": "A procura de atualizações falhou: {error}",
+    "Update failed: {error}": "A atualização falhou: {error}",
+    "Update installed. Restarting the app …": "Atualização instalada. A reiniciar a app …",
 }

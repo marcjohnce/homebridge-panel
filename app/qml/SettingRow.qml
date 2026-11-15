@@ -34,8 +34,10 @@ Item {
             Text {
                 Layout.fillWidth: true
                 visible: text !== ""
-                text: root.error !== "" ? root.error : root.field.help
-                color: root.error !== "" ? Theme.err : Theme.muted
+                text: root.error !== "" ? root.error
+                    : root.field.kind === "update" ? panel.updateInfo.text : root.field.help
+                color: root.error !== "" || (root.field.kind === "update" && panel.updateInfo.state === "failed")
+                       ? Theme.err : Theme.muted
                 font.pixelSize: Theme.s(13)
                 wrapMode: Text.WordWrap
             }
@@ -46,6 +48,7 @@ Item {
             sourceComponent: root.field.kind === "choice" ? choiceComponent
                            : root.field.kind === "toggle" ? toggleComponent
                            : root.field.kind === "action" ? actionComponent
+                           : root.field.kind === "update" ? updateComponent
                            : root.field.kind === "page" ? pageComponent : valueComponent
         }
     }
@@ -107,6 +110,17 @@ Item {
         PillButton {
             objectName: "action:" + root.field.key
             text: root.field.button || root.field.label
+            onClicked: root.actionRequested()
+        }
+    }
+
+    Component {
+        id: updateComponent
+        PillButton {
+            objectName: "action:update"
+            text: panel.updateInfo.install ? qsTr("Install") : qsTr("Check now")
+            primary: panel.updateInfo.install
+            enabled: !panel.updateInfo.busy
             onClicked: root.actionRequested()
         }
     }

@@ -949,3 +949,53 @@ def test_favorites_start_page(qapp, tmp_path):
     again = make_controller(tmp_path)                   # starts with the favorites
     assert again.category == "favorites"
     again.shutdown()
+
+
+class FakeUpdater:
+    supported = True
+
+    def __init__(self):
+        self.installed_tags, self.fail = [], ""
+
+    def installed(self):
+        return "0.0.2"
+
+    def check(self):
+        from app.updater import UpdateCheck
+        return UpdateCheck("0.0.2", "v0.0.3", True)
+
+    def install(self, tag):
+        from app.updater import UpdateError
+        if self.fail:
+            raise UpdateError(self.fail)
+        self.installed_tags.append(tag)
+
+
+def test_software_update(qapp, tmp_path):
+    store = SettingsStore(tmp_path / "settings.json")
+    store.update({"hap_enabled": False, "language": "en"})
+    up = FakeUpdater()
+    ctl = Controller(AppConfig.model_validate({"demo": {"enabled": True}}), store, updater=up)
+    calls, messages = [], []
+    ctl._exec = lambda path, argv: calls.append(argv)
+    ctl.restarting.connect(messages.append)
+    assert ctl.version == "0.0.2" and ctl.updateInfo["state"] == "idle"
+    assert "update" not in store.values
+    ctl.installUpdate()                                     # nothing found yet: ignored
+    assert ctl.updateInfo["state"] == "idle"
+    ctl.checkUpdate()
+    assert pump_until(lambda: ctl.updateInfo["state"] == "available")
+    info = ctl.updateInfo
+    assert info["install"] and info["latest"] == "0.0.3"
+    assert info["text"] == "Version 0.0.3 is available (installed: 0.0.2)"
+
+    up.fail = "the app folder has local changes"
+    ctl.installUpdate()
+    assert pump_until(lambda: ctl.updateInfo["text"].startswith("Update failed"))
+    assert ctl.updateInfo["install"] and not calls          # can be tried again
+
+    up.fail = ""
+    ctl.installUpdate()
+    assert pump_until(lambda: calls)
+    assert up.installed_tags == ["v0.0.3"] and messages == ["Update installed. Restarting the app …"]
+    ctl.shutdown()

@@ -470,7 +470,7 @@ Tapping *Address*, *Port* or *PIN* opens a keypad.
 
 A connected keyboard works as well, including letters for host names.
 
-### System: restart
+### System: update and restart
 
 At the bottom of the settings page, above *Info*.
 
@@ -479,10 +479,18 @@ At the bottom of the settings page, above *Info*.
 | # | Element | What it does |
 |---|---|---|
 | 1 | System | Actions that act on the app or the device |
-| 2 | Restart app | Closes and starts the panel again with the same options and reconnects to Homebridge – useful after editing `config.yaml` |
-| 3 | Restart Raspberry Pi | Reboots the device; the panel is back after about a minute |
+| 2 | Software update | Shows whether a new release is available. *Check now* looks again; *Install* (after a confirmation) installs it and restarts the app |
+| 3 | Restart app | Closes and starts the panel again with the same options and reconnects to Homebridge – useful after editing `config.yaml` |
+| 4 | Restart Raspberry Pi | Reboots the device; the panel is back after about a minute |
 
-Both ask before they run. While restarting, the panel shows *Restarting …*.
+The panel looks for updates on GitHub a minute after it starts and then once a day. Only
+stable releases count – pre-releases and the latest commits on `main` are not offered. The
+update checks out the release with git, installs its Python packages and restarts the app;
+`config.yaml` and the settings stay as they are. If something fails, the panel stays on the
+installed version and shows the reason. Updates need an installation from GitHub with
+`deploy/install.sh`, and the app folder must not have local changes to tracked files.
+
+Both restart buttons ask before they run. While restarting, the panel shows *Restarting …*.
 
 ![Confirmation before restarting](images/confirm-restart.png)
 

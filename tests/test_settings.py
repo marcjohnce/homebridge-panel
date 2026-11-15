@@ -45,8 +45,8 @@ def test_schema_contains_all_fields(tmp_path):
     assert {sec["id"]: sec["instant"] for sec in schema} == {"display": True, "rooms": True, "security": True, "homebridge": False, "mqtt": False, "system": True}
     system = next(sec for sec in schema if sec["id"] == "system")
     assert [(f["key"], f["kind"], f["button"]) for f in system["fields"]] == [
-        ("restart_app", "action", "Restart"), ("reboot", "action", "Restart")]
-    assert all(f["confirm"] for f in system["fields"])
+        ("update", "update", ""), ("restart_app", "action", "Restart"), ("reboot", "action", "Restart")]
+    assert all(f["confirm"] for f in system["fields"] if f["kind"] == "action")
 
 
 def test_alarm_pin_validation():

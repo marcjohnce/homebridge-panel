@@ -92,6 +92,8 @@ FIELDS = [
     Field("mqtt_password", "mqtt", "Password", "password", ""),
     Field("mqtt_test", "mqtt", "Test MQTT connection", "action", None,
           help="Tries the entered values without saving them", button="Test"),
+    # Software update: state and button come from the controller (Controller.updateInfo)
+    Field("update", "system", "Software update", "update", None),
     # Actions are buttons, not stored values. The controller runs them (Controller.run_action).
     Field("restart_app", "system", "Restart app", "action", None,
           help="Reloads the panel and reconnects to Homebridge",
@@ -101,7 +103,7 @@ FIELDS = [
           button="Restart", confirm="Restart the Raspberry Pi now? The panel is unavailable for about a minute."),
 ]
 ACTIONS = {f.key for f in FIELDS if f.kind == "action"}
-NOT_STORED = {f.key for f in FIELDS if f.kind in ("action", "page")}
+NOT_STORED = {f.key for f in FIELDS if f.kind in ("action", "page", "update")}
 FIELDS_BY_KEY = {f.key: f for f in FIELDS}
 
 _HOST_RE = re.compile(r"^(?=.{1,253}$)[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*$")
@@ -115,7 +117,7 @@ def validate(key: str, value: Any) -> tuple[Any, str | None]:
         value = int(value)
     if f is None:
         return value, tr("Unknown setting \"{key}\"").format(key=key)
-    if f.kind in ("action", "page"):
+    if f.kind in ("action", "page", "update"):
         return value, tr("\"{key}\" is an action, not a setting").format(key=key)
     if f.kind == "choice":
         for opt, _ in f.options:
