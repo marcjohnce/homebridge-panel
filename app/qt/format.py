@@ -14,7 +14,8 @@ CATEGORIES = ("light", "climate", "security")
 CATEGORY_OF_TYPE = {"light": "light", "plug": "light", "switch": "light", "blind": "light",
                     "thermostat": "climate", "sensor": "climate", "fan": "climate",
                     "security": "security", "value": "climate", "alarm": "security",
-                    "garage": "security", "tv": "light"}
+                    "garage": "security", "tv": "light", "speaker": "light", "purifier": "climate",
+                    "humidifier": "climate"}
 
 # Motion sensors only raise an alert while an alarm system is armed (set by the controller)
 _alarm_armed = False
@@ -32,6 +33,8 @@ def category(d: dict[str, Any]) -> str:
         return meta["area"]
     if meta.get("appliance") == "fan":
         return "climate"
+    if meta.get("opening"):          # motorized window / door
+        return "security"
     if d["type"] == "valve":         # water shut-off valves under Security, the others with the switches
         return "security" if meta.get("valve", "generic") == "generic" else "light"
     return CATEGORY_OF_TYPE.get(d["type"], "light")
@@ -53,6 +56,10 @@ def battery_text(d: dict[str, Any]) -> str:
 def alert_level(d: dict[str, Any]) -> int:
     """Security sensors: 2 = alarm (leak, glass break, smoke, CO, alarm system triggered),
     1 = open / motion / presence (those only while an alarm system is armed), 0 = quiet."""
+    if d["type"] == "blind" and d.get("meta", {}).get("opening"):     # motorized window / door: open
+        s = d.get("state", {})
+        return 0 if d.get("quiet") or not d.get("reachable", True) or not (s.get("position", 0) > 0
+                                                                           or s.get("obstructed")) else 1
     if d["type"] not in ("security", "alarm", "garage") or not d.get("reachable", True) \
             or not d.get("state", {}).get("triggered"):
         return 0
@@ -103,6 +110,36 @@ def security_text(d: dict[str, Any]) -> str:
     if kind == "presence":
         return tr("Present") if hit else tr("Nobody there")
     return tr("Motion") if hit else tr("No motion")
+
+
+def speaker_text(s: dict[str, Any]) -> str:
+    """"Playing, 40 %", "Paused", "Muted" or "Volume 40 %"."""
+    vol = s.get("volume")
+    if s.get("mute"):
+        return tr("Muted")
+    media = s.get("media")
+    if media:
+        text = {"playing": tr("Playing"), "paused": tr("Paused"), "loading": tr("Loading …")}.get(media, tr("Stopped"))
+        return f"{text}, {pct(vol)}" if vol is not None and media == "playing" else text
+    return tr("Volume {pct}").format(pct=pct(vol)) if vol is not None else tr("On")
+
+
+def purifier_text(s: dict[str, Any]) -> str:
+    if not s.get("on"):
+        return tr("Off")
+    text = tr("Purifying") if s.get("purifying") else tr("Idle")
+    if s.get("auto"):
+        return tr("{state}, auto").format(state=text)
+    return f"{text}, {pct(s['speed'])}" if s.get("speed") is not None else text
+
+
+def humidifier_text(s: dict[str, Any]) -> str:
+    now = s.get("humidity")
+    if not s.get("on"):
+        text = tr("Off")
+    else:
+        text = {"humidifying": tr("Humidifying"), "dehumidifying": tr("Dehumidifying")}.get(s.get("activity"), tr("Idle"))
+    return tr("{state}, now {pct}").format(state=text, pct=pct(now)) if now is not None else text
 
 
 def garage_text(d: dict[str, Any]) -> str:
@@ -217,6 +254,12 @@ def state_text(d: dict[str, Any]) -> str:
         return valve_text(s)
     if d["type"] == "garage":
         return garage_text(d)
+    if d["type"] == "speaker":
+        return speaker_text(s)
+    if d["type"] == "purifier":
+        return purifier_text(s)
+    if d["type"] == "humidifier":
+        return humidifier_text(s)
     if d["type"] == "tv":
         if not s.get("on"):
             return tr("Off")
@@ -271,5 +314,11 @@ def has_detail(d: dict[str, Any]) -> bool:
         return "duration" in caps
     if d["type"] == "tv":
         return any(c in caps for c in ("input", "volume", "mute", "remote"))
+    if d["type"] == "speaker":
+        return any(c in caps for c in ("volume", "media"))
+    if d["type"] == "purifier":
+        return any(c in caps for c in ("speed", "auto"))
+    if d["type"] == "humidifier":
+        return True
     return d["type"] in ("thermostat", "sensor", "blind") or any(
         c in caps for c in ("brightness", "color", "color_temp", "speed"))

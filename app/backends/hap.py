@@ -98,8 +98,8 @@ class HapBackend(Backend):
                 (sensors if stype in SENSOR_SERVICES else parts if stype in TV_PARTS else devices).append(snap)
             if sensors:
                 devices.append(merge_sensors(str(aid), acc_name, sensors))
-            attach_battery(devices, battery)
             attach_tv_parts(devices, parts)
+            attach_battery(devices, battery)
             result += devices
         return result
 

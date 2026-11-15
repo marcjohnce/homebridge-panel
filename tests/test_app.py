@@ -112,7 +112,7 @@ def test_homebridge_ui_backend():
              {"type": "CurrentTemperature", "value": 20.1, "canWrite": False},
              {"type": "HeatingThresholdTemperature", "value": 21, "canWrite": True,
               "minValue": 5, "maxValue": 30, "minStep": 0.5}]},
-        {"uniqueId": "zzz", "type": "AirPurifier", "serviceName": "Purifier", "serviceCharacteristics": []},
+        {"uniqueId": "zzz", "type": "Doorbell", "serviceName": "Doorbell", "serviceCharacteristics": []},
     ]
 
     def handler(req: httpx.Request) -> httpx.Response:
@@ -563,6 +563,59 @@ def test_tv_is_no_longer_a_switch_kind():
         assert plug.meta["appliance"] == "plug" and plug.icon == "plug"      # older configs still load
         await m.stop()
     asyncio.run(run())
+
+
+def test_more_device_classes_from_hap():
+    """Motorized door/window, speaker, smart speaker, air purifier, humidifier/dehumidifier."""
+    def acc(aid, stype, chars):
+        return {"aid": aid, "services": [{"iid": 10, "type": U(stype), "characteristics": [
+            {"iid": 11 + i, "type": U(t), "value": v, "perms": ["pr", "pw"], **kw} for i, (t, v, kw) in enumerate(chars)]}]}
+    data = {"accessories": [
+        acc(1, "8B", [("6D", 30, {}), ("7C", 30, {}), ("72", 2, {})]),                       # window
+        acc(2, "81", [("6D", 0, {}), ("7C", 0, {}), ("72", 2, {})]),                         # door
+        acc(3, "113", [("11A", True, {}), ("119", 40, {})]),                                 # speaker
+        acc(4, "228", [("E0", 0, {}), ("137", 0, {}), ("119", 25, {})]),                     # smart speaker
+        acc(5, "BB", [("B0", 1, {}), ("A9", 2, {}), ("A8", 1, {}), ("29", 50, {})]),         # air purifier
+        acc(6, "BD", [("B0", 1, {}), ("B3", 3, {}), ("B4", 0, {"valid-values": [0, 2]}), ("10", 65, {}),
+                      ("C9", 55, {}), ("B5", 5, {})]),                                     # dehumidifier
+    ]}
+    win, door, spk, smart, pur, hum = HapBackend.parse_accessories(data)
+    from app.qt.format import alert_level, category, has_detail, state_text
+
+    def dev(snap):
+        dtype, st, caps, meta = snapshot_to_state(snap)
+        return {"type": dtype.value, "reachable": True, "state": st, "capabilities": caps, "meta": meta}
+    w, d = dev(win), dev(door)
+    assert w["type"] == "blind" and w["meta"]["opening"] == "window" and category(w) == "security"
+    assert alert_level(w) == 1 and alert_level(d) == 0 and state_text(w) == "30% open"
+    assert [(c.name, v) for c, v in command_to_writes(door, {"on": True})] == [("TargetPosition", 100)]
+    sp = dev(spk)
+    assert sp["type"] == "speaker" and sp["state"] == {"volume": 40, "mute": True, "on": False}
+    assert state_text(sp) == "Muted" and has_detail(sp)
+    assert [(c.name, v) for c, v in command_to_writes(spk, {"on": True})] == [("Mute", False)]
+    sm = dev(smart)
+    assert sm["state"]["media"] == "playing" and state_text(sm) == "Playing, 25%" and category(sm) == "light"
+    assert [(c.name, v) for c, v in command_to_writes(smart, {"on": False, "volume": 60, "media": "stop"})] == \
+        [("TargetMediaState", 1), ("Volume", 60), ("TargetMediaState", 2)]
+    pu = dev(pur)
+    assert pu["type"] == "purifier" and state_text(pu) == "Purifying, auto" and category(pu) == "climate"
+    assert [(c.name, v) for c, v in command_to_writes(pur, {"auto": False, "speed": 70})] == \
+        [("TargetAirPurifierState", 0), ("RotationSpeed", 70)]
+    hu = dev(hum)
+    assert hu["type"] == "humidifier" and hu["meta"]["modes"] == ["auto", "dehumidify"]
+    assert hu["state"]["activity"] == "dehumidifying" and hu["state"]["dehumidify_target"] == 55
+    assert state_text(hu) == "Dehumidifying, now 65%" and category(hu) == "climate"
+    assert [(c.name, v) for c, v in command_to_writes(hum, {"mode": "dehumidify", "dehumidify_target": 50})] == \
+        [("TargetHumidifierDehumidifierState", 2), ("RelativeHumidityDehumidifierThreshold", 50)]
+
+
+def test_tv_speaker_is_not_a_device_of_its_own():
+    data = {"accessories": [{"aid": 1, "services": [
+        {"iid": 10, "type": U("D8"), "characteristics": [{"iid": 11, "type": U("B0"), "value": 0, "perms": ["pr", "pw"]}]},
+        {"iid": 20, "type": U("113"), "characteristics": [{"iid": 21, "type": U("11A"), "value": False,
+                                                           "perms": ["pr", "pw"]}]}]}]}
+    (tv,) = HapBackend.parse_accessories(data)
+    assert tv.service_type == "Television" and "Mute" in tv.chars
 
 
 def test_security_kind_override_and_icon():

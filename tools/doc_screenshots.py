@@ -543,6 +543,21 @@ def main() -> int:
     ], "Television"), out, "television")
     p.close()
 
+    # Speaker and humidifier
+    p = Panel(DETAIL_SIZE)
+    for name, image, callouts in (
+            ("Kitchen Speaker", "speaker", [(1, ["volumeBar"], "Volume", "left"),
+                                            (2, ["mediaButtons"], "Play / pause, stop", "right"),
+                                            (3, ["muteButton"], "Mute", "right")]),
+            ("Bedroom Humidifier", "humidifier", [(1, ["humidityNow"], "Current humidity", "top"),
+                                                  (2, ["humidifierModes"], "Mode", "left"),
+                                                  (3, ["target:humidify_target"], "Target humidity", "left")])):
+        p.win.setProperty("openDevice", p.device_id(name))
+        wait(400)
+        save(annotate(p.grab(), [(n, [p.rect(o) for o in objs], text, side) for n, objs, text, side in callouts],
+                      name), out, image)
+    p.close()
+
     # Valve with run time
     p = Panel(DETAIL_SIZE)
     vid = p.device_id("Garden Sprinkler")

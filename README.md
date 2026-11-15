@@ -44,6 +44,9 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
   motion sensors only count while it is armed; single sensors can be kept out of the alerts
 - **Batteries**: a red battery on the tile when a device's battery is below 10 % or reported low;
   *Settings → Batteries* lists all battery devices
+- **Motorized windows and doors**: position, open/stop/close; open ones count as alerts
+- **Speakers / smart speakers**: volume, mute, play/pause/stop
+- **Air purifiers** (auto/manual, speed) and **humidifiers / dehumidifiers** (mode, target humidity, water level)
 - **Televisions**: on/off, input sources, volume, mute and remote keys
 - **Garage doors**: state, open door as alert, open/close after a confirmation (opening with the alarm PIN)
 - **Valves**: irrigation, shower, faucet and generic valves; open/close, remaining time, run time

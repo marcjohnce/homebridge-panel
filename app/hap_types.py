@@ -45,7 +45,12 @@ SERVICE_TYPES: dict[str, str] = {
     "41": "GarageDoorOpener",
     "D8": "Television",
     "D9": "InputSource",
-    "113": "TelevisionSpeaker",
+    "113": "Speaker",            # also the speaker of a television (same type)
+    "228": "SmartSpeaker",
+    "81": "Door",
+    "8B": "Window",
+    "BB": "AirPurifier",
+    "BD": "HumidifierDehumidifier",
     "7F": "CarbonMonoxideSensor",
     "96": "Battery",
     EVE_WEATHER_SERVICE: "EveWeather",
@@ -110,6 +115,15 @@ CHAR_TYPES: dict[str, str] = {
     "D6": "IsConfigured",
     "135": "CurrentVisibilityState",
     "11A": "Mute",
+    "E0": "CurrentMediaState",
+    "137": "TargetMediaState",
+    "A9": "CurrentAirPurifierState",
+    "A8": "TargetAirPurifierState",
+    "B3": "CurrentHumidifierDehumidifierState",
+    "B4": "TargetHumidifierDehumidifierState",
+    "CA": "RelativeHumidityHumidifierThreshold",
+    "C9": "RelativeHumidityDehumidifierThreshold",
+    "B5": "WaterLevel",
     "119": "Volume",
     "EA": "VolumeSelector",
     "32": "TargetDoorState",
@@ -157,6 +171,12 @@ DEVICE_TYPE_BY_SERVICE: dict[str, DeviceType] = {
     "Valve": DeviceType.VALVE,
     "GarageDoorOpener": DeviceType.GARAGE,
     "Television": DeviceType.TV,
+    "Speaker": DeviceType.SPEAKER,
+    "SmartSpeaker": DeviceType.SPEAKER,
+    "Door": DeviceType.BLIND,             # motorized door / window: moved like a blind, shown under Security
+    "Window": DeviceType.BLIND,
+    "AirPurifier": DeviceType.PURIFIER,
+    "HumidifierDehumidifier": DeviceType.HUMIDIFIER,
     "CarbonMonoxideSensor": DeviceType.SECURITY,
     "Value": DeviceType.VALUE,          # virtual device from MQTT (app/backends/mqtt.py)
 }
@@ -173,7 +193,7 @@ SECURITY_SERVICES = {
 
 # Television: input sources and the speaker are services of their own in the same accessory;
 # they are attached to the television (see attach_tv_parts)
-TV_PARTS = {"InputSource", "TelevisionSpeaker"}
+TV_PARTS = {"InputSource", "Speaker"}
 SPEAKER_CHARS = {"Mute", "Volume", "VolumeSelector"}
 # RemoteKey values (HAP); the panel offers these
 REMOTE_KEYS = {"rewind": 0, "forward": 1, "up": 4, "down": 5, "left": 6, "right": 7, "select": 8, "back": 9,
@@ -181,9 +201,11 @@ REMOTE_KEYS = {"rewind": 0, "forward": 1, "up": 4, "down": 5, "left": 6, "right"
 
 
 def attach_tv_parts(snaps: list["ServiceSnapshot"], parts: list["ServiceSnapshot"]) -> None:
-    """Adds input sources and the speaker of an accessory to its television service."""
+    """Adds input sources and the speaker of an accessory to its television service. Without a
+    television a speaker is a device of its own (added to snaps)."""
     tv = next((s for s in snaps if s.service_type == "Television"), None)
     if tv is None:
+        snaps += [p for p in parts if p.service_type == "Speaker"]
         return
     for part in parts:
         if part.service_type == "InputSource":
@@ -193,6 +215,14 @@ def attach_tv_parts(snaps: list["ServiceSnapshot"], parts: list["ServiceSnapshot
                 if name in SPEAKER_CHARS:
                     tv.chars.setdefault(name, ch)
 
+
+# SmartSpeaker media states (current: 0 play, 1 pause, 2 stop, 4 loading, 5 interrupted)
+MEDIA_STATES = {0: "playing", 1: "paused", 2: "stopped", 4: "loading", 5: "interrupted"}
+MEDIA_TARGETS = {"play": 0, "pause": 1, "stop": 2}
+# HumidifierDehumidifier: activity and target mode
+HUMIDIFIER_STATES = {0: "inactive", 1: "idle", 2: "humidifying", 3: "dehumidifying"}
+HUMIDIFIER_MODES = {0: "auto", 1: "humidify", 2: "dehumidify"}
+HUMIDIFIER_MODES_REV = {v: k for k, v in HUMIDIFIER_MODES.items()}
 
 # GarageDoorOpener: current door state; the target is 0 = open, 1 = closed
 DOOR_STATES = {0: "open", 1: "closed", 2: "opening", 3: "closing", 4: "stopped"}
@@ -279,7 +309,9 @@ def snapshot_to_state(s: ServiceSnapshot) -> tuple[DeviceType, dict[str, Any], l
     meta: dict[str, Any] = {}
     c = s.chars
 
-    if s.service_type == "WindowCovering":
+    if s.service_type in ("Door", "Window"):          # motorized: an opening like a window contact
+        meta["opening"] = s.service_type.lower()
+    if s.service_type in ("WindowCovering", "Door", "Window"):
         pos = int(round(_num(s.get("CurrentPosition", 0)) or 0))
         target = int(round(_num(s.get("TargetPosition", pos)) or 0))
         state["position"] = pos
@@ -321,6 +353,54 @@ def snapshot_to_state(s: ServiceSnapshot) -> tuple[DeviceType, dict[str, Any], l
             caps.append("mute")
         if "RemoteKey" in c:
             caps.append("remote")
+    elif s.service_type in ("Speaker", "SmartSpeaker"):
+        if "Volume" in c:
+            state["volume"] = int(_num(s.get("Volume")) or 0)
+            caps.append("volume")
+        if "Mute" in c:
+            state["mute"] = bool(s.get("Mute", False))
+            caps.append("mute")
+        if "TargetMediaState" in c:
+            state["media"] = MEDIA_STATES.get(int(s.get("CurrentMediaState", 2) or 0), "stopped")
+            state["on"] = state["media"] == "playing"
+            caps += ["on", "media"]
+        elif "Active" in c:
+            state["on"] = int(s.get("Active", 0) or 0) == 1
+            caps.append("on")
+        elif "Mute" in c:                            # a plain speaker: "on" = not muted
+            state["on"] = not state["mute"]
+            caps.append("on")
+    elif s.service_type == "AirPurifier":
+        state["on"] = int(s.get("Active", 0) or 0) == 1
+        state["purifying"] = int(s.get("CurrentAirPurifierState", 0) or 0) == 2
+        caps.append("on")
+        if "TargetAirPurifierState" in c:
+            state["auto"] = int(s.get("TargetAirPurifierState", 0) or 0) == 1
+            caps.append("auto")
+        if "RotationSpeed" in c:
+            state["speed"] = _num(s.get("RotationSpeed", 0))
+            caps.append("speed")
+    elif s.service_type == "HumidifierDehumidifier":
+        state["on"] = int(s.get("Active", 0) or 0) == 1
+        state["activity"] = HUMIDIFIER_STATES.get(int(s.get("CurrentHumidifierDehumidifierState", 0) or 0), "idle")
+        state["mode"] = HUMIDIFIER_MODES.get(int(s.get("TargetHumidifierDehumidifierState", 0) or 0), "auto")
+        caps += ["on", "mode"]
+        t = c.get("TargetHumidifierDehumidifierState")
+        valid = t.valid if t is not None and t.valid else (
+            list(range(int(t.min or 0), int(t.max) + 1)) if t is not None and t.max is not None else list(HUMIDIFIER_MODES))
+        meta["modes"] = [HUMIDIFIER_MODES[v] for v in sorted(valid) if v in HUMIDIFIER_MODES]
+        if "CurrentRelativeHumidity" in c:
+            state["humidity"] = _num(s.get("CurrentRelativeHumidity"))
+        for char, key in (("RelativeHumidityHumidifierThreshold", "humidify_target"),
+                          ("RelativeHumidityDehumidifierThreshold", "dehumidify_target")):
+            if char in c:
+                state[key] = int(_num(s.get(char)) or 0)
+                caps.append(key)
+        if "RotationSpeed" in c:
+            state["speed"] = _num(s.get("RotationSpeed", 0))
+            caps.append("speed")
+        if "WaterLevel" in c:
+            state["water"] = int(_num(s.get("WaterLevel")) or 0)
     elif s.service_type == "GarageDoorOpener":
         door = DOOR_STATES.get(int(s.get("CurrentDoorState", 1) or 0), "closed")
         state["door"] = door
@@ -480,12 +560,16 @@ def command_to_writes(s: ServiceSnapshot, attrs: dict[str, Any]) -> list[tuple[C
     for key, value in attrs.items():
         if key == "on":
             on = bool(value)
-            if s.service_type == "GarageDoorOpener":    # on = open, off = close
+            if s.service_type == "SmartSpeaker" and "TargetMediaState" in c:     # on = play, off = pause
+                writes.append((c["TargetMediaState"], MEDIA_TARGETS["play" if on else "pause"]))
+            elif s.service_type == "Speaker" and "Active" not in c:              # a plain speaker: mute
+                writes.append((need("Mute"), not on))
+            elif s.service_type == "GarageDoorOpener":    # on = open, off = close
                 writes.append((need("TargetDoorState"), 0 if on else 1))
             elif s.service_type == "Thermostat":
                 ch = need("TargetHeatingCoolingState")
                 writes.append((ch, THERMOSTAT_MODES_REV["heat"] if on else 0))
-            elif s.service_type == "WindowCovering":     # on = open fully, off = close
+            elif s.service_type in ("WindowCovering", "Door", "Window"):     # on = open fully, off = close
                 writes.append((need("TargetPosition"), 100 if on else 0))
             elif "On" in c:
                 writes.append((c["On"], on))
@@ -532,12 +616,28 @@ def command_to_writes(s: ServiceSnapshot, attrs: dict[str, Any]) -> list[tuple[C
             if value not in REMOTE_KEYS:
                 raise ValueError(tr("Unknown attribute '{key}'").format(key=f"remote {value}"))
             writes.append((need("RemoteKey"), REMOTE_KEYS[value]))
+        elif key == "volume":                    # speaker: 0–100
+            writes.append((need("Volume"), int(_clamp(value, need("Volume"), 0, 100))))
+        elif key == "media":                     # smart speaker: play / pause / stop
+            if value not in MEDIA_TARGETS:
+                raise ValueError(tr("Unknown mode '{mode}'").format(mode=value))
+            writes.append((need("TargetMediaState"), MEDIA_TARGETS[value]))
+        elif key == "auto":                      # air purifier: automatic or manual
+            writes.append((need("TargetAirPurifierState"), 1 if value else 0))
+        elif key in ("humidify_target", "dehumidify_target"):
+            ch = need("RelativeHumidityHumidifierThreshold" if key == "humidify_target"
+                      else "RelativeHumidityDehumidifierThreshold")
+            writes.append((ch, int(_clamp(value, ch, 0, 100))))
         elif key == "duration":                  # valve: run time in seconds
             ch = need("SetDuration")
             writes.append((ch, int(_clamp(value, ch, 0, 3600))))
         elif key == "mode":
             mode = str(value)
-            if s.service_type == "SecuritySystem":
+            if s.service_type == "HumidifierDehumidifier":
+                if mode not in HUMIDIFIER_MODES_REV:
+                    raise ValueError(tr("Unknown mode '{mode}'").format(mode=mode))
+                writes.append((need("TargetHumidifierDehumidifierState"), HUMIDIFIER_MODES_REV[mode]))
+            elif s.service_type == "SecuritySystem":
                 if mode not in ALARM_MODES_REV:
                     raise ValueError(tr("Unknown mode '{mode}'").format(mode=mode))
                 writes.append((need("SecuritySystemTargetState"), ALARM_MODES_REV[mode]))

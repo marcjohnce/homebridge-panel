@@ -127,6 +127,9 @@ ApplicationWindow {
             panel.selectRoom("");               // the alarm may be in any room
             toast.show(message);
         }
+        function onDetailRequested(id) {
+            window.openDevice = id;
+        }
         function onGarageRequested(id) {
             garageConfirm.ask(id);
         }

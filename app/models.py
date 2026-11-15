@@ -18,6 +18,9 @@ class DeviceType(str, Enum):
     VALUE = "value"           # virtual device: a value received over MQTT
     GARAGE = "garage"         # garage door opener
     TV = "tv"                 # television: power, input sources, volume, remote keys
+    SPEAKER = "speaker"       # speaker / smart speaker: volume, mute, play/pause
+    PURIFIER = "purifier"     # air purifier: on/off, auto/manual, speed
+    HUMIDIFIER = "humidifier" # humidifier / dehumidifier: mode, target humidity
     VALVE = "valve"           # water valve: generic, irrigation, shower head, faucet
     ALARM = "alarm"           # alarm system (HomeKit SecuritySystem): armed / disarmed / triggered
 
@@ -39,6 +42,9 @@ DEFAULT_ICONS = {
     DeviceType.VALVE: "valve",
     DeviceType.GARAGE: "garage",
     DeviceType.TV: "tv",
+    DeviceType.SPEAKER: "speaker",
+    DeviceType.PURIFIER: "purifier",
+    DeviceType.HUMIDIFIER: "humidifier",
 }
 
 # Kinds of security sensors. A contact sensor can be a window, a door, a plain contact

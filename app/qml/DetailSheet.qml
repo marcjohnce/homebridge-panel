@@ -16,6 +16,9 @@ Rectangle {
     readonly property bool isAlarm: dev.type === "alarm"
     readonly property bool isValve: dev.type === "valve"
     readonly property bool isTv: dev.type === "tv"
+    readonly property bool isSpeaker: dev.type === "speaker"
+    readonly property bool isPurifier: dev.type === "purifier"
+    readonly property bool isHumidifier: dev.type === "humidifier"
     readonly property bool heatingNow: isThermostat && dev.reachable && dev.state.heating
 
     color: Theme.page
@@ -91,7 +94,8 @@ Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
             sourceComponent: root.isAlarm ? alarmComponent : root.isValve ? valveComponent
-                           : root.isTv ? tvComponent : root.isChoice ? choiceComponent
+                           : root.isTv ? tvComponent : root.isSpeaker ? speakerComponent
+                           : root.isPurifier ? purifierComponent : root.isHumidifier ? humidifierComponent : root.isChoice ? choiceComponent
                            : root.isThermostat ? thermostatComponent : root.isSensor ? sensorComponent
                            : root.isBlind ? blindComponent : lightComponent
         }
@@ -114,6 +118,26 @@ Rectangle {
     Component {
         id: sensorComponent
         SensorView {
+            dev: root.dev
+        }
+    }
+    Component {
+        id: speakerComponent
+        SpeakerControl {
+            dev: root.dev
+            sheet: root
+        }
+    }
+    Component {
+        id: purifierComponent
+        PurifierControl {
+            dev: root.dev
+            sheet: root
+        }
+    }
+    Component {
+        id: humidifierComponent
+        HumidifierControl {
             dev: root.dev
         }
     }

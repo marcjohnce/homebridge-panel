@@ -93,6 +93,8 @@ class HomebridgeUiBackend(Backend):
             stype = svc.get("type")
             if stype == "BatteryService":
                 stype = "Battery"
+            if stype == "TelevisionSpeaker":            # same HomeKit type as a speaker
+                stype = "Speaker"
             if stype not in DEVICE_TYPE_BY_SERVICE and stype not in SENSOR_SERVICES and stype != "Battery" \
                     and stype not in TV_PARTS:
                 # custom services (e.g. Eve air pressure) are identified by their UUID
@@ -130,9 +132,11 @@ class HomebridgeUiBackend(Backend):
                 devices.setdefault(group, []).append(snap)
         for group, snaps in sensors.items():
             devices.setdefault(group, []).append(merge_sensors(group, snaps[0].accessory, snaps))
+        for group in parts.keys() - devices.keys():     # e.g. an accessory with only a speaker
+            devices[group] = []
         for group, snaps in devices.items():
-            attach_battery(snaps, batteries.get(group, {}))
             attach_tv_parts(snaps, parts.get(group, []))
+            attach_battery(snaps, batteries.get(group, {}))
             result += snaps
         return result
 
