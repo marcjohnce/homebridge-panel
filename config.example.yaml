@@ -67,6 +67,7 @@ devices:
   "Alarm System":              { room: Hall }
   "Garden Sprinkler":          { room: Garden }
   "Garage Door":               { room: Garage }
+  "Front Door Lock":           { room: Hall }
   "Living Room TV":            { room: Living Room }
   "Skylight":                  { room: Bedroom }
   "Kitchen Speaker":           { room: Kitchen }

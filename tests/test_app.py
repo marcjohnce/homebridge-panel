@@ -618,6 +618,22 @@ def test_tv_speaker_is_not_a_device_of_its_own():
     assert tv.service_type == "Television" and "Mute" in tv.chars
 
 
+def test_lock_from_hap():
+    data = {"accessories": [{"aid": 7, "services": [
+        {"iid": 10, "type": U("45"), "characteristics": [
+            {"iid": 11, "type": U("1D"), "value": 2, "perms": ["pr", "ev"]},
+            {"iid": 12, "type": U("1E"), "value": 1, "perms": ["pr", "pw", "ev"]}]}]}]}
+    (snap,) = HapBackend.parse_accessories(data)
+    dtype, st, _, meta = snapshot_to_state(snap)
+    assert dtype.value == "lock" and st == {"lock": "jammed", "target": "locked", "triggered": True}
+    assert meta["icon_hint"] == "lockOpen"
+    assert [(c.name, v) for c, v in command_to_writes(snap, {"on": True})] == [("LockTargetState", 0)]
+    from app.qt.format import alert_level, state_text
+    d = {"type": "lock", "reachable": True, "state": st, "meta": {}}
+    assert state_text(d) == "Jammed" and alert_level(d) == 1
+    assert state_text({**d, "state": {"lock": "locked", "target": "unlocked"}}) == "Unlocking …"
+
+
 def test_security_kind_override_and_icon():
     cfg = AppConfig.model_validate({"demo": {"enabled": True}, "devices": {
         "Bedroom Window": {"security": "window"}, "Washing Machine Leak": {"security": "window"}}})

@@ -1,6 +1,6 @@
 import QtQuick
 
-// Masked PIN entry with digit keys (alarm system, garage door); Enter on a keyboard submits
+// Masked PIN entry with digit keys (alarm system, garage door, door lock); Enter on a keyboard submits
 Column {
     id: root
 

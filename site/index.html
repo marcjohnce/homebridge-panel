@@ -467,6 +467,7 @@ footer a{color:var(--ink)}
       <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M4 4h16M5 4v13h14V4M5 8h14M5 12h14M12 17v3"/></svg><h3 data-i18n="t.blinds">Blinds and shutters</h3><p data-i18n="t.blinds.p">Position by dragging, stop, slat angle</p></li>
       <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="1"/><path d="M5 3l7 3v15M19 12h-4"/></svg><h3 data-i18n="t.motor">Motorized windows and doors</h3><p data-i18n="t.motor.p">Position, open, stop, close; open ones as an alert</p></li>
       <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6v10H3z"/><path d="M7 20v-7h10v7M7 16h10"/></svg><h3 data-i18n="t.garage">Garage doors</h3><p data-i18n="t.garage.p">State, open and close after a confirmation</p></li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 11V8a4.5 4.5 0 019 0v3"/><rect x="5.5" y="11" width="13" height="9.5" rx="1"/><path d="M12 14.5V17"/></svg><h3 data-i18n="t.lock">Door locks</h3><p data-i18n="t.lock.p">Lock, unlock with a PIN, unlocked as an alert</p></li>
       <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M12 13v8M12 13l-5-6M12 13l5-6M12 13V4M8 21h8"/></svg><h3 data-i18n="t.valve">Valves and irrigation</h3><p data-i18n="t.valve.p">Open/close, run time, minutes left</p></li>
       <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M12 3c3 4 6 7 6 10.5a6 6 0 01-12 0C6 10 9 7 12 3z"/></svg><h3 data-i18n="t.climate">Climate and air sensors</h3><p data-i18n="t.climate.p">Temperature, humidity, air pressure, light, air quality, CO₂, fine dust, VOC</p></li>
       <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="1"/><path d="M12 3v18M5 12h14"/></svg><h3 data-i18n="t.sec">Security sensors</h3><p data-i18n="t.sec.p">Window, door, glass break, leak, motion, presence, smoke, CO</p></li>
@@ -475,7 +476,7 @@ footer a{color:var(--ink)}
       <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><rect x="3" y="8" width="16" height="8" rx="1.5"/><path d="M21 11v2"/><rect x="5" y="10" width="3" height="4" fill="currentColor" stroke="none"/></svg><h3 data-i18n="t.bat">Batteries</h3><p data-i18n="t.bat.p">Low battery on the tile, full list in the settings</p></li>
     </ul>
     <div class="types-foot">
-      <p data-i18n="dev.no"><strong>Not supported yet:</strong> door locks, cameras, doorbells and buttons.</p>
+      <p data-i18n="dev.no"><strong>Not supported yet:</strong> cameras, doorbells and buttons.</p>
       <p data-i18n="dev.native">Native HomeKit devices without Homebridge need a plugin first.</p>
     </div>
   </div>
@@ -679,6 +680,7 @@ cd ~/homebridge-panel
     "t.hum":"Luftbefeuchter und -entfeuchter","t.hum.p":"Modus, Zielfeuchte, Wasserstand",
     "t.motor":"Motorisierte Fenster und Türen","t.motor.p":"Position, öffnen, stoppen, schließen; offen als Meldung",
     "t.blinds":"Rollos und Jalousien","t.blinds.p":"Position per Ziehen, Stopp, Lamellenwinkel",
+    "t.lock":"Türschlösser","t.lock.p":"Abschließen, aufschließen mit PIN, offen als Meldung",
     "t.garage":"Garagentore","t.garage.p":"Status, öffnen und schließen nach Bestätigung",
     "t.valve":"Ventile und Bewässerung","t.valve.p":"Auf/zu, Laufzeit, Restminuten",
     "t.climate":"Klima- und Luftsensoren","t.climate.p":"Temperatur, Feuchte, Luftdruck, Helligkeit, Luftqualität, CO₂, Feinstaub, VOC",
@@ -686,7 +688,7 @@ cd ~/homebridge-panel
     "t.alarm":"Alarmanlage","t.alarm.p":"Scharf in Zuhause, Abwesend oder Nacht, unscharf optional mit PIN",
     "t.mqtt":"MQTT-Werte","t.mqtt.p":"Beliebige Topics als Kachel, z. B. Heizungsdruck in bar",
     "t.bat":"Batterien","t.bat.p":"Schwache Batterie auf der Kachel, vollständige Liste in den Einstellungen",
-    "dev.no":"<strong>Noch nicht unterstützt:</strong> Türschlösser, Kameras, Türklingeln und Taster.","dev.native":"Native HomeKit-Geräte ohne Homebridge brauchen zuerst ein Plugin.",
+    "dev.no":"<strong>Noch nicht unterstützt:</strong> Kameras, Türklingeln und Taster.","dev.native":"Native HomeKit-Geräte ohne Homebridge brauchen zuerst ein Plugin.",
     "sizes.title":"Eine App, jedes Display.",
     "sizes.lede":"Vom klassischen Raspberry Pi Touch Display über 10,1″-Panels bis zum quadratischen Wanddisplay. Das Layout passt sich an – Seitenleiste, Kopfleiste oder Hochformat.",
     "sizes.7":"7″-HDMI-Displays","sizes.10":"10,1″-Panels – empfohlen","sizes.sq":"Quadratisch, z. B. HyperPixel 4.0 – empfohlen","sizes.p":"Hochformat",

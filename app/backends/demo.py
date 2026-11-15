@@ -69,6 +69,8 @@ _DEVICES = [
     ("television", "Television", "Living Room TV",
      [("Active", 0, True, {}), ("ActiveIdentifier", 1, True, {}), ("RemoteKey", None, True, {}),
       ("Mute", False, True, {}), ("VolumeSelector", None, True, {})]),
+    ("front-lock", "LockMechanism", "Front Door Lock",
+     [("LockCurrentState", 1, False, {}), ("LockTargetState", 1, True, {})]),
     ("garage", "GarageDoorOpener", "Garage Door",
      [("CurrentDoorState", 1, False, {}), ("TargetDoorState", 1, True, {}), ("ObstructionDetected", False, False, {})]),
     ("sprinkler", "Valve", "Garden Sprinkler",
@@ -153,6 +155,8 @@ class DemoBackend(Backend):
         low, high = hum["RelativeHumidityHumidifierThreshold"].value, hum["RelativeHumidityDehumidifierThreshold"].value
         hum["CurrentHumidifierDehumidifierState"].value = (
             0 if not hum["Active"].value else 2 if mode in (0, 1) and now < low else 3 if mode in (0, 2) and now > high else 1)
+        lock = self._services["front-lock"].chars      # the lock follows its target
+        lock["LockCurrentState"].value = lock["LockTargetState"].value
         door = self._services["garage"].chars        # the garage door moves within one poll
         cur, tgt = door["CurrentDoorState"], door["TargetDoorState"].value
         if tgt == 0 and cur.value != 0:

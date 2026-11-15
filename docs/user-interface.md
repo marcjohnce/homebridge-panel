@@ -85,7 +85,7 @@ Tiles leave out the room from the device name when the room is shown anyway
 |---|---|
 | Lights | lights, switches, plugs and blinds |
 | Climate | heating, temperature, humidity, air pressure and light sensors, fans, air purifiers, humidifiers |
-| Security | alarm system, garage doors, motorized windows and doors, window, door, glass break, leak, motion, presence, smoke and CO sensors – alarms and open windows first |
+| Security | alarm system, door locks, garage doors, motorized windows and doors, window, door, glass break, leak, motion, presence, smoke and CO sensors – alarms and open windows first |
 
 A dot before a room tab shows where something is going on: under *Lights* a dot in the accent
 colour marks rooms with at least one light, switch or plug on (blinds don't count); under
@@ -130,6 +130,11 @@ A window, door, contact or motion sensor that is only used for automations can b
 of the alerts: switch off *Security alerts* in [Settings → Rooms and devices](#rooms-and-devices).
 It is still shown under *Security*, but raises no alert, gets no red dot and is marked
 *No alerts* in the device list. Leak, smoke, CO and glass break sensors always alert.
+
+A **door lock** (HomeKit lock) shows *Locked*, *Unlocked*, *Locking …*, *Unlocking …* or *Jammed*.
+An unlocked or jammed lock counts as an alert (can be switched off with *Security alerts*). A tap
+asks *Unlock …?* or *Lock …?* first; unlocking asks for the *PIN to disarm* of the alarm system if
+one is set, locking needs no PIN.
 
 **Motorized windows and doors** (HomeKit window and door, e.g. skylights) appear under *Security*:
 an open one counts as an alert like an open window (can be switched off with *Security alerts*). A

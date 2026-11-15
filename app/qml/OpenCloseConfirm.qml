@@ -1,12 +1,15 @@
 import QtQuick
 import QtQuick.Controls.Basic
 
-// Asks before a garage door is opened or closed; opening needs the alarm PIN if one is set
+// Asks before a garage door is opened or closed or a door lock is unlocked or locked;
+// opening / unlocking needs the alarm PIN if one is set
 Popup {
     id: root
 
     property var dev: ({})
-    readonly property bool opening: !!dev.state && dev.state.door !== "open" && dev.state.door !== "opening"
+    readonly property bool isLock: dev.type === "lock"
+    readonly property bool opening: !!dev.state && (isLock ? dev.state.lock !== "unlocked"
+                                                           : dev.state.door !== "open" && dev.state.door !== "opening")
     readonly property bool needsPin: opening && panel.alarmPinSet
 
     function ask(id) {
@@ -18,7 +21,7 @@ Popup {
     function confirm() {
         if (needsPin && pad.entry.length < 4)
             return;
-        const err = panel.garageDoor(dev.id, opening, pad.entry);
+        const err = panel.openClose(dev.id, opening, pad.entry);
         if (err !== "") {
             pad.error = err;
             pad.entry = "";
@@ -49,7 +52,8 @@ Popup {
 
         Text {
             width: parent.width
-            text: root.opening ? qsTr("Open %1?").arg(root.dev.name || "") : qsTr("Close %1?").arg(root.dev.name || "")
+            text: root.isLock ? (root.opening ? qsTr("Unlock %1?") : qsTr("Lock %1?")).arg(root.dev.name || "")
+                : (root.opening ? qsTr("Open %1?") : qsTr("Close %1?")).arg(root.dev.name || "")
             color: Theme.ink
             font.pixelSize: Theme.s(18)
             font.weight: Font.Medium
@@ -58,7 +62,7 @@ Popup {
         Text {
             width: parent.width
             visible: root.needsPin
-            text: qsTr("Enter the PIN to open")
+            text: root.isLock ? qsTr("Enter the PIN to unlock") : qsTr("Enter the PIN to open")
             color: Theme.muted
             font.pixelSize: Theme.s(14)
         }
@@ -80,7 +84,8 @@ Popup {
             PillButton {
                 objectName: "garageConfirm"
                 primary: true
-                text: root.opening ? qsTr("Open door") : qsTr("Close door")
+                text: root.isLock ? (root.opening ? qsTr("Unlock") : qsTr("Lock"))
+                    : (root.opening ? qsTr("Open door") : qsTr("Close door"))
                 enabled: !root.needsPin || pad.entry.length >= 4
                 onClicked: root.confirm()
             }
