@@ -7,7 +7,7 @@ GridView {
     signal openDetail(string id)
 
     readonly property int columns: Math.max(2, Math.floor(width / Theme.s(172)))
-    readonly property bool showRooms: panel.currentRoom === "" && panel.rooms.length > 1
+    readonly property bool showRooms: panel.category === "favorites" || (panel.currentRoom === "" && panel.rooms.length > 1)
 
     model: panel.devices
     cellWidth: width / columns
@@ -52,6 +52,7 @@ GridView {
         horizontalAlignment: Text.AlignHCenter
         wrapMode: Text.WordWrap
         text: panel.deviceCount === 0 ? qsTr("No devices yet. Enter your Homebridge address, port and PIN in Settings.")
+            : panel.category === "favorites" ? qsTr("No favorites yet. Mark devices as favorite in Settings → Rooms and devices.")
             : panel.category === "light" ? qsTr("No lights, switches or blinds here.")
             : panel.category === "climate" ? qsTr("No heating or climate sensors here.")
             : qsTr("No security sensors here.")

@@ -327,7 +327,8 @@ PT: dict[str, str] = {
     "Show the “General” room": "Mostrar a divisão «Geral»",
     "Off: devices without a room only appear under “All”":
         "Desligado: os dispositivos sem divisão só aparecem em «Todas»",
-    "Tap a device to change its name, kind or room.": "Toque num dispositivo para alterar o nome, o tipo ou a divisão.",
+    "Tap a device to change its name, kind or room or to make it a favorite.":
+        "Toque num dispositivo para alterar o nome, o tipo ou a divisão, ou para o marcar como favorito.",
     "Edit %1": "Editar %1",
     "Edit device": "Editar dispositivo",
     "Display name": "Nome apresentado",
@@ -452,4 +453,9 @@ PT: dict[str, str] = {
         "Falha no início de sessão no Homebridge UI ({status}) – verifique o utilizador e a palavra-passe",
     "Homebridge UI request failed: {error}": "O pedido ao Homebridge UI falhou: {error}",
     "Homebridge UI write failed: {error}": "A escrita no Homebridge UI falhou: {error}",
+    "Favorites": "Favoritos",
+    "Favorite": "Favorito",
+    "Shown under Favorites, the start page of the panel": "Aparece em Favoritos, a página inicial do painel",
+    "No favorites yet. Mark devices as favorite in Settings → Rooms and devices.":
+        "Ainda sem favoritos. Marque dispositivos como favoritos em Definições → Divisões e dispositivos.",
 }

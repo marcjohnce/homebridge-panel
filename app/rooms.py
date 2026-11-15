@@ -7,7 +7,9 @@ The panel can override it; overrides and the room order are stored in settings.j
     "rooms": {"order": ["Living Room", "Kitchen"], "devices": {"hap:...": "Kitchen"},
               "names": {"hap:...": "Coffee"}, "kinds": {"hap:...": "window"}, "hidden": ["hap:..."], "quiet": {"hap:...": true},
               "outdoor": {"hap:...": true}, "areas": {"hap:...": "climate"},
-              "device_order": {"Kitchen": ["hap:...", "hap:..."]}}
+              "device_order": {"Kitchen": ["hap:...", "hap:..."]}, "favorites": ["hap:...", "hap:..."]}
+
+Favorites (in their order) form the first menu entry of the home screen.
 
 Hidden devices are left out of the home screen (tiles, menu status, alarms, temperatures)
 and are only listed in the settings.
@@ -43,6 +45,8 @@ class RoomLayout:
         self.device_order: dict[str, list[str]] = (
             {str(r): [str(i) for i in ids] for r, ids in order.items() if isinstance(ids, list)}
             if isinstance(order, dict) else {})
+        favs = data.get("favorites", [])
+        self.favorites: list[str] = list(dict.fromkeys(str(f) for f in favs)) if isinstance(favs, list) else []
         hidden = data.get("hidden", [])
         self.hidden: set[str] = {str(h) for h in hidden} if isinstance(hidden, list) else set()
         quiet = data.get("quiet", {})
@@ -67,7 +71,8 @@ class RoomLayout:
                 "names": dict(self.names), "kinds": dict(self.kinds), "hidden": sorted(self.hidden),
                 "quiet": dict(self.quiet),
                 "outdoor": dict(self.outdoor), "areas": dict(self.areas),
-                "device_order": {r: list(ids) for r, ids in self.device_order.items()}}
+                "device_order": {r: list(ids) for r, ids in self.device_order.items()},
+                "favorites": list(self.favorites)}
 
     @property
     def default_room(self) -> str:
@@ -168,6 +173,26 @@ class RoomLayout:
         i = ids.index(dev_id)
         ids.insert(max(0, min(len(ids) - 1, i + delta)), ids.pop(i))
         self.device_order[room] = ids
+
+    def set_favorite(self, dev_id: str, favorite: bool) -> None:
+        """New favorites are added at the end."""
+        if favorite and dev_id not in self.favorites:
+            self.favorites.append(dev_id)
+        elif not favorite and dev_id in self.favorites:
+            self.favorites.remove(dev_id)
+
+    def favorite_rank(self, dev_id: str) -> int:
+        return self.favorites.index(dev_id) if dev_id in self.favorites else len(self.favorites)
+
+    def move_favorite(self, dev_id: str, delta: int, shown_ids: list[str]) -> None:
+        """shown_ids: the favorites listed in the settings, in their order (devices that are
+        currently missing keep their place at the end)."""
+        if dev_id not in shown_ids:
+            return
+        ids = list(shown_ids)
+        i = ids.index(dev_id)
+        ids.insert(max(0, min(len(ids) - 1, i + delta)), ids.pop(i))
+        self.favorites = ids + [f for f in self.favorites if f not in ids]
 
     def check_device_name(self, name: str) -> tuple[str, str | None]:
         name = " ".join(str(name).split())

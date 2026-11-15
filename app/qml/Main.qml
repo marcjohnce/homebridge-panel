@@ -106,7 +106,7 @@ ApplicationWindow {
             window.openDevice = "";
             window.settingsOpen = false;
             window.idle = true;
-            panel.selectCategory("light");      // after waking up the panel starts with "Light"
+            panel.selectStart();      // after waking up: favorites (if any) or lights
         }
     }
 

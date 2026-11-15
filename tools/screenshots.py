@@ -89,11 +89,16 @@ def main() -> int:
     def click(x: float, y: float) -> None:
         QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPointF(x, y).toPoint())
 
+    # a few favorites for the start page
+    for dev_id in ("demo:living-ceiling", "demo:heating-living", "demo:front-lock", "demo:coffee",
+                   "demo:living-blinds", "demo:kitchen-light"):
+        ctl.roomEditor.saveDevice(dev_id, {"favorite": True})
+
     themes = ["light", "dark"] if args.theme == "both" else [args.theme]
     for theme in themes:
         store.update({"theme": theme})
         ctl.settings_saved({"theme"})
-        for cat in ("light", "climate", "security"):
+        for cat in ("favorites", "light", "climate", "security"):
             ctl.selectCategory(cat)
             shot(f"{theme}-home-{cat}")
         ctl.selectCategory("")

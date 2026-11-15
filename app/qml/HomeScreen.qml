@@ -45,6 +45,7 @@ Item {
                 spacing: Theme.s(12)
 
                 RoomTabs {
+                    visible: panel.category !== "favorites"
                     Layout.fillWidth: true
                     Layout.preferredHeight: Theme.s(44)
                 }
@@ -72,6 +73,7 @@ Item {
                 onOpenSettings: root.openSettings()
             }
             RoomTabs {
+                visible: panel.category !== "favorites"
                 Layout.fillWidth: true
                 Layout.preferredHeight: 44
                 Layout.leftMargin: 24
