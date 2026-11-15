@@ -20,6 +20,9 @@ Rectangle {
     readonly property bool isPurifier: dev.type === "purifier"
     readonly property bool isHumidifier: dev.type === "humidifier"
     readonly property bool heatingNow: isThermostat && dev.reachable && dev.state.heating
+    // temperature chart from the Eve history of the device
+    readonly property bool hasHistory: !!(dev.meta && dev.meta.history)
+    property bool showHistory: false
 
     color: Theme.page
     focus: true
@@ -28,6 +31,7 @@ Rectangle {
     // refresh() assigns dev directly, so follow device changes explicitly as well
     onDeviceIdChanged: {
         busy = false;
+        showHistory = false;
         dev = panel.device(deviceId);
     }
 
@@ -90,10 +94,28 @@ Rectangle {
             onBack: root.closed()
         }
 
+        Row {
+            visible: root.hasHistory
+            spacing: Theme.s(28)
+            UnderlineButton {
+                objectName: "detailNow"
+                text: qsTr("Now")
+                selected: !root.showHistory
+                onClicked: root.showHistory = false
+            }
+            UnderlineButton {
+                objectName: "detailHistory"
+                text: qsTr("History")
+                selected: root.showHistory
+                onClicked: root.showHistory = true
+            }
+        }
+
         Loader {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            sourceComponent: root.isAlarm ? alarmComponent : root.isValve ? valveComponent
+            sourceComponent: root.hasHistory && root.showHistory ? historyComponent
+                           : root.isAlarm ? alarmComponent : root.isValve ? valveComponent
                            : root.isTv ? tvComponent : root.isSpeaker ? speakerComponent
                            : root.isPurifier ? purifierComponent : root.isHumidifier ? humidifierComponent : root.isChoice ? choiceComponent
                            : root.isThermostat ? thermostatComponent : root.isSensor ? sensorComponent
@@ -101,6 +123,12 @@ Rectangle {
         }
     }
 
+    Component {
+        id: historyComponent
+        HistoryChart {
+            deviceId: root.deviceId
+        }
+    }
     Component {
         id: thermostatComponent
         ThermostatControl {

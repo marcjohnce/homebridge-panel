@@ -1050,3 +1050,27 @@ def test_groups_and_virtual_devices_as_favorites(qapp, tmp_path):
     assert ed._layout.favorites == [group]
     assert SettingsStore(tmp_path / "settings.json").rooms["favorites"] == [group]
     ctl.shutdown()
+
+
+def test_temperature_history(qapp, tmp_path):
+    ctl = make_controller(tmp_path)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 29)
+    with_history = sorted(d["name"] for d in ctl.devices.all() if d["meta"].get("history"))
+    assert with_history == ["Living Room Climate", "Living Room Heating", "Weather Station"]
+    got = []
+    ctl.historyLoaded.connect(lambda dev_id, days, result: got.append((dev_id, days, result)))
+    ctl.loadHistory("demo:weather-station", 1)
+    assert pump_until(lambda: got)
+    dev_id, days, result = got[0]
+    assert (dev_id, days, result["error"]) == ("demo:weather-station", 1, "")
+    assert 140 <= len(result["points"]) <= 145 and result["min"] < result["max"]
+    assert result["since"] <= result["points"][0]["t"] <= result["points"][-1]["t"] <= result["until"]
+    ctl.loadHistory("demo:weather-station", 30)
+    assert pump_until(lambda: len(got) == 2)
+    assert len(got[1][2]["points"]) <= 240                  # averaged for the chart
+    assert (tmp_path / "history.json").exists()             # kept for the next start
+    ctl.loadHistory("demo:coffee", 1)                       # no history: empty, no error
+    assert pump_until(lambda: len(got) == 3)
+    assert got[2][2]["points"] == [] and got[2][2]["error"] == ""
+    ctl.shutdown()

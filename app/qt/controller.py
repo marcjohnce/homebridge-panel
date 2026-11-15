@@ -27,6 +27,7 @@ from ..backends.mqtt import MqttBackend, test_connection as test_mqtt
 from ..rooms import BUILTIN_DEFAULT, RoomLayout
 from ..scheduler import Scheduler
 from ..updater import UpdateError, Updater
+from ..eve_history import TemperatureHistory, bucket
 from ..settings import ACTIONS, SettingsStore, apply_to_config, validate
 from ..models import AREAS, KIND_ICONS, KIND_KEYS, QUIET_KINDS
 from . import format as fmt
@@ -685,6 +686,7 @@ class Controller(QObject):
     _message = Signal(object)
     _updateResult = Signal(object)        # from the update thread: (kind, value)
     updateChanged = Signal()
+    historyLoaded = Signal(str, int, "QVariantMap")    # device, days, {points, min, max, error}
     toast = Signal(str)
     deviceUpdated = Signal(str)
     userActivity = Signal()
@@ -746,6 +748,8 @@ class Controller(QObject):
         self._message.connect(self._on_message)
         self._theme_timer = QTimer(self, interval=30_000, timeout=self._update_theme)
         self._theme_timer.start()
+        # Eve history read from the devices, kept next to settings.json
+        self._history = TemperatureHistory(Path(store.path).with_name("history.json"))
         # software update: checked a minute after the start and then once a day
         self._updater = updater or Updater()
         supported = self._updater.supported
@@ -939,7 +943,7 @@ class Controller(QObject):
     async def _restart(self, cfg: AppConfig) -> None:
         await self._stop_manager()
         try:
-            mgr = DeviceManager(cfg, create_backends(cfg))
+            mgr = DeviceManager(cfg, create_backends(cfg), history=self._history)
         except ValueError as e:
             self.toast.emit(str(e))
             return
@@ -1127,6 +1131,30 @@ class Controller(QObject):
                 self.toast.emit(str(e))
             else:
                 self.toast.emit(tr("Command failed: {error}").format(error=e))
+        fut.add_done_callback(done)
+
+    @Slot(str, int)
+    def loadHistory(self, dev_id: str, days: int) -> None:
+        """Reads the temperature history of a device (new entries only) and answers with
+        historyLoaded: points {t: ms, v: °C} of the last `days` days, at most 240."""
+        if not self._mgr:
+            self.historyLoaded.emit(dev_id, days, {"points": [], "error": tr("Not connected to Homebridge yet.")})
+            return
+        fut = self.runner.submit(self._mgr.temperature_history(dev_id))
+
+        def done(f: concurrent.futures.Future) -> None:
+            e = f.exception()
+            if e is not None:
+                log.warning("History of %s: %s", dev_id, e)
+                result = {"points": [], "error": tr("History could not be read: {error}").format(error=e)}
+            else:
+                now = time.time()
+                pts = bucket(f.result(), now - days * 86400, now)
+                vals = [v for _, v in pts]
+                result = {"points": [{"t": t * 1000, "v": v} for t, v in pts], "error": "",
+                          "since": (now - days * 86400) * 1000, "until": now * 1000,
+                          "min": min(vals) if vals else 0, "max": max(vals) if vals else 0}
+            _emit_safely(self.historyLoaded, dev_id, days, result)
         fut.add_done_callback(done)
 
     @Slot(str)

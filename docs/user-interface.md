@@ -194,6 +194,9 @@ Choose the kind of a contact or motion sensor in [Settings → Rooms and devices
 Changes are sent shortly after you stop dragging or tapping, so a quick series of taps
 results in one command.
 
+Thermostats with an Eve history (e.g. radiator thermostats of Eve-compatible plugins) also have a
+*History* page with the room temperature, see [Temperature history](#temperature-history).
+
 ## Lights and fans
 
 **Color light** – 1280 × 800 and 720 × 720
@@ -307,9 +310,30 @@ CO₂ sensor reports a high level.
 | 2 | Temperature | In °C |
 | 3 | Humidity | Relative humidity in % |
 | 4 | Air pressure | In hPa |
-| 5 | Light level | In lux (light sensors) |
+| 5 | History | Only for devices with an Eve history (see below): switches to the temperature chart |
 
 ![Light sensor at 1280 × 800](images/sensor-light.png)
+
+### Temperature history
+
+Many Homebridge plugins keep a history of their readings for the Eve app (plugins built on
+*fakegato-history* or *homebridge-lib*, e.g. weather stations, room sensors and radiator
+thermostats). For these devices the detail view has a second page, *History*, with a chart of
+the temperature over the last 24 hours, 7 or 30 days (as far back as the device keeps it, usually
+about four weeks of 10-minute values).
+
+![Temperature history](images/history.png)
+
+| # | Element | What it does |
+|---|---|---|
+| 1 | 24 hours, 7 days, 30 days | Period of the chart |
+| 2 | Lowest, highest | Lowest and highest temperature in this period |
+| 3 | Touch the chart | Shows the time and temperature at that point; disappears after a few seconds |
+
+The panel reads the history directly from Homebridge (HAP connection; the Homebridge UI
+connection does not give access to it). The first time a chart is opened it reads everything the
+device keeps, which can take a few seconds; after that only new values. The values are kept in
+`history.json` next to the settings, so they are there right away after a restart.
 
 | Reading | HomeKit service | Notes |
 |---|---|---|

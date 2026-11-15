@@ -8,6 +8,11 @@ from typing import Any
 
 from ..hap_types import Char, ServiceSnapshot
 from .base import Backend
+from .eve_sim import THERMO, WEATHER, EveHistorySim, demo_temperatures
+
+# devices with an Eve history: fingerprint, mean temperature and daily swing
+_HISTORY = {"weather-station": (WEATHER, 5.0, 4.0), "living-climate": (WEATHER, 21.0, 0.7),
+            "heating-living": (THERMO, 20.0, 1.0)}
 
 _DEVICES = [
     ("living-ceiling", "Lightbulb", "Living Room Ceiling Light",
@@ -110,6 +115,15 @@ class DemoBackend(Backend):
                 key=key, service_type=stype, name=nm,
                 chars={c: Char(name=c, value=v, writable=w, ref=(key, c), **kw) for c, v, w, kw in chars},
             )
+        # Eve history (temperature charts)
+        self.history: dict[str, EveHistorySim] = {}
+        now = time.time()
+        for key, (fingerprint, base, swing) in _HISTORY.items():
+            raw = [(t, [round(v * 100), 8000 if fingerprint is WEATHER else 2100,
+                        10140 if fingerprint is WEATHER else 40] + ([0, 0] if fingerprint is THERMO else []))
+                   for t, v in demo_temperatures(now, base, swing)]
+            self.history[key] = EveHistorySim(fingerprint, raw)
+            self._services[key].history = {part: (key, part) for part in ("status", "entries", "request")}
         # input sources of the television: services of their own, linked to it
         for ident, label in ((1, "HDMI 1"), (2, "HDMI 2"), (3, "Netflix")):
             key = f"tv-input-{ident}"
@@ -177,6 +191,13 @@ class DemoBackend(Backend):
     async def fetch(self) -> list[ServiceSnapshot]:
         self._simulate()
         return copy.deepcopy(list(self._services.values()))
+
+    async def read_char(self, ref: tuple[str, str]) -> Any:
+        sim = self.history[ref[0]]
+        return sim.status() if ref[1] == "status" else sim.read_entries()
+
+    async def write_char(self, ref: tuple[str, str], value: Any) -> None:
+        self.history[ref[0]].request(value)
 
     async def write(self, writes: list[tuple[Char, Any]]) -> None:
         for ch, value in writes:
