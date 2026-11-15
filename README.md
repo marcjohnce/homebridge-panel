@@ -157,7 +157,7 @@ column to the catalog.
 | `hap` | additional bridges (child bridges); the main bridge comes from the settings |
 | `homebridge_ui` | alternatively access via the Homebridge web UI (username/password) |
 | `demo` | simulated devices |
-| `devices` | per device (ID or name): `room`, `name`, `icon`, `order`, `hidden`, `outdoor` (sensors), `security` (`window`, `door`, `contact`, `glassbreak`, `motion`, `presence` for contact/motion/occupancy sensors), `appliance` (`switch`, `plug`, `coffee`, `washer`, `dishwasher`, `fan` for switches/plugs), `lamp` (`bulb`, `ceiling`, `spot`, `wall`, `table` for lights), `valve` (`generic`, `irrigation`, `shower`, `faucet`), `area` (`light`, `climate`, `security`); values set on the panel take precedence |
+| `devices` | per device (ID or name): `room`, `name`, `icon`, `order`, `hidden`, `outdoor` (sensors), `security` (`window`, `door`, `contact`, `glassbreak`, `motion`, `presence` for contact/motion/occupancy sensors), `appliance` (`switch`, `plug`, `coffee`, `washer`, `dishwasher`, `fan` for switches/plugs), `lamp` (`bulb`, `ceiling`, `spot`, `wall`, `table`, `desk`, `floorlamp`, `globe`, `strip` for lights), `valve` (`generic`, `irrigation`, `shower`, `faucet`), `area` (`light`, `climate`, `security`); values set on the panel take precedence |
 | `scenes` | scenes with actions `{device: …, set: {…}}`, run by schedules; `room` is kept for a later scenes view |
 | `schedules` | run a scene at a time on weekdays (`mo tu we th fr sa su`) |
 

@@ -378,7 +378,8 @@ class RoomsBridge(QObject):
                    "switch": "Switch", "plug": "Plug", "coffee": "Coffee machine",
                    "washer": "Washing machine", "dishwasher": "Dishwasher", "fan": "Fan",
                    "bulb": "Bulb", "ceiling": "Ceiling lamp", "spot": "Spotlight", "wall": "Wall lamp",
-                   "table": "Table lamp",
+                   "table": "Table lamp", "desk": "Desk lamp", "floorlamp": "Floor lamp", "globe": "Globe lamp",
+                   "strip": "LED strip",
                    "generic": "Valve", "irrigation": "Irrigation", "shower": "Shower head", "faucet": "Faucet"}
     AREA_LABELS = {"": "Automatic", "light": "Lights", "climate": "Climate", "security": "Security"}
 
