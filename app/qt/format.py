@@ -14,7 +14,7 @@ CATEGORIES = ("light", "climate", "security")
 CATEGORY_OF_TYPE = {"light": "light", "plug": "light", "switch": "light", "blind": "light",
                     "thermostat": "climate", "sensor": "climate", "fan": "climate",
                     "security": "security", "value": "climate", "alarm": "security",
-                    "garage": "security", "tv": "light", "speaker": "light", "purifier": "climate",
+                    "garage": "security", "lock": "security", "tv": "light", "speaker": "light", "purifier": "climate",
                     "humidifier": "climate"}
 
 # Motion sensors only raise an alert while an alarm system is armed (set by the controller)
@@ -60,12 +60,12 @@ def alert_level(d: dict[str, Any]) -> int:
         s = d.get("state", {})
         return 0 if d.get("quiet") or not d.get("reachable", True) or not (s.get("position", 0) > 0
                                                                            or s.get("obstructed")) else 1
-    if d["type"] not in ("security", "alarm", "garage") or not d.get("reachable", True) \
+    if d["type"] not in ("security", "alarm", "garage", "lock") or not d.get("reachable", True) \
             or not d.get("state", {}).get("triggered"):
         return 0
     if d["type"] == "alarm":
         return 2
-    if d["type"] == "garage":                # open door: like an open window
+    if d["type"] in ("garage", "lock"):      # open door, unlocked or jammed lock: like an open window
         return 0 if d.get("quiet") else 1
     kind = d.get("meta", {}).get("security")
     if d.get("quiet") and kind not in ALARM_KINDS:      # set on the panel: only shown, no alerts
@@ -140,6 +140,15 @@ def humidifier_text(s: dict[str, Any]) -> str:
     else:
         text = {"humidifying": tr("Humidifying"), "dehumidifying": tr("Dehumidifying")}.get(s.get("activity"), tr("Idle"))
     return tr("{state}, now {pct}").format(state=text, pct=pct(now)) if now is not None else text
+
+
+def lock_text(s: dict[str, Any]) -> str:
+    lock, target = s.get("lock", "unknown"), s.get("target")
+    if lock == "jammed":
+        return tr("Jammed")
+    if target and lock in ("locked", "unlocked") and target != lock:
+        return tr("Locking …") if target == "locked" else tr("Unlocking …")
+    return {"locked": tr("Locked"), "unlocked": tr("Unlocked")}.get(lock, tr("Unknown"))
 
 
 def garage_text(d: dict[str, Any]) -> str:
@@ -254,6 +263,8 @@ def state_text(d: dict[str, Any]) -> str:
         return valve_text(s)
     if d["type"] == "garage":
         return garage_text(d)
+    if d["type"] == "lock":
+        return lock_text(s)
     if d["type"] == "speaker":
         return speaker_text(s)
     if d["type"] == "purifier":

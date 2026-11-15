@@ -86,6 +86,9 @@ class PanelTest {
     mk("Humidifier").add(S.HumidifierDehumidifier, "Humidifier", [[C.Active, 1],
       [C.CurrentHumidifierDehumidifierState, 2], [C.TargetHumidifierDehumidifierState, 1], [C.CurrentRelativeHumidity, 38],
       [C.RelativeHumidityHumidifierThreshold, 45], [C.RelativeHumidityDehumidifierThreshold, 60], [C.WaterLevel, 70]]);
+    const lock = mk("Lock");
+    lock.add(S.LockMechanism, "Lock", [[C.LockCurrentState, 1], [C.LockTargetState, 1]]);
+    lock.onSet = (s, Ch, v) => { if (Ch === C.LockTargetState) s.getCharacteristic(C.LockCurrentState).value = v; };
     const tv = mk("Television");
     const tvs = tv.add(S.Television, "Television", [[C.Active, 0], [C.ActiveIdentifier, 1],
       [C.ConfiguredName, "Television"], [C.SleepDiscoveryMode, 1]]);

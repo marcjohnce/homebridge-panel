@@ -130,16 +130,16 @@ ApplicationWindow {
         function onDetailRequested(id) {
             window.openDevice = id;
         }
-        function onGarageRequested(id) {
-            garageConfirm.ask(id);
+        function onConfirmRequested(id) {
+            openCloseConfirm.ask(id);
         }
         function onRestarting(message) {
             restartOverlay.message = message;
         }
     }
 
-    GarageConfirm {
-        id: garageConfirm
-        objectName: "garageDialog"
+    OpenCloseConfirm {
+        id: openCloseConfirm
+        objectName: "openCloseDialog"
     }
 }

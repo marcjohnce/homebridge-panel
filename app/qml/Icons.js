@@ -63,6 +63,9 @@ var paths = {
     sprinkler: "M12 21V12M8 21h8M12 12L6.5 5M12 12l5.5-7M12 12V3.5M4.5 7h.01M3.5 10.5h.01M19.5 7h.01M20.5 10.5h.01M12 1.5h.01",
     shower: "M5 21V8a4.5 4.5 0 0 1 4.5-4.5h1a4.5 4.5 0 0 1 4.5 4.5v1M11 9h8M12.5 12.5v1.5M15 12.5v2.5M17.5 12.5v1.5M13.5 17v1.5M16.5 17v1.5M15 19.5v1.5",
     faucet: "M3.5 10h11a4 4 0 0 1 4 4v1.5M9 10V6.5M5.5 5h7M18.5 18.5v.01M18.5 21v.01",
+    // door lock: closed and open padlock
+    lock: "M7.5 11V8a4.5 4.5 0 0 1 9 0v3M5.5 11h13v9.5h-13zM12 14.5v2.5",
+    lockOpen: "M7.5 11V8a4.5 4.5 0 0 1 8.7-1.6M5.5 11h13v9.5h-13zM12 14.5v2.5",
     // garage door: house outline with door panels
     garage: "M3 20.5V9l9-5.5L21 9v11.5M6.5 20.5v-8h11v8M6.5 15h11M6.5 17.75h11",
     // television remote: volume, mute, play/pause, info

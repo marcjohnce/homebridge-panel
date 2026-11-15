@@ -43,6 +43,7 @@ SERVICE_TYPES: dict[str, str] = {
     "7E": "SecuritySystem",
     "D0": "Valve",
     "41": "GarageDoorOpener",
+    "45": "LockMechanism",
     "D8": "Television",
     "D9": "InputSource",
     "113": "Speaker",            # also the speaker of a television (same type)
@@ -108,6 +109,8 @@ CHAR_TYPES: dict[str, str] = {
     "66": "SecuritySystemCurrentState",
     "D2": "InUse",
     "E": "CurrentDoorState",
+    "1D": "LockCurrentState",
+    "1E": "LockTargetState",
     "E7": "ActiveIdentifier",
     "E1": "RemoteKey",
     "E6": "Identifier",
@@ -170,6 +173,7 @@ DEVICE_TYPE_BY_SERVICE: dict[str, DeviceType] = {
     "SecuritySystem": DeviceType.ALARM,
     "Valve": DeviceType.VALVE,
     "GarageDoorOpener": DeviceType.GARAGE,
+    "LockMechanism": DeviceType.LOCK,
     "Television": DeviceType.TV,
     "Speaker": DeviceType.SPEAKER,
     "SmartSpeaker": DeviceType.SPEAKER,
@@ -223,6 +227,9 @@ MEDIA_TARGETS = {"play": 0, "pause": 1, "stop": 2}
 HUMIDIFIER_STATES = {0: "inactive", 1: "idle", 2: "humidifying", 3: "dehumidifying"}
 HUMIDIFIER_MODES = {0: "auto", 1: "humidify", 2: "dehumidify"}
 HUMIDIFIER_MODES_REV = {v: k for k, v in HUMIDIFIER_MODES.items()}
+
+# LockMechanism: current state (the target is 0 = unsecured, 1 = secured)
+LOCK_STATES = {0: "unlocked", 1: "locked", 2: "jammed", 3: "unknown"}
 
 # GarageDoorOpener: current door state; the target is 0 = open, 1 = closed
 DOOR_STATES = {0: "open", 1: "closed", 2: "opening", 3: "closing", 4: "stopped"}
@@ -401,6 +408,13 @@ def snapshot_to_state(s: ServiceSnapshot) -> tuple[DeviceType, dict[str, Any], l
             caps.append("speed")
         if "WaterLevel" in c:
             state["water"] = int(_num(s.get("WaterLevel")) or 0)
+    elif s.service_type == "LockMechanism":
+        lock = LOCK_STATES.get(int(s.get("LockCurrentState", 3) or 0), "unknown")
+        state["lock"] = lock
+        state["target"] = "locked" if int(s.get("LockTargetState", 1) or 0) == 1 else "unlocked"
+        state["triggered"] = lock in ("unlocked", "jammed")           # not locked: a security alert
+        caps.append("on")
+        meta["icon_hint"] = "lock" if lock == "locked" else "lockOpen"
     elif s.service_type == "GarageDoorOpener":
         door = DOOR_STATES.get(int(s.get("CurrentDoorState", 1) or 0), "closed")
         state["door"] = door
@@ -560,7 +574,9 @@ def command_to_writes(s: ServiceSnapshot, attrs: dict[str, Any]) -> list[tuple[C
     for key, value in attrs.items():
         if key == "on":
             on = bool(value)
-            if s.service_type == "SmartSpeaker" and "TargetMediaState" in c:     # on = play, off = pause
+            if s.service_type == "LockMechanism":          # on = unlock, off = lock
+                writes.append((need("LockTargetState"), 0 if on else 1))
+            elif s.service_type == "SmartSpeaker" and "TargetMediaState" in c:     # on = play, off = pause
                 writes.append((c["TargetMediaState"], MEDIA_TARGETS["play" if on else "pause"]))
             elif s.service_type == "Speaker" and "Active" not in c:              # a plain speaker: mute
                 writes.append((need("Mute"), not on))

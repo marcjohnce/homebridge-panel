@@ -25,7 +25,7 @@ TYPES = {"Color Light": "light", "White Light": "light", "Plug": "plug", "Switch
          "Weather": "sensor", "Air": "sensor", "Light Level": "sensor", "Alarm": "alarm",
          "Sprinkler": "valve", "Garage": "garage", "Television": "tv", "Skylight": "blind",
          "Motor Door": "blind", "Speaker": "speaker", "Smart Speaker": "speaker", "Purifier": "purifier",
-         "Humidifier": "humidifier"}
+         "Humidifier": "humidifier", "Lock": "lock"}
 COMMANDS = [("Color Light", {"on": False}, "on", False), ("Color Light", {"brightness": 25}, "brightness", 25),
             ("Color Light", {"hue": 200, "saturation": 50}, "hue", 200),
             ("White Light", {"color_temp": 400}, "color_temp", 400), ("Plug", {"on": False}, "on", False),
@@ -43,7 +43,8 @@ COMMANDS = [("Color Light", {"on": False}, "on", False), ("Color Light", {"brigh
             ("Smart Speaker", {"on": True}, "media", "playing"), ("Smart Speaker", {"media": "stop"}, "media", "stopped"),
             ("Purifier", {"on": True}, "purifying", True), ("Purifier", {"auto": False, "speed": 70}, "speed", 70),
             ("Humidifier", {"mode": "dehumidify"}, "mode", "dehumidify"),
-            ("Humidifier", {"dehumidify_target": 55}, "dehumidify_target", 55)]
+            ("Humidifier", {"dehumidify_target": 55}, "dehumidify_target", 55),
+            ("Lock", {"on": True}, "lock", "unlocked"), ("Lock", {"on": False}, "lock", "locked")]
 
 
 async def run(cfg: AppConfig) -> int:

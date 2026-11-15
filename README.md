@@ -48,6 +48,7 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 - **Speakers / smart speakers**: volume, mute, play/pause/stop
 - **Air purifiers** (auto/manual, speed) and **humidifiers / dehumidifiers** (mode, target humidity, water level)
 - **Televisions**: on/off, input sources, volume, mute and remote keys
+- **Door locks**: state, unlocked as alert, lock/unlock after a confirmation (unlocking with the alarm PIN)
 - **Garage doors**: state, open door as alert, open/close after a confirmation (opening with the alarm PIN)
 - **Valves**: irrigation, shower, faucet and generic valves; open/close, remaining time, run time
 - **Switch groups**: several switches of a room of which only one is on (e.g. irrigation circuits); a tap

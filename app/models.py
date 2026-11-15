@@ -17,6 +17,7 @@ class DeviceType(str, Enum):
     SECURITY = "security"     # contact (window, door, glass break), leak, motion, smoke and CO sensors
     VALUE = "value"           # virtual device: a value received over MQTT
     GARAGE = "garage"         # garage door opener
+    LOCK = "lock"             # door lock
     TV = "tv"                 # television: power, input sources, volume, remote keys
     SPEAKER = "speaker"       # speaker / smart speaker: volume, mute, play/pause
     PURIFIER = "purifier"     # air purifier: on/off, auto/manual, speed
@@ -41,6 +42,7 @@ DEFAULT_ICONS = {
     DeviceType.ALARM: "alarm",
     DeviceType.VALVE: "valve",
     DeviceType.GARAGE: "garage",
+    DeviceType.LOCK: "lock",
     DeviceType.TV: "tv",
     DeviceType.SPEAKER: "speaker",
     DeviceType.PURIFIER: "purifier",
