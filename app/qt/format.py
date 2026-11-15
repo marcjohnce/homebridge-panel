@@ -14,7 +14,7 @@ CATEGORIES = ("light", "climate", "security")
 CATEGORY_OF_TYPE = {"light": "light", "plug": "light", "switch": "light", "blind": "light",
                     "thermostat": "climate", "sensor": "climate", "fan": "climate",
                     "security": "security", "value": "climate", "alarm": "security",
-                    "garage": "security"}
+                    "garage": "security", "tv": "light"}
 
 # Motion sensors only raise an alert while an alarm system is armed (set by the controller)
 _alarm_armed = False
@@ -217,6 +217,10 @@ def state_text(d: dict[str, Any]) -> str:
         return valve_text(s)
     if d["type"] == "garage":
         return garage_text(d)
+    if d["type"] == "tv":
+        if not s.get("on"):
+            return tr("Off")
+        return tr("On – {input}").format(input=s["input_name"]) if s.get("input_name") else tr("On")
     if d.get("meta", {}).get("choice"):         # switch group: the switch that is on
         return s.get("active_name") or tr("Off")
     if d["type"] == "security":
@@ -265,5 +269,7 @@ def has_detail(d: dict[str, Any]) -> bool:
         return True
     if d["type"] == "valve":
         return "duration" in caps
+    if d["type"] == "tv":
+        return any(c in caps for c in ("input", "volume", "mute", "remote"))
     return d["type"] in ("thermostat", "sensor", "blind") or any(
         c in caps for c in ("brightness", "color", "color_temp", "speed"))

@@ -17,6 +17,7 @@ class DeviceType(str, Enum):
     SECURITY = "security"     # contact (window, door, glass break), leak, motion, smoke and CO sensors
     VALUE = "value"           # virtual device: a value received over MQTT
     GARAGE = "garage"         # garage door opener
+    TV = "tv"                 # television: power, input sources, volume, remote keys
     VALVE = "valve"           # water valve: generic, irrigation, shower head, faucet
     ALARM = "alarm"           # alarm system (HomeKit SecuritySystem): armed / disarmed / triggered
 
@@ -37,6 +38,7 @@ DEFAULT_ICONS = {
     DeviceType.ALARM: "alarm",
     DeviceType.VALVE: "valve",
     DeviceType.GARAGE: "garage",
+    DeviceType.TV: "tv",
 }
 
 # Kinds of security sensors. A contact sensor can be a window, a door, a plain contact
@@ -54,7 +56,7 @@ QUIET_KINDS = {"presence"}
 # What a switch or plug powers; chosen on the panel or with appliance: in config.yaml.
 # The kind sets the icon; "fan" puts the device under "Climate", washer and dishwasher
 # show "Running" while their plug reports power use.
-APPLIANCE_KINDS = ("switch", "plug", "tv", "coffee", "washer", "dishwasher", "fan")
+APPLIANCE_KINDS = ("switch", "plug", "coffee", "washer", "dishwasher", "fan")
 APPLIANCE_ICONS = {k: k for k in APPLIANCE_KINDS}
 # Lamp kinds of lights; only the icon changes (lamp: in config.yaml)
 LAMP_KINDS = ("bulb", "ceiling", "spot", "wall", "table")

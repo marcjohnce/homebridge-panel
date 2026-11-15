@@ -83,6 +83,7 @@ class DeviceOverride(BaseModel):
         None, description="Kind of a contact or motion sensor (e.g. glassbreak)")
     valve: Literal["generic", "irrigation", "shower", "faucet"] | None = Field(
         None, description="Kind of a valve (icon; generic valves appear under Security)")
+    # "tv" is still accepted from older configurations and treated as a plain switch
     appliance: Literal["switch", "plug", "tv", "coffee", "washer", "dishwasher", "fan"] | None = Field(
         None, description="What a switch or plug powers (icon, washer/dishwasher state, fan under Climate)")
     lamp: Literal["bulb", "ceiling", "spot", "wall", "table"] | None = Field(

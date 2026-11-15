@@ -43,6 +43,9 @@ SERVICE_TYPES: dict[str, str] = {
     "7E": "SecuritySystem",
     "D0": "Valve",
     "41": "GarageDoorOpener",
+    "D8": "Television",
+    "D9": "InputSource",
+    "113": "TelevisionSpeaker",
     "7F": "CarbonMonoxideSensor",
     "96": "Battery",
     EVE_WEATHER_SERVICE: "EveWeather",
@@ -100,6 +103,15 @@ CHAR_TYPES: dict[str, str] = {
     "66": "SecuritySystemCurrentState",
     "D2": "InUse",
     "E": "CurrentDoorState",
+    "E7": "ActiveIdentifier",
+    "E1": "RemoteKey",
+    "E6": "Identifier",
+    "DB": "InputSourceType",
+    "D6": "IsConfigured",
+    "135": "CurrentVisibilityState",
+    "11A": "Mute",
+    "119": "Volume",
+    "EA": "VolumeSelector",
     "32": "TargetDoorState",
     "D3": "SetDuration",
     "D4": "RemainingDuration",
@@ -144,6 +156,7 @@ DEVICE_TYPE_BY_SERVICE: dict[str, DeviceType] = {
     "SecuritySystem": DeviceType.ALARM,
     "Valve": DeviceType.VALVE,
     "GarageDoorOpener": DeviceType.GARAGE,
+    "Television": DeviceType.TV,
     "CarbonMonoxideSensor": DeviceType.SECURITY,
     "Value": DeviceType.VALUE,          # virtual device from MQTT (app/backends/mqtt.py)
 }
@@ -157,6 +170,29 @@ SECURITY_SERVICES = {
     "SmokeSensor": ("SmokeDetected", 1, "smoke", ("smoke",)),
     "CarbonMonoxideSensor": ("CarbonMonoxideDetected", 1, "co", ("co",)),
 }
+
+# Television: input sources and the speaker are services of their own in the same accessory;
+# they are attached to the television (see attach_tv_parts)
+TV_PARTS = {"InputSource", "TelevisionSpeaker"}
+SPEAKER_CHARS = {"Mute", "Volume", "VolumeSelector"}
+# RemoteKey values (HAP); the panel offers these
+REMOTE_KEYS = {"rewind": 0, "forward": 1, "up": 4, "down": 5, "left": 6, "right": 7, "select": 8, "back": 9,
+               "play_pause": 11, "info": 15}
+
+
+def attach_tv_parts(snaps: list["ServiceSnapshot"], parts: list["ServiceSnapshot"]) -> None:
+    """Adds input sources and the speaker of an accessory to its television service."""
+    tv = next((s for s in snaps if s.service_type == "Television"), None)
+    if tv is None:
+        return
+    for part in parts:
+        if part.service_type == "InputSource":
+            tv.linked.append(part)
+        else:
+            for name, ch in part.chars.items():
+                if name in SPEAKER_CHARS:
+                    tv.chars.setdefault(name, ch)
+
 
 # GarageDoorOpener: current door state; the target is 0 = open, 1 = closed
 DOOR_STATES = {0: "open", 1: "closed", 2: "opening", 3: "closing", 4: "stopped"}
@@ -208,6 +244,7 @@ class ServiceSnapshot:
     name: str
     chars: dict[str, Char] = field(default_factory=dict)
     accessory: str = ""      # name of the parent accessory
+    linked: list["ServiceSnapshot"] = field(default_factory=list)   # e.g. input sources of a television
 
     def get(self, name: str, default: Any = None) -> Any:
         c = self.chars.get(name)
@@ -261,6 +298,29 @@ def snapshot_to_state(s: ServiceSnapshot) -> tuple[DeviceType, dict[str, Any], l
             caps.append("tilt")
             meta.update(min_tilt=tilt.min if tilt.min is not None else -90,
                         max_tilt=tilt.max if tilt.max is not None else 90)
+    elif s.service_type == "Television":
+        state["on"] = int(s.get("Active", 0) or 0) == 1
+        caps.append("on")
+        inputs = []
+        for src in s.linked:
+            if int(src.get("IsConfigured", 1) or 0) != 1 or int(src.get("CurrentVisibilityState", 0) or 0) != 0:
+                continue                                   # hidden or not set up in the Home app
+            ident = src.get("Identifier")
+            if ident is not None:
+                inputs.append({"id": int(ident), "name": src.get("ConfiguredName") or src.get("Name") or src.name})
+        if inputs:
+            meta["inputs"] = inputs
+            caps.append("input")
+            active = s.get("ActiveIdentifier")
+            state["input"] = int(active) if active is not None else None
+            state["input_name"] = next((i["name"] for i in inputs if i["id"] == state["input"]), "")
+        if "VolumeSelector" in c:
+            caps.append("volume")
+        if "Mute" in c:
+            state["mute"] = bool(s.get("Mute", False))
+            caps.append("mute")
+        if "RemoteKey" in c:
+            caps.append("remote")
     elif s.service_type == "GarageDoorOpener":
         door = DOOR_STATES.get(int(s.get("CurrentDoorState", 1) or 0), "closed")
         state["door"] = door
@@ -462,6 +522,16 @@ def command_to_writes(s: ServiceSnapshot, attrs: dict[str, Any]) -> list[tuple[C
             name = "TargetTemperature" if s.service_type == "Thermostat" else "HeatingThresholdTemperature"
             ch = need(name)
             writes.append((ch, _clamp(value, ch, 10, 30)))
+        elif key == "input":                     # television: input source by identifier
+            writes.append((need("ActiveIdentifier"), int(value)))
+        elif key == "volume_step":               # television speaker: +1 louder, -1 quieter
+            writes.append((need("VolumeSelector"), 0 if int(value) > 0 else 1))
+        elif key == "mute":
+            writes.append((need("Mute"), bool(value)))
+        elif key == "remote":
+            if value not in REMOTE_KEYS:
+                raise ValueError(tr("Unknown attribute '{key}'").format(key=f"remote {value}"))
+            writes.append((need("RemoteKey"), REMOTE_KEYS[value]))
         elif key == "duration":                  # valve: run time in seconds
             ch = need("SetDuration")
             writes.append((ch, int(_clamp(value, ch, 0, 3600))))

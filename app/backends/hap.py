@@ -19,7 +19,7 @@ import httpx
 
 from ..config import HapBackendConfig
 from ..hap_types import (CHAR_TYPES, DEVICE_TYPE_BY_SERVICE, SENSOR_SERVICES, SERVICE_TYPES, Char, ServiceSnapshot,
-                         attach_battery, merge_sensors, short_uuid)
+                         TV_PARTS, attach_battery, attach_tv_parts, merge_sensors, short_uuid)
 from ..i18n import tr
 from .base import Backend, BackendError
 
@@ -67,9 +67,11 @@ class HapBackend(Backend):
             sensors: list[ServiceSnapshot] = []
             devices: list[ServiceSnapshot] = []
             battery: dict[str, Char] = {}
+            parts: list[ServiceSnapshot] = []          # input sources and speaker of a television
             for svc in services:
                 stype = SERVICE_TYPES.get(short_uuid(svc.get("type", "")))
-                if stype not in DEVICE_TYPE_BY_SERVICE and stype not in SENSOR_SERVICES and stype != "Battery":
+                if stype not in DEVICE_TYPE_BY_SERVICE and stype not in SENSOR_SERVICES \
+                        and stype != "Battery" and stype not in TV_PARTS:
                     continue
                 chars: dict[str, Char] = {}
                 for ch in svc.get("characteristics", []):
@@ -93,10 +95,11 @@ class HapBackend(Backend):
                     or (chars.get("Name") and chars["Name"].value) or acc_name or f"{stype} {aid}"
                 snap = ServiceSnapshot(key=f"{aid}.{svc['iid']}", service_type=stype, name=name,
                                        chars=chars, accessory=acc_name)
-                (sensors if stype in SENSOR_SERVICES else devices).append(snap)
+                (sensors if stype in SENSOR_SERVICES else parts if stype in TV_PARTS else devices).append(snap)
             if sensors:
                 devices.append(merge_sensors(str(aid), acc_name, sensors))
             attach_battery(devices, battery)
+            attach_tv_parts(devices, parts)
             result += devices
         return result
 

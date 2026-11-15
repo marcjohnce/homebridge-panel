@@ -136,7 +136,7 @@ class DeviceManager:
             meta["outdoor"] = True
         if ov and ov.security and ov.security in meta.get("kinds", ()):
             meta["security"] = ov.security
-        if ov and ov.appliance and "appliance" in meta:
+        if ov and ov.appliance and ov.appliance != "tv" and "appliance" in meta:
             meta["appliance"] = ov.appliance
         if ov and ov.lamp and "lamp" in meta:
             meta["lamp"] = ov.lamp

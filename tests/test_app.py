@@ -502,6 +502,69 @@ def test_garage_door_from_hap():
     assert alert_level({**d, "state": {"door": "closed", "triggered": False}}) == 0
 
 
+def test_television_from_hap_and_ui():
+    """Television with input sources and a speaker (services of their own in one accessory)."""
+    def src(iid, ident, name, configured=1, visible=0):
+        return {"iid": iid, "type": U("D9"), "characteristics": [
+            {"iid": iid + 1, "type": U("E6"), "value": ident, "perms": ["pr"]},
+            {"iid": iid + 2, "type": U("E3"), "value": name, "perms": ["pr", "pw"]},
+            {"iid": iid + 3, "type": U("D6"), "value": configured, "perms": ["pr"]},
+            {"iid": iid + 4, "type": U("135"), "value": visible, "perms": ["pr"]}]}
+    data = {"accessories": [{"aid": 8, "services": [
+        {"iid": 10, "type": U("D8"), "characteristics": [
+            {"iid": 11, "type": U("B0"), "value": 1, "perms": ["pr", "pw"]},
+            {"iid": 12, "type": U("E7"), "value": 2, "perms": ["pr", "pw"]},
+            {"iid": 13, "type": U("E3"), "value": "Wohnzimmer TV", "perms": ["pr", "pw"]},
+            {"iid": 14, "type": U("E1"), "perms": ["pw"]}]},
+        src(20, 1, "HDMI 1"), src(30, 2, "Netflix"), src(40, 3, "AV", configured=0), src(50, 4, "USB", visible=1),
+        {"iid": 60, "type": U("113"), "characteristics": [
+            {"iid": 61, "type": U("11A"), "value": False, "perms": ["pr", "pw"]},
+            {"iid": 62, "type": U("EA"), "perms": ["pw"]}]},
+    ]}]}
+    (snap,) = HapBackend.parse_accessories(data)
+    dtype, st, caps, meta = snapshot_to_state(snap)
+    assert dtype.value == "tv" and snap.name == "Wohnzimmer TV"
+    assert meta["inputs"] == [{"id": 1, "name": "HDMI 1"}, {"id": 2, "name": "Netflix"}]   # hidden ones left out
+    assert st == {"on": True, "input": 2, "input_name": "Netflix", "mute": False}
+    assert caps == ["on", "input", "volume", "mute", "remote"]
+    writes = command_to_writes(snap, {"input": 1, "volume_step": -1, "mute": True, "remote": "select", "on": False})
+    assert [(ch.name, ch.ref, v) for ch, v in writes] == [
+        ("ActiveIdentifier", (8, 12), 1), ("VolumeSelector", (8, 62), 1), ("Mute", (8, 61), True),
+        ("RemoteKey", (8, 14), 8), ("Active", (8, 11), 0)]
+    from app.qt.format import category, has_detail, state_text
+    d = {"type": "tv", "reachable": True, "state": st, "capabilities": caps, "meta": meta}
+    assert state_text(d) == "On – Netflix" and has_detail(d) and category(d) == "light"
+
+    ui = [{"uniqueId": "t", "aid": 8, "instance": {"username": "0E"}, "type": "Television", "serviceName": "TV",
+           "accessoryInformation": {"Name": "TV"},
+           "serviceCharacteristics": [{"type": "Active", "value": 0, "canWrite": True},
+                                      {"type": "ActiveIdentifier", "value": 1, "canWrite": True}]},
+          {"uniqueId": "i1", "aid": 8, "instance": {"username": "0E"}, "type": "InputSource", "serviceName": "HDMI 1",
+           "accessoryInformation": {"Name": "TV"},
+           "serviceCharacteristics": [{"type": "Identifier", "value": 1}, {"type": "ConfiguredName", "value": "HDMI 1"}]},
+          {"uniqueId": "s", "aid": 8, "instance": {"username": "0E"}, "type": "TelevisionSpeaker",
+           "serviceName": "Speaker", "accessoryInformation": {"Name": "TV"},
+           "serviceCharacteristics": [{"type": "VolumeSelector", "canWrite": True}]}]
+    (tv,) = HomebridgeUiBackend.parse_accessories(ui)
+    _, st, caps, meta = snapshot_to_state(tv)
+    assert st["on"] is False and meta["inputs"] == [{"id": 1, "name": "HDMI 1"}] and "volume" in caps
+    assert command_to_writes(tv, {"volume_step": 1})[0][0].ref == ("s", "VolumeSelector")   # to the speaker
+
+
+def test_tv_is_no_longer_a_switch_kind():
+    from app.models import APPLIANCE_KINDS
+    assert "tv" not in APPLIANCE_KINDS
+    cfg = AppConfig.model_validate({"demo": {"enabled": True}, "devices": {"TV Plug": {"appliance": "tv"}}})
+
+    async def run():
+        m = DeviceManager(cfg, create_backends(cfg))
+        await m.start()
+        plug = m.devices[m.resolve("TV Plug")]
+        assert plug.meta["appliance"] == "plug" and plug.icon == "plug"      # older configs still load
+        await m.stop()
+    asyncio.run(run())
+
+
 def test_security_kind_override_and_icon():
     cfg = AppConfig.model_validate({"demo": {"enabled": True}, "devices": {
         "Bedroom Window": {"security": "window"}, "Washing Machine Leak": {"security": "window"}}})

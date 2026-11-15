@@ -69,6 +69,18 @@ class PanelTest {
     const garage = mk("Garage");
     garage.add(S.GarageDoorOpener, "Garage", [[C.CurrentDoorState, 1], [C.TargetDoorState, 1], [C.ObstructionDetected, false]]);
     garage.onSet = (s, Ch, v) => { if (Ch === C.TargetDoorState) s.getCharacteristic(C.CurrentDoorState).value = v; };
+    const tv = mk("Television");
+    const tvs = tv.add(S.Television, "Television", [[C.Active, 0], [C.ActiveIdentifier, 1],
+      [C.ConfiguredName, "Television"], [C.SleepDiscoveryMode, 1]]);
+    tvs.getCharacteristic(C.RemoteKey).onSet(() => {});
+    ["HDMI 1", "HDMI 2", "Netflix"].forEach((name, i) => {
+      const src = tv.add(S.InputSource, name, [[C.Identifier, i + 1], [C.ConfiguredName, name],
+        [C.IsConfigured, 1], [C.InputSourceType, 3], [C.CurrentVisibilityState, 0]], "input" + (i + 1));
+      tvs.addLinkedService(src);
+    });
+    const spk = tv.add(S.TelevisionSpeaker, "Speaker", [[C.Mute, false], [C.VolumeControlType, 1]]);
+    spk.getCharacteristic(C.VolumeSelector).onSet(() => {});
+    tvs.addLinkedService(spk);
     cb(list);
   }
 }
