@@ -354,6 +354,19 @@ class SettingsBridge(QObject):
         fut.add_done_callback(lambda f: _emit_safely(self.testFinished, *f.result()))
 
 
+def _cached(fn):
+    """The list is built once per `changed` signal (QML reads it from many places)."""
+    name = fn.__name__
+
+    def get(self):
+        if name not in self._cache:
+            self._cache[name] = fn(self)
+        return self._cache[name]
+    get.__name__ = name
+    get.__doc__ = fn.__doc__
+    return get
+
+
 class RoomsBridge(QObject):
     """Room management in the settings (RoomsPage.qml). Changes apply and save immediately."""
     changed = Signal()
@@ -362,6 +375,13 @@ class RoomsBridge(QObject):
         super().__init__(controller)
         self._store = store
         self._ctl = controller
+        self._cache: dict[str, Any] = {}
+
+    def notify(self) -> None:
+        """Lists changed: build them again when read. (Not a slot on `changed`: QML bindings
+        hear about the signal before connected slots run and would read the old lists.)"""
+        self._cache.clear()
+        self.changed.emit()
 
     @property
     def _layout(self) -> RoomLayout:
@@ -375,6 +395,7 @@ class RoomsBridge(QObject):
         self._ctl.climateChanged.emit()     # hidden sensors leave the temperature average
 
     @Property("QVariantList", notify=changed)
+    @_cached
     def rooms(self) -> list[dict[str, Any]]:
         dev_rooms = self._ctl._model.device_rooms()
         counts: dict[str, int] = {}
@@ -396,6 +417,7 @@ class RoomsBridge(QObject):
     AREA_LABELS = {"": "Automatic", "light": "Lights", "climate": "Climate", "security": "Security"}
 
     @Property("QVariantList", notify=changed)
+    @_cached
     def devices(self) -> list[dict[str, Any]]:
         devs = self._ctl._model.ordered(self._ctl._model.all())     # same order as the tiles
         virtual = {f"mqtt:{v['id']}": v for v in self._store.virtual}
@@ -427,6 +449,7 @@ class RoomsBridge(QObject):
         return out
 
     @Property("QVariantList", notify=changed)
+    @_cached
     def favorites(self) -> list[dict[str, Any]]:
         """Favorites in their order, listed like the devices above."""
         ids = [d["id"] for d in self._ctl._model.favorites()]
@@ -475,7 +498,7 @@ class RoomsBridge(QObject):
         self._store.rooms = self._layout.to_dict()
         self._store.save()
         self._ctl.restart_backends()
-        self.changed.emit()
+        self.notify()
         return ""
 
     @Slot(str)
@@ -486,7 +509,7 @@ class RoomsBridge(QObject):
         self._store.rooms = self._layout.to_dict()
         self._store.save()
         self._ctl.restart_backends()
-        self.changed.emit()
+        self.notify()
 
     @Slot(str, result=str)
     def lastValue(self, dev_id: str) -> str:
@@ -503,6 +526,7 @@ class RoomsBridge(QObject):
 
     # ---------- light groups ----------
     @Property("QVariantList", notify=changed)
+    @_cached
     def lights(self) -> list[dict[str, Any]]:
         """Lights that can join a group (not groups themselves)."""
         m = self._ctl._model
@@ -541,6 +565,7 @@ class RoomsBridge(QObject):
 
     # ---------- switch groups ----------
     @Property("QVariantList", notify=changed)
+    @_cached
     def switches(self) -> list[dict[str, Any]]:
         """Switches, plugs and valves that can join a switch group."""
         m = self._ctl._model
@@ -1106,7 +1131,7 @@ class Controller(QObject):
             self.roomsChanged.emit()
         self._check_alarms()
         self.summaryChanged.emit()
-        self._room_editor.changed.emit()    # device counts and assignments in the settings
+        self._room_editor.notify()    # device counts and assignments in the settings
 
     # ---------- commands from QML ----------
     def _command(self, coro_factory) -> None:

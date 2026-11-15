@@ -16,8 +16,9 @@ Popup {
     property bool draftFavorite
     property string error
 
-    readonly property var roomLights: panel.roomEditor.lights.filter(l => l.room === draftRoom)
-    readonly property var lightRooms: panel.roomEditor.rooms.filter(r => panel.roomEditor.lights.some(l => l.room === r.name))
+    readonly property var lights: panel.roomEditor.lights        // read once per change
+    readonly property var roomLights: lights.filter(l => l.room === draftRoom)
+    readonly property var lightRooms: panel.roomEditor.rooms.filter(r => lights.some(l => l.room === r.name))
 
     function edit(d) {
         device = d;
