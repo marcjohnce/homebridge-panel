@@ -7,6 +7,7 @@ Rectangle {
     id: root
 
     property int tab: 0                // 0 rooms, 1 devices
+    property string moved              // last moved row ("device:<id>", "favorite:<id>"), highlighted
     property string message
     signal closed
 
@@ -34,8 +35,32 @@ Rectangle {
         else
             deviceEditor.edit(d);
     }
+    // After moving a row up or down the list scrolls by one row, so the moved row stays under the
+    // finger and tapping again moves the same room or device further (not its new neighbour).
+    // At the top or bottom end the list may scroll past its edge for this; it returns when the
+    // list is scrolled by hand or the tab changes.
+    function keepInPlace(key, delta, rowHeight) {
+        moved = key;
+        const y = flick.contentY + delta * rowHeight;
+        flick.topMargin = Math.max(flick.topMargin, -y);
+        flick.bottomMargin = Math.max(flick.bottomMargin, y - Math.max(0, flick.contentHeight - flick.height));
+        flick.contentY = y;
+    }
+    function settleList() {
+        if (flick.topMargin === 0 && flick.bottomMargin === 0)
+            return;
+        const y = Math.max(0, Math.min(flick.contentY, Math.max(0, flick.contentHeight - flick.height)));
+        flick.topMargin = 0;
+        flick.bottomMargin = 0;
+        flick.contentY = y;
+    }
     function renameRoom(room) {
         keyboard.edit(qsTr("Rename room"), room.name, text => root.editor.renameRoom(room.name, text));
+    }
+
+    onTabChanged: {
+        moved = "";
+        settleList();
     }
 
     color: Theme.page
@@ -96,6 +121,7 @@ Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
             contentHeight: (root.tab === 0 ? roomsColumn : devicesColumn).implicitHeight + 24
+            onMovementEnded: root.settleList()
             boundsBehavior: Flickable.StopAtBounds
             clip: true
 
@@ -144,6 +170,7 @@ Rectangle {
                                     color: Theme.line
                                 }
                                 RowLayout {
+                                    id: roomRow
                                     objectName: "room:" + roomItem.modelData.name
                                     width: parent.width
                                     height: Math.max(Theme.s(68), roomText.implicitHeight + 20)
@@ -175,13 +202,21 @@ Rectangle {
                                         iconName: "up"
                                         label: qsTr("Move %1 up").arg(roomItem.modelData.name)
                                         enabled: roomItem.index > 0
-                                        onClicked: root.editor.moveRoom(roomItem.modelData.name, -1)
+                                        onClicked: {
+                                            const name = roomItem.modelData.name;       // the row is rebuilt by the move
+                                            root.keepInPlace("room:" + name, -1, roomRow.height + 1);
+                                            root.editor.moveRoom(name, -1);
+                                        }
                                     }
                                     IconButton {
                                         iconName: "down"
                                         label: qsTr("Move %1 down").arg(roomItem.modelData.name)
                                         enabled: roomItem.index < root.rooms.length - 1
-                                        onClicked: root.editor.moveRoom(roomItem.modelData.name, 1)
+                                        onClicked: {
+                                            const name = roomItem.modelData.name;       // the row is rebuilt by the move
+                                            root.keepInPlace("room:" + name, 1, roomRow.height + 1);
+                                            root.editor.moveRoom(name, 1);
+                                        }
                                     }
                                     IconButton {
                                         objectName: "rename:" + roomItem.modelData.name
@@ -272,6 +307,7 @@ Rectangle {
                         readonly property var members: favorites ? root.editor.favorites
                             : root.editor.devices.filter(d => d.room === modelData.name)
                         function move(id, delta) {
+                            root.keepInPlace((favorites ? "favorite:" : "device:") + id, delta, Theme.s(60) + 1);
                             if (favorites)
                                 root.editor.moveFavorite(id, delta);
                             else
@@ -313,6 +349,7 @@ Rectangle {
                                             color: Theme.line
                                         }
                                         Item {
+                                            id: devRow
                                             objectName: (group.favorites ? "favorite:" : "device:") + devItem.modelData.id
                                             width: parent.width
                                             height: Theme.s(60)
@@ -329,7 +366,8 @@ Rectangle {
                                             Rectangle {
                                                 anchors.fill: parent
                                                 radius: 14
-                                                color: devMouse.pressed ? Theme.tilePress : "transparent"
+                                                color: devMouse.pressed ? Theme.tilePress
+                                                     : root.moved === devRow.objectName ? Theme.goldSoft : "transparent"
                                                 border.color: Theme.gold
                                                 border.width: parent.activeFocus ? 2 : 0
                                             }
