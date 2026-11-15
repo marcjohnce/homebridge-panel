@@ -13,6 +13,13 @@ Rectangle {
 
     readonly property var editor: panel.roomEditor
     readonly property var rooms: editor.rooms
+    // read once per change: every access from QML converts the whole list
+    readonly property var devices: editor.devices
+    readonly property var favorites: editor.favorites
+    // groups of the Devices tab: favorites first (their order is the order on the start page),
+    // then the rooms; only while the tab is shown
+    readonly property var groups: tab !== 1 ? []
+        : (favorites.length > 0 ? [{ name: qsTr("Favorites"), favorites: true }] : []).concat(filledRooms)
     readonly property var filledRooms: rooms.filter(r => r.count > 0)
     readonly property string defaultRoom: {
         const r = rooms.find(r => r.isDefault);
@@ -266,7 +273,7 @@ Rectangle {
                     Layout.fillWidth: true
                     Layout.topMargin: 10
                     Layout.leftMargin: 4
-                    text: root.editor.devices.length > 0 ? qsTr("Tap a device to change its name, kind or room or to make it a favorite.")
+                    text: root.devices.length > 0 ? qsTr("Tap a device to change its name, kind or room or to make it a favorite.")
                         : qsTr("No devices yet. Devices appear here once the panel is connected to Homebridge.")
                     color: Theme.muted
                     font.pixelSize: Theme.s(14)
@@ -296,16 +303,14 @@ Rectangle {
                     }
                 }
 
-                // favorites first (their order is the order on the start page), then the rooms
                 Repeater {
-                    model: (root.editor.favorites.length > 0 ? [{ name: qsTr("Favorites"), favorites: true }] : [])
-                        .concat(root.filledRooms)
+                    model: root.groups
                     ColumnLayout {
                         id: group
                         required property var modelData
                         readonly property bool favorites: !!modelData.favorites
-                        readonly property var members: favorites ? root.editor.favorites
-                            : root.editor.devices.filter(d => d.room === modelData.name)
+                        readonly property var members: favorites ? root.favorites
+                            : root.devices.filter(d => d.room === modelData.name)
                         function move(id, delta) {
                             root.keepInPlace((favorites ? "favorite:" : "device:") + id, delta, Theme.s(60) + 1);
                             if (favorites)

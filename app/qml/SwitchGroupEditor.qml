@@ -18,10 +18,11 @@ Popup {
     property string draftArea
     property string error
 
-    readonly property var switchRooms: panel.roomEditor.rooms.filter(r => panel.roomEditor.switches.some(s => s.room === r.name))
+    readonly property var switches: panel.roomEditor.switches    // read once per change
+    readonly property var switchRooms: panel.roomEditor.rooms.filter(r => switches.some(s => s.room === r.name))
     // members first in their order, then the other switches of the room
     readonly property var roomSwitches: {
-        const here = panel.roomEditor.switches.filter(s => s.room === draftRoom);
+        const here = switches.filter(s => s.room === draftRoom);
         const chosen = draftMembers.map(id => here.find(s => s.id === id)).filter(s => !!s);
         return chosen.concat(here.filter(s => draftMembers.indexOf(s.id) < 0));
     }
