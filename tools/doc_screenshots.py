@@ -231,7 +231,7 @@ def home_callouts(p: Panel, top_layout: bool) -> list[tuple]:
     if not top_layout:
         out.append((2, [p.rect("climate")], "Indoor and outdoor temperature"))
     out += [
-        (3, [p.rect("categoryMenu")], "Menu: lights, climate, scenes, security", *(["top"] if top_layout else ["left"])),
+        (3, [p.rect("categoryMenu")], "Menu: favorites, lights, climate, security", *(["top"] if top_layout else ["left"])),
         (4, [status], "Connection status"),
         (5, [p.rect("settingsButton")], "Settings"),
         (6, [p.rect("roomTabs")], "Rooms; “All” comes last", *([] if top_layout else ["top"])),
@@ -242,8 +242,19 @@ def home_callouts(p: Panel, top_layout: bool) -> list[tuple]:
 
 
 def menu_views(p: Panel, out: Path, size: str, suffix: str = "") -> None:
-    """Climate and security as chosen in the menu."""
+    """Favorites, climate and security as chosen in the menu."""
     p.win.setProperty("openDevice", "")
+    favs = [p.device_id(n) for n in ("Living Room Ceiling Light", "Living Room Heating", "Front Door Lock",
+                                     "Coffee Maker", "Living Room Blinds", "Kitchen Light")]
+    for dev_id in favs:
+        p.ctl.roomEditor.saveDevice(dev_id, {"favorite": True})
+    p.ctl.selectCategory("favorites")
+    save(annotate(p.grab(), [
+        (1, [p.rect("category:favorites")], "Favorites, the start page", "left" if not suffix else "top"),
+        (2, [p.rect(f"tile:{favs[2]}")], "Favorite with its room"),
+    ], f"Favorites – {size}"), out, f"home-favorites{suffix}")
+    for dev_id in favs:
+        p.ctl.roomEditor.saveDevice(dev_id, {"favorite": False})
     p.ctl.selectCategory("climate")
     p.ctl.selectRoom("")
     save(annotate(p.grab(), [
@@ -387,9 +398,9 @@ def main() -> int:
     wait(400)
     save(annotate(p.grab(), [
         (1, [p.rect("deviceName")], "Display name (tap to change)", "left"),
-        (2, [p.rect("kindChoices")], "Kind: window, door, contact or glass break", "left"),
-        (3, [p.rect("roomChoices")], "Room; “New room …” creates one", "left"),
-        (4, [p.rect("hiddenToggle")], "Hide on the home screen", "right"),
+        (2, [p.rect("favoriteToggle")], "Favorite: shown on the start page", "right"),
+        (3, [p.rect("kindChoices")], "Kind: window, door, contact or glass break", "left"),
+        (4, [p.rect("roomChoices")], "Room; “New room …” creates one", "left"),
         (5, [p.rect("deviceSave")], "Save", "bottom"),
     ], "Edit device"), out, "device-editor")
     p.key(Qt.Key.Key_Escape)

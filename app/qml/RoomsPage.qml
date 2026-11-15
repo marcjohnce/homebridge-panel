@@ -231,7 +231,7 @@ Rectangle {
                     Layout.fillWidth: true
                     Layout.topMargin: 10
                     Layout.leftMargin: 4
-                    text: root.editor.devices.length > 0 ? qsTr("Tap a device to change its name, kind or room.")
+                    text: root.editor.devices.length > 0 ? qsTr("Tap a device to change its name, kind or room or to make it a favorite.")
                         : qsTr("No devices yet. Devices appear here once the panel is connected to Homebridge.")
                     color: Theme.muted
                     font.pixelSize: Theme.s(14)
@@ -261,12 +261,22 @@ Rectangle {
                     }
                 }
 
+                // favorites first (their order is the order on the start page), then the rooms
                 Repeater {
-                    model: root.filledRooms
+                    model: (root.editor.favorites.length > 0 ? [{ name: qsTr("Favorites"), favorites: true }] : [])
+                        .concat(root.filledRooms)
                     ColumnLayout {
                         id: group
                         required property var modelData
-                        readonly property var members: root.editor.devices.filter(d => d.room === modelData.name)
+                        readonly property bool favorites: !!modelData.favorites
+                        readonly property var members: favorites ? root.editor.favorites
+                            : root.editor.devices.filter(d => d.room === modelData.name)
+                        function move(id, delta) {
+                            if (favorites)
+                                root.editor.moveFavorite(id, delta);
+                            else
+                                root.editor.moveDevice(id, delta);
+                        }
                         Layout.fillWidth: true
                         spacing: 8
 
@@ -303,7 +313,7 @@ Rectangle {
                                             color: Theme.line
                                         }
                                         Item {
-                                            objectName: "device:" + devItem.modelData.id
+                                            objectName: (group.favorites ? "favorite:" : "device:") + devItem.modelData.id
                                             width: parent.width
                                             height: Theme.s(60)
                                             activeFocusOnTab: true
@@ -342,26 +352,27 @@ Rectangle {
                                                     elide: Text.ElideRight
                                                 }
                                                 Text {
-                                                    objectName: "hiddenLabel:" + devItem.modelData.id
-                                                    visible: devItem.modelData.hidden || devItem.modelData.grouped || devItem.modelData.quiet
-                                                    text: devItem.modelData.hidden ? qsTr("Hidden")
+                                                    objectName: (group.favorites ? "favoriteLabel:" : "hiddenLabel:") + devItem.modelData.id
+                                                    visible: group.favorites || devItem.modelData.hidden || devItem.modelData.grouped || devItem.modelData.quiet
+                                                    text: group.favorites ? devItem.modelData.room
+                                                        : devItem.modelData.hidden ? qsTr("Hidden")
                                                         : devItem.modelData.grouped ? qsTr("In a group") : qsTr("No alerts")
                                                     color: Theme.muted
                                                     font.pixelSize: Theme.s(14)
                                                 }
                                                 IconButton {
-                                                    objectName: "deviceUp:" + devItem.modelData.id
+                                                    objectName: (group.favorites ? "favoriteUp:" : "deviceUp:") + devItem.modelData.id
                                                     iconName: "up"
                                                     label: qsTr("Move %1 up").arg(devItem.modelData.name)
                                                     enabled: devItem.index > 0
-                                                    onClicked: root.editor.moveDevice(devItem.modelData.id, -1)
+                                                    onClicked: group.move(devItem.modelData.id, -1)
                                                 }
                                                 IconButton {
-                                                    objectName: "deviceDown:" + devItem.modelData.id
+                                                    objectName: (group.favorites ? "favoriteDown:" : "deviceDown:") + devItem.modelData.id
                                                     iconName: "down"
                                                     label: qsTr("Move %1 down").arg(devItem.modelData.name)
                                                     enabled: devItem.index < group.members.length - 1
-                                                    onClicked: root.editor.moveDevice(devItem.modelData.id, 1)
+                                                    onClicked: group.move(devItem.modelData.id, 1)
                                                 }
                                                 LineIcon {
                                                     Layout.preferredWidth: 20

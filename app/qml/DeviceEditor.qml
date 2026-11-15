@@ -3,7 +3,7 @@ import QtQuick.Controls.Basic
 import QtQuick.Layouts
 
 // Edit a device in Settings → Rooms and devices: display name, kind (contact and motion
-// sensors: window, door, glass break …), room, outdoor sensor and hidden. Saved with "Save".
+// sensors: window, door, glass break …), room, favorite, outdoor sensor and hidden. Saved with "Save".
 Popup {
     id: root
 
@@ -13,6 +13,7 @@ Popup {
     property string draftKind
     property string draftRoom
     property bool draftHidden
+    property bool draftFavorite
     property bool draftOutdoor
     property bool draftQuiet
     // window, door, contact, motion and presence sensors can be kept out of security alerts (not alarms)
@@ -28,6 +29,7 @@ Popup {
         draftKind = d.kind || "";
         draftRoom = d.room;
         draftHidden = !!d.hidden;
+        draftFavorite = !!d.favorite;
         draftOutdoor = !!d.outdoor;
         draftQuiet = !!d.quiet;
         draftArea = d.area || "";
@@ -37,7 +39,7 @@ Popup {
     function save() {
         const err = panel.roomEditor.saveDevice(device.id, {
             name: draftName, kind: draftKind, room: draftRoom, area: draftArea,
-            hidden: draftHidden, outdoor: draftOutdoor, quiet: canQuiet ? draftQuiet : false
+            hidden: draftHidden, favorite: draftFavorite, outdoor: draftOutdoor, quiet: canQuiet ? draftQuiet : false
         });
         if (err !== "")
             error = err;
@@ -165,6 +167,14 @@ Popup {
                     }
                 }
 
+                ToggleRow {
+                    width: parent.width
+                    label: qsTr("Favorite")
+                    help: qsTr("Shown under Favorites, the start page of the panel")
+                    checked: root.draftFavorite
+                    toggleName: "favoriteToggle"
+                    onToggled: root.draftFavorite = !root.draftFavorite
+                }
                 Text {
                     visible: (root.device.kinds || []).length > 0
                     topPadding: 4

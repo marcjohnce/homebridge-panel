@@ -42,7 +42,7 @@ Start the app at a given size in a window with `.venv/bin/python -m app --size 8
 |---|---|---|
 | 1 | Clock and date | Current time and date (the top bar shows only the clock on square screens) |
 | 2 | Indoor and outdoor temperature | *indoors*: average of all reachable thermostats and indoor sensors. *outdoors*: sensors marked as *Outdoor sensor* in Settings → Rooms and devices or with `outdoor: true` in `config.yaml` (shown only if there is one). Hidden devices are left out |
-| 3 | Menu | Chooses what the tiles show: [Lights](#menu), [Climate](#menu), [Security](#security). Each entry shows a short status, e.g. *2 on*, *1 heating* or *1 alert* in red. The top bar shows the menu as icons with a red count on *Security* |
+| 3 | Menu | Chooses what the tiles show: [Favorites](#favorites), [Lights](#menu), [Climate](#menu), [Security](#security). Each entry shows a short status, e.g. *2 on*, *1 heating* or *1 alert* in red. The top bar shows the menu as icons with a red count on *Security* |
 | 4 | Connection status | Green: all bridges connected. Red: a bridge is not reachable (details under Settings → Info) |
 | 5 | Settings | Opens the [settings page](#settings) |
 | 6 | Rooms | Filter the tiles by room. Only rooms with devices of the chosen menu entry appear. Choosing a menu entry selects the first room; *All* comes last and shows every device with its room above the name |
@@ -51,7 +51,7 @@ Start the app at a given size in a window with `.venv/bin/python -m app --size 8
 
 Tiles leave out the room from the device name when the room is shown anyway
 ("Living Room Heating" → "Heating"). The detail view shows the full name. The panel starts with
-*Lights* and returns to it after the screen saver.
+[Favorites](#favorites) and returns to them after the screen saver; without favorites it starts with *Lights*.
 
 ### 1280 × 800 – 10.1″ displays
 
@@ -83,6 +83,7 @@ Tiles leave out the room from the device name when the room is shown anyway
 
 | Menu entry | Shows |
 |---|---|
+| Favorites | the devices marked as favorite, from every room, in their own order |
 | Lights | lights, switches, plugs and blinds |
 | Climate | heating, temperature, humidity, air pressure and light sensors, fans, air purifiers, humidifiers |
 | Security | alarm system, door locks, garage doors, motorized windows and doors, window, door, glass break, leak, motion, presence, smoke and CO sensors – alarms and open windows first |
@@ -91,6 +92,20 @@ A dot before a room tab shows where something is going on: under *Lights* a dot 
 colour marks rooms with at least one light, switch or plug on (blinds don't count); under
 *Security* a red dot marks rooms with an open window or door or an alarm (motion does not count
 yet). *Climate* and *All* have no dots.
+
+### Favorites
+
+*Favorites* collects the devices you use most on one page – lights, heating, the door lock, whatever
+you like, from every room. It has no room tabs; each tile shows its room above the name. Mark a
+device with *Favorite* in Settings → Rooms and devices → Devices. The favorites are listed there at
+the top, where the arrows set their order.
+
+![Favorites](images/home-favorites.png)
+
+| # | Element | What it does |
+|---|---|---|
+| 1 | Favorites | First menu entry and start page of the panel |
+| 2 | Favorite | A tile like everywhere else, with its room above the name |
 
 ![Climate](images/home-climate.png)
 
@@ -369,17 +384,17 @@ Names are entered with an on-screen keyboard; a connected keyboard works as well
 | 2 | Keys | Letter layout of the panel language. *?123* switches to digits, punctuation and accented letters; hold delete to clear |
 | 3 | Done | Saves the name, or shows why it cannot be used (empty, longer than 24 characters, name already taken) |
 
-The *Devices* tab lists all devices grouped by room. Tap a device to edit it:
+The *Devices* tab lists the favorites first, then all devices grouped by room. Tap a device to edit it:
 
 ![Edit device](images/device-editor.png)
 
 | # | Element | What it does |
 |---|---|---|
 | 1 | Display name | Opens the keyboard. Below it the name from Homebridge; *Original name* restores it (an empty name does the same) |
-| 2 | Kind | Contact and motion sensors: window, door, contact, glass break or motion. Lights: bulb, ceiling lamp, chandelier, spotlight, wall lamp, table lamp, desk lamp, floor lamp, globe lamp or LED strip (icon only). Switches and plugs: switch, plug, coffee machine, washing machine, dishwasher or fan – sets the icon; *Fan* shows the device under *Climate*; washing machine and dishwasher show *Running* while their plug measures power, otherwise *Ready* |
-| 3 | Room | The current room is highlighted. *New room …* creates a room with the keyboard |
-| 4 | Show under, hide on the home screen | *Show under* moves the device to another menu entry (*Automatic*: by device type). Further down: see below. Temperature sensors also have *Outdoor sensor*: it then counts for the outdoor temperature in the sidebar instead of indoors (same as `outdoor: true` in `config.yaml`) |
-| 5 | Save | Saves name, kind, room and *Hide on the home screen* together; *Cancel* discards the changes |
+| 2 | Favorite | Shows the device under [Favorites](#favorites), the start page; new favorites are added at the end |
+| 3 | Kind | Contact and motion sensors: window, door, contact, glass break or motion. Lights: bulb, ceiling lamp, chandelier, spotlight, wall lamp, table lamp, desk lamp, floor lamp, globe lamp or LED strip (icon only). Switches and plugs: switch, plug, coffee machine, washing machine, dishwasher or fan – sets the icon; *Fan* shows the device under *Climate*; washing machine and dishwasher show *Running* while their plug measures power, otherwise *Ready* |
+| 4 | Room | The current room is highlighted. *New room …* creates a room with the keyboard. Further down: *Show under* moves the device to another menu entry (*Automatic*: by device type), and *Hide on the home screen* (see below). Temperature sensors also have *Outdoor sensor*: it then counts for the outdoor temperature in the sidebar instead of indoors (same as `outdoor: true` in `config.yaml`) |
+| 5 | Save | Saves name, favorite, kind, room and *Hide on the home screen* together; *Cancel* discards the changes |
 
 *Hide on the home screen* removes a device from the tiles – also
 under *All* and in the default room – and from the menu status, alarms and temperatures. It stays

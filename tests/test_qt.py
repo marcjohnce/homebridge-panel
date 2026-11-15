@@ -913,3 +913,39 @@ def test_menu_switch_selects_first_room(qapp, tmp_path):
     ctl.selectCategory("security")
     assert ctl.currentRoom == ctl.rooms[0] != ""            # not "All"
     ctl.shutdown()
+
+
+def test_favorites_start_page(qapp, tmp_path):
+    ctl = make_controller(tmp_path)
+    assert ctl.category == "light"                      # no favorites yet
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 29)
+    ed = ctl.roomEditor
+    ids = [d["id"] for d in ctl.devices.all() if d["type"] in ("light", "thermostat", "lock")][:3]
+    for i in reversed(ids):                             # added at the end: reverse order
+        assert ed.saveDevice(i, {"favorite": True}) == ""
+    assert [d["id"] for d in ed.favorites] == ids[::-1]
+    ed.moveFavorite(ids[0], -99)                        # back to the front
+    assert [d["id"] for d in ed.favorites] == [ids[0], ids[2], ids[1]]
+
+    ctl.selectCategory("favorites")
+    assert ctl.rooms == [] and ctl.currentRoom == ""    # no room tabs, every room
+    assert ctl.devices._rows == [ids[0], ids[2], ids[1]]
+    assert ctl.roomMarks == {}
+
+    assert ed.saveDevice(ids[2], {"hidden": True}) == ""      # hidden: not on the home screen
+    assert ctl.devices._rows == [ids[0], ids[1]] and len(ed.favorites) == 3
+    ctl.selectCategory("light")
+    ctl.selectStart()
+    assert ctl.category == "favorites"
+    assert ed.saveDevice(ids[0], {"favorite": False}) == ""
+    assert ctl.devices._rows == [ids[1]]
+    assert ed.saveDevice(ids[0], {"favorite": True}) == ""
+    ed.moveFavorite(ids[0], -99)
+    stored = SettingsStore(tmp_path / "settings.json").rooms["favorites"]
+    assert stored == [ids[0], ids[2], ids[1]]
+    ctl.shutdown()
+
+    again = make_controller(tmp_path)                   # starts with the favorites
+    assert again.category == "favorites"
+    again.shutdown()

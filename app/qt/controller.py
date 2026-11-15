@@ -34,6 +34,7 @@ from .format import (air_warning, alert_level, battery_low, battery_text, catego
 
 log = logging.getLogger(__name__)
 ALL_ROOMS = ""
+FAVORITES = "favorites"            # first menu entry: favorite devices of every room
 NIGHT_FROM, NIGHT_TO = 19, 7
 
 
@@ -151,6 +152,7 @@ class DeviceModel(QAbstractListModel):
         out = {**d, "baseRoom": base, "room": self.layout.room_of(d["id"], base),
                "baseName": base_name, "name": self.layout.names.get(d["id"]) or base_name,
                "hidden": d["id"] in self.layout.hidden,
+               "favorite": d["id"] in self.layout.favorites,
                "grouped": d["id"] in self.grouped}
         meta = d.get("meta", {})
         base_outdoor = d.get("baseOutdoor", bool(meta.get("outdoor")))
@@ -190,6 +192,9 @@ class DeviceModel(QAbstractListModel):
             self.refresh_texts()
 
     def _visible(self) -> list[str]:
+        if self._category == FAVORITES:      # every room, in the order set in the settings
+            favs = [d for d in self.shown() if d.get("favorite")]
+            return [d["id"] for d in sorted(favs, key=lambda d: self.layout.favorite_rank(d["id"]))]
         devs = [d for d in self.shown() if self._room in (ALL_ROOMS, d["room"])
                 and self._category in ("", category(d))]
         # alarms first, then open windows/doors; otherwise the order of rooms and devices
@@ -212,6 +217,11 @@ class DeviceModel(QAbstractListModel):
     def count(self, pred) -> int:
         """Counts devices shown on the home screen (hidden ones are left out)."""
         return sum(1 for d in self.shown() if pred(d))
+
+    def favorites(self) -> list[dict[str, Any]]:
+        """Favorite devices (also hidden ones) in their order."""
+        return sorted((d for d in self._all.values() if d.get("favorite")),
+                      key=lambda d: self.layout.favorite_rank(d["id"]))
 
     def shown(self) -> list[dict[str, Any]]:
         return [d for d in self._all.values() if not d.get("hidden") and not d.get("grouped")]
@@ -238,7 +248,7 @@ class DeviceModel(QAbstractListModel):
         old = self._all.get(d["id"])
         d = self._place(d)
         self._all[d["id"]] = d
-        structural = (old is None or any(old.get(k) != d.get(k) for k in ("room", "name", "order", "hidden", "grouped"))
+        structural = (old is None or any(old.get(k) != d.get(k) for k in ("room", "name", "order", "hidden", "grouped", "favorite"))
                       or alert_level(old) != alert_level(d))
         if structural:
             self._relayout()
@@ -401,6 +411,7 @@ class RoomsBridge(QObject):
                         "switchGroup": switch_groups.get(d["id"]),
                         "kind": next((d["meta"][k] for k in KIND_KEYS if k in d.get("meta", {})), ""),
                         "hidden": bool(d.get("hidden")),
+                        "favorite": bool(d.get("favorite")),
                         "area": d.get("meta", {}).get("area", ""),
                         "areas": [{"value": a, "label": tr(self.AREA_LABELS[a])} for a in ("", *AREAS)],
                         # temperature sensors can be marked as outdoor sensors (not thermostats)
@@ -412,6 +423,18 @@ class RoomsBridge(QObject):
                         "kinds": [{"value": k, "label": tr(self.KIND_LABELS[k]), "icon": KIND_ICONS[k]}
                                   for k in kinds] if len(kinds) > 1 else []})
         return out
+
+    @Property("QVariantList", notify=changed)
+    def favorites(self) -> list[dict[str, Any]]:
+        """Favorites in their order, listed like the devices above."""
+        ids = [d["id"] for d in self._ctl._model.favorites()]
+        devs = {d["id"]: d for d in self.devices}
+        return [devs[i] for i in ids if i in devs]
+
+    @Slot(str, int)
+    def moveFavorite(self, dev_id: str, delta: int) -> None:
+        self._layout.move_favorite(dev_id, delta, [d["id"] for d in self._ctl._model.favorites()])
+        self._commit()
 
     @Slot(str, int)
     def moveDevice(self, dev_id: str, delta: int) -> None:
@@ -549,7 +572,7 @@ class RoomsBridge(QObject):
     @Slot(str, "QVariantMap", result=str)
     def saveDevice(self, dev_id: str, values: dict[str, Any]) -> str:
         """Saves what the device editor changed: name ("" = original), kind, room, area
-        ("" = automatic), hidden, outdoor and quiet (no security alerts). Missing keys keep their value."""
+        ("" = automatic), hidden, favorite, outdoor and quiet (no security alerts). Missing keys keep their value."""
         m = self._ctl._model
         d = m.get(dev_id)
         if not d:
@@ -562,6 +585,7 @@ class RoomsBridge(QObject):
         if area and area not in AREAS:
             return tr("Choose one of the offered options")
         hidden = bool(values.get("hidden", d.get("hidden", False)))
+        favorite = bool(values.get("favorite", d.get("favorite", False)))
         quiet = bool(values.get("quiet", d.get("quiet", False)))
         outdoor = bool(values.get("outdoor", meta.get("outdoor", False)))
         name, err = self._layout.check_device_name(name)
@@ -574,6 +598,7 @@ class RoomsBridge(QObject):
             self._layout.set_kind(dev_id, kind, d.get("baseKind", kind))
         self._layout.set_room(dev_id, room, d["baseRoom"], m.device_rooms())
         self._layout.set_hidden(dev_id, hidden)
+        self._layout.set_favorite(dev_id, favorite)
         if d["type"] in ("garage", "lock") or meta.get("opening"):
             self._layout.set_quiet(dev_id, quiet)
         if d["type"] == "security":
@@ -689,7 +714,8 @@ class Controller(QObject):
         self._rooms: list[str] = []
         self._room = ALL_ROOMS
         self._room_auto = True        # follow the first room until one is chosen
-        self._category = "light"
+        self._category = self._start_category()
+        self._model._category = self._category
         self._scenes = [{**s.model_dump(include={"id", "name", "icon", "room"}), "count": len(s.actions)}
                         for s in base_cfg.scenes]
         self._alarms: set[str] = set()
@@ -947,7 +973,15 @@ class Controller(QObject):
                 state=state_text(d), room=d["room"], name=short_name(d["name"], d["room"])))
         self._alarms = set(alarms)
 
+    def _start_category(self) -> str:
+        """The panel starts with the favorites if there are any, otherwise with the lights."""
+        if self._model.all():
+            return FAVORITES if any(d.get("favorite") for d in self._model.shown()) else "light"
+        return FAVORITES if self._model.layout.favorites else "light"
+
     def _tab_rooms(self) -> list[str]:
+        if self._category == FAVORITES:     # favorites are listed without room tabs
+            return []
         rooms = self._model.rooms(self._category)
         if not self.store.get("show_general"):
             rooms = [r for r in rooms if r != self._model.layout.default_room]
@@ -1132,6 +1166,11 @@ class Controller(QObject):
         self.categoryChanged.emit()
         self._refresh_rooms()
         self.scenesChanged.emit()
+
+    @Slot()
+    def selectStart(self) -> None:
+        """Back to the start page, e.g. after the screensaver."""
+        self.selectCategory(self._start_category())
 
     @Slot(str)
     def selectRoom(self, room: str) -> None:
