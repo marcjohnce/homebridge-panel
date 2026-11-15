@@ -26,7 +26,8 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 ## Features
 
 - **Lights**: on/off, brightness bar, color wheel, white tone
-- **Smart plugs / switches**: on/off, "in use" indicator
+- **Smart plugs / switches**: on/off, "in use" indicator; kinds plug, switch, coffee machine, washing
+  machine, dishwasher, fan
 - **Heating**: thermostats and heater-coolers with a dial (drag or −/+), modes Off/Heat/Auto
 - **Fans**: on/off, speed
 - **Blinds**: open, close, stop, position by dragging, slat angle; smooth position updates while moving
@@ -43,6 +44,7 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
   motion sensors only count while it is armed; single sensors can be kept out of the alerts
 - **Batteries**: a red battery on the tile when a device's battery is below 10 % or reported low;
   *Settings → Batteries* lists all battery devices
+- **Televisions**: on/off, input sources, volume, mute and remote keys
 - **Garage doors**: state, open door as alert, open/close after a confirmation (opening with the alarm PIN)
 - **Valves**: irrigation, shower, faucet and generic valves; open/close, remaining time, run time
 - **Switch groups**: several switches of a room of which only one is on (e.g. irrigation circuits); a tap
@@ -152,7 +154,7 @@ column to the catalog.
 | `hap` | additional bridges (child bridges); the main bridge comes from the settings |
 | `homebridge_ui` | alternatively access via the Homebridge web UI (username/password) |
 | `demo` | simulated devices |
-| `devices` | per device (ID or name): `room`, `name`, `icon`, `order`, `hidden`, `outdoor` (sensors), `security` (`window`, `door`, `contact`, `glassbreak`, `motion` for contact/motion sensors), `appliance` (`switch`, `plug`, `tv`, `coffee`, `washer`, `dishwasher`, `fan` for switches/plugs), `lamp` (`bulb`, `ceiling`, `spot`, `wall`, `table` for lights), `area` (`light`, `climate`, `security`); values set on the panel take precedence |
+| `devices` | per device (ID or name): `room`, `name`, `icon`, `order`, `hidden`, `outdoor` (sensors), `security` (`window`, `door`, `contact`, `glassbreak`, `motion`, `presence` for contact/motion/occupancy sensors), `appliance` (`switch`, `plug`, `coffee`, `washer`, `dishwasher`, `fan` for switches/plugs), `lamp` (`bulb`, `ceiling`, `spot`, `wall`, `table` for lights), `valve` (`generic`, `irrigation`, `shower`, `faucet`), `area` (`light`, `climate`, `security`); values set on the panel take precedence |
 | `scenes` | scenes with actions `{device: …, set: {…}}`, run by schedules; `room` is kept for a later scenes view |
 | `schedules` | run a scene at a time on weekdays (`mo tu we th fr sa su`) |
 

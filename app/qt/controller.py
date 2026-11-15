@@ -82,7 +82,7 @@ class DeviceModel(QAbstractListModel):
              "stateText", "hasDetail", "targetTemp", "minTemp", "maxTemp", "modeOff", "alertLevel", "warning",
              "batteryLow")
     # order inside a room: per menu area
-    RANK = {"light": 0, "switch": 1, "plug": 1, "valve": 1, "blind": 2, "thermostat": 0, "sensor": 1, "fan": 2}
+    RANK = {"light": 0, "switch": 1, "plug": 1, "tv": 1, "valve": 1, "blind": 2, "thermostat": 0, "sensor": 1, "fan": 2}
 
     def __init__(self, parent: QObject | None = None, layout: RoomLayout | None = None):
         super().__init__(parent)
@@ -374,7 +374,7 @@ class RoomsBridge(QObject):
     KIND_LABELS = {"window": "Window", "door": "Door", "contact": "Contact", "glassbreak": "Glass break",
                    "leak": "Leak", "motion": "Motion", "presence": "Presence",
                    "smoke": "Smoke detector", "co": "CO detector",
-                   "switch": "Switch", "plug": "Plug", "tv": "TV", "coffee": "Coffee machine",
+                   "switch": "Switch", "plug": "Plug", "coffee": "Coffee machine",
                    "washer": "Washing machine", "dishwasher": "Dishwasher", "fan": "Fan",
                    "bulb": "Bulb", "ceiling": "Ceiling lamp", "spot": "Spotlight", "wall": "Wall lamp",
                    "table": "Table lamp",

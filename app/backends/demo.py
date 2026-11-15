@@ -52,6 +52,9 @@ _DEVICES = [
     ("washer-leak", "LeakSensor", "Washing Machine Leak", [("LeakDetected", 0, False, {}),     # battery almost empty
                                                              ("BatteryLevel", 4, False, {}), ("StatusLowBattery", 1, False, {})]),
     # without HoldPosition and tilt: stop sets the target to the current position
+    ("television", "Television", "Living Room TV",
+     [("Active", 0, True, {}), ("ActiveIdentifier", 1, True, {}), ("RemoteKey", None, True, {}),
+      ("Mute", False, True, {}), ("VolumeSelector", None, True, {})]),
     ("garage", "GarageDoorOpener", "Garage Door",
      [("CurrentDoorState", 1, False, {}), ("TargetDoorState", 1, True, {}), ("ObstructionDetected", False, False, {})]),
     ("sprinkler", "Valve", "Garden Sprinkler",
@@ -91,6 +94,14 @@ class DemoBackend(Backend):
                 key=key, service_type=stype, name=nm,
                 chars={c: Char(name=c, value=v, writable=w, ref=(key, c), **kw) for c, v, w, kw in chars},
             )
+        # input sources of the television: services of their own, linked to it
+        for ident, label in ((1, "HDMI 1"), (2, "HDMI 2"), (3, "Netflix")):
+            key = f"tv-input-{ident}"
+            self._services["television"].linked.append(ServiceSnapshot(
+                key=key, service_type="InputSource", name=label,
+                chars={c: Char(name=c, value=v, ref=(key, c)) for c, v in (
+                    ("Identifier", ident), ("ConfiguredName", label), ("IsConfigured", 1),
+                    ("CurrentVisibilityState", 0))}))
 
     def _simulate(self) -> None:
         for s in self._services.values():

@@ -528,6 +528,21 @@ def main() -> int:
     save(annotate(p.grab(), [], "Open the garage door"), out, "garage-confirm")
     p.close()
 
+    # Television: inputs, remote keys, volume
+    p = Panel(DETAIL_SIZE)
+    tid = p.device_id("Living Room TV")
+    p.ctl.toggle(tid)
+    wait(600)
+    p.win.setProperty("openDevice", tid)
+    wait(400)
+    save(annotate(p.grab(), [
+        (1, [p.rect("tvInputs")], "Input sources", "top"),
+        (2, [p.rect("tvRemote")], "Remote keys", "left"),
+        (3, [p.rect("tvVolume")], "Louder, mute, quieter", "right"),
+        (4, [p.rect("tvPower")], "On / off", "bottom"),
+    ], "Television"), out, "television")
+    p.close()
+
     # Valve with run time
     p = Panel(DETAIL_SIZE)
     vid = p.device_id("Garden Sprinkler")

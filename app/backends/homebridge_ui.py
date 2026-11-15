@@ -20,7 +20,7 @@ import httpx
 
 from ..config import HomebridgeUiBackendConfig
 from ..hap_types import (CHAR_TYPES, DEVICE_TYPE_BY_SERVICE, SENSOR_SERVICES, SERVICE_TYPES, Char, ServiceSnapshot,
-                         attach_battery, merge_sensors, short_uuid)
+                         TV_PARTS, attach_battery, attach_tv_parts, merge_sensors, short_uuid)
 from ..i18n import tr
 from .base import Backend, BackendError
 
@@ -88,14 +88,17 @@ class HomebridgeUiBackend(Backend):
         sensors: dict[str, list[ServiceSnapshot]] = {}
         devices: dict[str, list[ServiceSnapshot]] = {}     # per accessory, to attach the battery
         batteries: dict[str, dict[str, Char]] = {}
+        parts: dict[str, list[ServiceSnapshot]] = {}     # input sources and speaker of a television
         for svc in data:
             stype = svc.get("type")
             if stype == "BatteryService":
                 stype = "Battery"
-            if stype not in DEVICE_TYPE_BY_SERVICE and stype not in SENSOR_SERVICES and stype != "Battery":
+            if stype not in DEVICE_TYPE_BY_SERVICE and stype not in SENSOR_SERVICES and stype != "Battery" \
+                    and stype not in TV_PARTS:
                 # custom services (e.g. Eve air pressure) are identified by their UUID
                 stype = SERVICE_TYPES.get(short_uuid(svc.get("uuid", "")), stype)
-            if stype not in DEVICE_TYPE_BY_SERVICE and stype not in SENSOR_SERVICES and stype != "Battery":
+            if stype not in DEVICE_TYPE_BY_SERVICE and stype not in SENSOR_SERVICES and stype != "Battery" \
+                    and stype not in TV_PARTS:
                 continue
             uid = svc["uniqueId"]
             chars: dict[str, Char] = {}
@@ -119,7 +122,9 @@ class HomebridgeUiBackend(Backend):
             name = svc.get("serviceName") or info.get("Name") or stype
             snap = ServiceSnapshot(key=uid, service_type=stype, name=name, chars=chars,
                                    accessory=info.get("Name", ""))
-            if stype in SENSOR_SERVICES:
+            if stype in TV_PARTS:
+                parts.setdefault(group, []).append(snap)
+            elif stype in SENSOR_SERVICES:
                 sensors.setdefault(group, []).append(snap)
             else:
                 devices.setdefault(group, []).append(snap)
@@ -127,6 +132,7 @@ class HomebridgeUiBackend(Backend):
             devices.setdefault(group, []).append(merge_sensors(group, snaps[0].accessory, snaps))
         for group, snaps in devices.items():
             attach_battery(snaps, batteries.get(group, {}))
+            attach_tv_parts(snaps, parts.get(group, []))
             result += snaps
         return result
 

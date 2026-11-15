@@ -61,6 +61,14 @@ var paths = {
     faucet: "M3.5 10h11a4 4 0 0 1 4 4v1.5M9 10V6.5M5.5 5h7M18.5 18.5v.01M18.5 21v.01",
     // garage door: house outline with door panels
     garage: "M3 20.5V9l9-5.5L21 9v11.5M6.5 20.5v-8h11v8M6.5 15h11M6.5 17.75h11",
+    // television remote: volume, mute, play/pause, info
+    volumeUp: "M4 9.5h3.5L12 5.5v13l-4.5-4H4zM16 9.5a3.5 3.5 0 0 1 0 5M18.5 7a7 7 0 0 1 0 10",
+    volumeDown: "M4 9.5h3.5L12 5.5v13l-4.5-4H4zM16 9.5a3.5 3.5 0 0 1 0 5",
+    mute: "M4 9.5h3.5L12 5.5v13l-4.5-4H4zM15.5 9.5l5 5M20.5 9.5l-5 5",
+    playPause: "M5 6.5v11l7-5.5zM15 6.5v11M19 6.5v11",
+    info: "M3.5 12a8.5 8.5 0 1 0 17 0a8.5 8.5 0 1 0-17 0M12 11v5.5M12 7.8v.01",
+    dot: "M8.5 12a3.5 3.5 0 1 0 7 0a3.5 3.5 0 1 0-7 0",
+    returnKey: "M9 6.5l-4 4 4 4M5 10.5h9a4.5 4.5 0 0 1 0 9h-2",
     // presence: a person
     presence: "M9.5 6a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0M6.5 20.5v-3.5a5.5 5.5 0 0 1 11 0v3.5",
     motion: "M10.5 12a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0M8 8a5.7 5.7 0 0 0 0 8M16 8a5.7 5.7 0 0 1 0 8M5.2 5.2a9.6 9.6 0 0 0 0 13.6M18.8 5.2a9.6 9.6 0 0 1 0 13.6",

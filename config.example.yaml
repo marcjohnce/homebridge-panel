@@ -42,7 +42,7 @@ devices:
   #               weather, drop, sun
   # Sensors: outdoor: true shows the temperature as "outdoors" instead of indoors
   # Contact/motion sensors: security: window | door | contact | glassbreak | motion (also selectable on the panel)
-  # Switches/plugs: appliance: switch | plug | tv | coffee | washer | dishwasher | fan (fan: shown under Climate)
+  # Switches/plugs: appliance: switch | plug | coffee | washer | dishwasher | fan (fan: shown under Climate)
   # Lights: lamp: bulb | ceiling | spot | wall | table (icon)
   # Any device: area: light | climate | security moves it to another menu entry
   "Living Room Ceiling Light": { room: Living Room, order: 1, icon: ceiling }
@@ -51,7 +51,7 @@ devices:
   "Kitchen Light":             { room: Kitchen }
   "Coffee Maker":              { room: Kitchen, appliance: coffee }
   "Bathroom Heating":          { room: Bathroom, icon: floor }
-  "TV Plug":                   { room: Living Room, appliance: tv }
+  "TV Plug":                   { room: Living Room }
   "Washing Machine":           { room: Bathroom, appliance: washer }
   "Weather Station":           { room: Garden, outdoor: true }
   "Living Room Climate":       { room: Living Room }
@@ -67,6 +67,7 @@ devices:
   "Alarm System":              { room: Hall }
   "Garden Sprinkler":          { room: Garden }
   "Garage Door":               { room: Garage }
+  "Living Room TV":            { room: Living Room }
   # "homebridge:12.10":        { hidden: true }
 
 # --- Scenes (icon: moon, sun, film, leaf, home, power) -----------------------------
