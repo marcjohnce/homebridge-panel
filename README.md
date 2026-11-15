@@ -215,6 +215,8 @@ python tools/doc_screenshots.py         # update the documentation screenshots
   service of the configured bridges and whether the panel supports it. A plugin running as a
   **child bridge** has its own port and PIN and is not on the main bridge: add it under `hap:` in
   `config.yaml`.
+- Tested with **Homebridge 2.5** (HAP-NodeJS 2.3), Homebridge 1.11 and Homebridge UI 5.30; `tools/homebridge-test/`
+  has a test plugin with every supported device type and a check script.
 
 ## License
 

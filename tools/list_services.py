@@ -24,7 +24,7 @@ from app.hap_types import (CHAR_TYPES, DEVICE_TYPE_BY_SERVICE, SENSOR_SERVICES, 
                            short_uuid)
 from app.settings import SettingsStore, apply_to_config, default_path  # noqa: E402
 
-SKIP = {"AccessoryInformation"}       # no device of its own
+SKIP = {"AccessoryInformation", "A2"}   # no device of their own (A2: HAP protocol information)
 NOTE = {"Battery": "battery of the other services"}
 
 
@@ -60,7 +60,7 @@ async def dump(b: HapBackendConfig) -> None:
         for svc in acc.get("services", []):
             short = short_uuid(svc.get("type", ""))
             stype = SERVICE_TYPES.get(short)
-            if stype in SKIP:
+            if stype in SKIP or short in SKIP:
                 continue
             if stype in DEVICE_TYPE_BY_SERVICE:
                 status = f"shown as {DEVICE_TYPE_BY_SERVICE[stype].value}"

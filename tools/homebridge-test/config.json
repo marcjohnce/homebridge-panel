@@ -1,0 +1,6 @@
+{
+  "bridge": {"name": "Panel Test", "username": "0E:22:33:44:55:66", "port": 51900, "pin": "031-45-154",
+             "advertiser": "ciao"},
+  "accessories": [],
+  "platforms": [{"platform": "PanelTest", "name": "PanelTest"}]
+}
