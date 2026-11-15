@@ -18,6 +18,11 @@ HAP_BASE_SUFFIX = "-0000-1000-8000-0026BB765291"
 EVE_WEATHER_SERVICE = "E863F001-079E-48FF-8F27-9C2605A29F52"
 EVE_AIR_PRESSURE_SERVICE = "E863F00A-079E-48FF-8F27-9C2605A29F52"
 EVE_AIR_PRESSURE = "E863F10F-079E-48FF-8F27-9C2605A29F52"      # hPa
+# Eve history (fakegato-history, homebridge-lib): see app/eve_history.py
+EVE_HISTORY_SERVICE = "E863F007-079E-48FF-8F27-9C2605A29F52"
+EVE_HISTORY_CHARS = {"E863F116-079E-48FF-8F27-9C2605A29F52": "status",
+                     "E863F117-079E-48FF-8F27-9C2605A29F52": "entries",
+                     "E863F11C-079E-48FF-8F27-9C2605A29F52": "request"}
 
 # Service UUIDs (short form) -> name
 SERVICE_TYPES: dict[str, str] = {
@@ -282,6 +287,7 @@ class ServiceSnapshot:
     chars: dict[str, Char] = field(default_factory=dict)
     accessory: str = ""      # name of the parent accessory
     linked: list["ServiceSnapshot"] = field(default_factory=list)   # e.g. input sources of a television
+    history: dict[str, Any] | None = None   # Eve history of the accessory: refs of status, entries, request
 
     def get(self, name: str, default: Any = None) -> Any:
         c = self.chars.get(name)
@@ -542,6 +548,8 @@ def snapshot_to_state(s: ServiceSnapshot) -> tuple[DeviceType, dict[str, Any], l
     if "CurrentTemperature" in c:
         state["current_temp"] = _num(s.get("CurrentTemperature"))
         caps.append("current_temp")
+        if s.history:
+            meta["history"] = True          # temperature chart from the Eve history
 
     level = _num(s.get("BatteryLevel"))
     if level is not None:

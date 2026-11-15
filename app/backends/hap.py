@@ -18,8 +18,9 @@ from typing import Any
 import httpx
 
 from ..config import HapBackendConfig
-from ..hap_types import (CHAR_TYPES, DEVICE_TYPE_BY_SERVICE, SENSOR_SERVICES, SERVICE_TYPES, Char, ServiceSnapshot,
-                         TV_PARTS, attach_battery, attach_tv_parts, merge_sensors, short_uuid)
+from ..hap_types import (CHAR_TYPES, DEVICE_TYPE_BY_SERVICE, EVE_HISTORY_CHARS, EVE_HISTORY_SERVICE, SENSOR_SERVICES,
+                         SERVICE_TYPES, Char, ServiceSnapshot, TV_PARTS, attach_battery, attach_tv_parts,
+                         merge_sensors, short_uuid)
 from ..i18n import tr
 from .base import Backend, BackendError
 
@@ -68,7 +69,12 @@ class HapBackend(Backend):
             devices: list[ServiceSnapshot] = []
             battery: dict[str, Char] = {}
             parts: list[ServiceSnapshot] = []          # input sources and speaker of a television
+            history: dict[str, Any] = {}
             for svc in services:
+                if str(svc.get("type", "")).upper() == EVE_HISTORY_SERVICE:
+                    history = {EVE_HISTORY_CHARS[t]: (aid, ch["iid"]) for ch in svc.get("characteristics", [])
+                               if (t := str(ch.get("type", "")).upper()) in EVE_HISTORY_CHARS}
+                    continue
                 stype = SERVICE_TYPES.get(short_uuid(svc.get("type", "")))
                 if stype not in DEVICE_TYPE_BY_SERVICE and stype not in SENSOR_SERVICES \
                         and stype != "Battery" and stype not in TV_PARTS:
@@ -100,8 +106,28 @@ class HapBackend(Backend):
                 devices.append(merge_sensors(str(aid), acc_name, sensors))
             attach_tv_parts(devices, parts)
             attach_battery(devices, battery)
+            if len(history) == 3:           # the history belongs to the accessory's temperature device
+                for snap in devices:
+                    if "CurrentTemperature" in snap.chars:
+                        snap.history = history
             result += devices
         return result
+
+    async def read_char(self, ref: tuple[int, int]) -> Any:
+        """Reads one characteristic now (the accessory's get handler runs)."""
+        try:
+            r = await self.client.get("/characteristics", params={"id": f"{ref[0]}.{ref[1]}"})
+        except httpx.HTTPError as e:
+            raise BackendError(tr("HAP read failed: {error}").format(error=e)) from e
+        if r.status_code not in (200, 207):
+            raise BackendError(tr("HAP read failed: {error}").format(error=f"{r.status_code} {r.text[:200]}"))
+        chars = r.json().get("characteristics", [])
+        if not chars or chars[0].get("status", 0) != 0:
+            raise BackendError(tr("HAP read failed: {error}").format(error=chars[:1]))
+        return chars[0].get("value")
+
+    async def write_char(self, ref: tuple[int, int], value: Any) -> None:
+        await self.write([(Char(name="", value=None, ref=ref), value)])
 
     async def write(self, writes: list[tuple[Char, Any]]) -> None:
         body = {"characteristics": [

@@ -1,6 +1,6 @@
 // Test accessories for the smart home panel: every service type the panel supports
-let hap;
-module.exports = (api) => { hap = api.hap; api.registerPlatform("PanelTest", PanelTest); };
+let hap, homebridge;
+module.exports = (api) => { hap = api.hap; homebridge = api; api.registerPlatform("PanelTest", PanelTest); };
 
 class Acc {
   constructor(name) {
@@ -101,6 +101,40 @@ class PanelTest {
     const spk = tv.add(S.TelevisionSpeaker, "Speaker", [[C.Mute, false], [C.VolumeControlType, 1]]);
     spk.getCharacteristic(C.VolumeSelector).onSet(() => {});
     tvs.addLinkedService(spk);
+    this.addHistory(list, mk);
     cb(list);
+  }
+
+  // Eve history like plugins built on fakegato-history keep it: three days of 10-minute values
+  // (weather) and a small ring buffer that has already wrapped around (thermostat).
+  // Optional: needs `npm install fakegato-history` where Homebridge can find it (e.g. NODE_PATH).
+  addHistory(list, mk) {
+    let FakeGato;
+    try {
+      FakeGato = require("fakegato-history")(homebridge);
+    } catch (e) {
+      this.log.info("fakegato-history not installed – no history accessories");
+      return;
+    }
+    const { Service: S, Characteristic: C } = hap;
+    const now = Math.round(Date.now() / 1000);
+    const hw = mk("History Weather");
+    hw.add(S.TemperatureSensor, "History Weather", [[C.CurrentTemperature, 7.5]]);
+    hw.add(S.HumiditySensor, "History Humidity", [[C.CurrentRelativeHumidity, 80]]);
+    Object.assign(hw, { displayName: "History Weather", log: this.log });
+    const wh = new FakeGato("weather", hw, { disableTimer: true, size: 4032 });
+    hw.services.push(wh);
+    for (let i = 432; i >= 1; i--) {
+      wh.addEntry({ time: now - i * 600, temp: Math.round(500 + 300 * Math.sin(i / 24)) / 100, humidity: 80, pressure: 1013 });
+    }
+    const ht = mk("History Thermostat");
+    ht.add(S.Thermostat, "History Thermostat", [[C.CurrentHeatingCoolingState, 1], [C.TargetHeatingCoolingState, 1],
+      [C.CurrentTemperature, 20.5], [C.TargetTemperature, 21], [C.TemperatureDisplayUnits, 0]]);
+    Object.assign(ht, { displayName: "History Thermostat", log: this.log });
+    const th = new FakeGato("thermo", ht, { disableTimer: true, size: 100 });
+    ht.services.push(th);
+    for (let i = 150; i >= 1; i--) {
+      th.addEntry({ time: now - i * 600, currentTemp: 20 + (i % 10) / 10, setTemp: 21, valvePosition: 40 });
+    }
   }
 }

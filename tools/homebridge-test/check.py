@@ -83,6 +83,19 @@ async def run(cfg: AppConfig) -> int:
             await m.refresh_all()
             got = m.devices[devs[name].id].state.get(key)
             check(got == want, f"{name} {attrs} → {key} = {got!r}")
+    # Eve history (only when fakegato-history is installed for the test plugin)
+    for name, count, last in (("History Weather", 432, 5.12), ("History Thermostat", 98, 20.1)):
+        if name not in devs:
+            print(f"  skip {name}: fakegato-history not installed")
+            continue
+        check(devs[name].meta.get("history") is True, f"{name} has an Eve history")
+        try:
+            pts = await m.temperature_history(devs[name].id)
+        except Exception as e:                           # noqa: BLE001 – report and go on
+            check(False, f"{name} history: {e}")
+            continue
+        check(len(pts) == count and pts[-1][1] == last, f"{name} history: {len(pts)} values, last {pts[-1:]}")
+        check(all(b[0] - a[0] == 600 for a, b in zip(pts, pts[1:])), f"{name} history: every 10 minutes")
     await m.stop()
     print("\nFAILED:\n  " + "\n  ".join(fails) if fails else "\nall checks passed")
     return 1 if fails else 0
