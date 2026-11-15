@@ -190,6 +190,7 @@ PT: dict[str, str] = {
     'Floor lamp': 'Candeeiro de pé',
     'Globe lamp': 'Candeeiro esférico',
     'LED strip': 'Fita LED',
+    "Chandelier": "Lustre",
     "%1, lights on": "%1, luzes acesas",
     "Language": "Idioma",
     "System": "Sistema",
