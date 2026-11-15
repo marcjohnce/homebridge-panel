@@ -344,6 +344,21 @@ def test_rooms_page_rename_with_keyboard(qapp, tmp_path):
     tap("keyboardDone")
     assert pump_until(lambda: "Koch area" in ctl.rooms)
     assert item("headerTitle").property("text") != ""                    # qsTr falls back to English
+
+    # tapping the same arrow again moves the same device further (the list follows it)
+    tap("tab:devices")
+    ed = ctl.roomEditor
+    room = max(ctl.rooms, key=lambda r: sum(d["room"] == r for d in ed.devices))
+    target = [d["id"] for d in ed.devices if d["room"] == room][1]
+    flick = item("roomsFlick")
+    down = item("deviceDown:" + target)
+    flick.setProperty("contentY", down.mapToItem(flick.property("contentItem"), QPointF(0, 0)).y() - 200)
+    pump_until(lambda: False, timeout=0.3)
+    down = item("deviceDown:" + target)
+    spot = down.mapToScene(QPointF(down.width() / 2, down.height() / 2)).toPoint()
+    for expected in (2, 3, 4):
+        QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, spot)
+        assert pump_until(lambda: [d["id"] for d in ed.devices if d["room"] == room].index(target) == expected)
     ctl.shutdown()
     win.close()
     qapp.removeTranslator(translator)

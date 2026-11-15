@@ -403,7 +403,8 @@ listed here, marked *Hidden*, so it can be shown again. (`hidden: true` in `conf
 device completely, also from the settings.)
 
 The arrows next to each device set the order of the tiles in the room (under *All*: rooms first,
-then this order; alarms stay in front under *Security*).
+then this order; alarms stay in front under *Security*). The list follows the moved device and
+marks it, so tapping the same arrow again keeps moving the same device.
 
 **Virtual devices (MQTT)** show a value received on an MQTT topic, e.g. the water pressure of a
 boiler in bar. Set up the broker first under *Settings → MQTT* (address, port, protocol MQTT /
