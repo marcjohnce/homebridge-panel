@@ -62,6 +62,7 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 - **Light / dark / dark blue / automatic** appearance and a **screen saver** with a large clock
 - **Settings page** for appearance, screen saver and the Homebridge connection (address, port, PIN)
   with keypad, connection test and apply without restart; **restart** the app or the Raspberry Pi
+- **Updates** from the settings: new stable releases are found automatically and installed with one tap
 - Optimized for **1280×800** and **720×720**; also works on 800×480, 1024×600, 1280×720 and portrait displays
 
 ## Requirements
@@ -95,6 +96,12 @@ For `--autostart`, enable desktop autologin: `sudo raspi-config` → *System Opt
 
 Then tap the settings icon at the bottom left, enter your Homebridge address, port and PIN,
 tap **Test connection** and **Apply**.
+
+### Updates
+
+*Settings → System → Software update* shows when a new release is available and installs it
+with one tap (the app restarts afterwards). Only stable GitHub releases are offered. By hand:
+`git fetch --tags && git checkout <tag> && .venv/bin/pip install -r requirements.txt`.
 
 ### Starting manually
 

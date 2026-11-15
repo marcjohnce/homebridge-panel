@@ -69,6 +69,14 @@ Rectangle {
         messageOk = true;
         message = qsTr("Applied. Reconnecting …");
     }
+    // software update: install the release found (after a confirmation) or look again
+    function update(field) {
+        if (panel.updateInfo.install)
+            confirm.ask({ key: "update", label: field.label, button: qsTr("Install"),
+                          confirm: qsTr("Install version %1 now? The app restarts afterwards.").arg(panel.updateInfo.latest) });
+        else
+            panel.checkUpdate();
+    }
     function testMqtt() {
         testing = true;
         message = "";
@@ -161,6 +169,7 @@ Rectangle {
                         onEdit: (key, value) => section.instant ? root.saveInstant(key, value) : root.setDraft(key, value)
                         onEditRequested: (field, value) => root.editValue(field, value)
                         onActionRequested: field => field.kind === "page" ? root.subPage = field.key
+                                                 : field.kind === "update" ? root.update(field)
                                                  : field.key === "mqtt_test" ? root.testMqtt()
                                                  : field.confirm ? confirm.ask(field) : panel.settings.runAction(field.key)
                     }
@@ -250,6 +259,6 @@ Rectangle {
     ConfirmDialog {
         id: confirm
         objectName: "confirmDialog"
-        onConfirmed: key => panel.settings.runAction(key)
+        onConfirmed: key => key === "update" ? panel.installUpdate() : panel.settings.runAction(key)
     }
 }

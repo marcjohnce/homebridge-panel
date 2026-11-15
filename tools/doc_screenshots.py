@@ -434,13 +434,16 @@ def main() -> int:
     p.key(Qt.Key.Key_Escape)
     wait(300)
 
+    p.ctl._set_update(state="available", current="0.0.3", latest="v0.0.4", error="")   # as if found on GitHub
     flick = p.item("settingsFlick")
-    flick.setProperty("contentY", max(0, flick.property("contentHeight") - flick.height()))
+    top = p.item("section:system").mapToItem(flick.property("contentItem"), QPointF(0, 0)).y()
+    flick.setProperty("contentY", min(top - 40, max(0, flick.property("contentHeight") - flick.height())))
     wait(300)
     save(annotate(p.grab(), [
         (1, [p.rect("section:system")], "System", "left"),
-        (2, [p.rect("action:restart_app")], "Restart app", "right"),
-        (3, [p.rect("action:reboot")], "Restart Raspberry Pi", "right"),
+        (2, [p.rect("action:update")], "Software update: install a new release", "right"),
+        (3, [p.rect("action:restart_app")], "Restart app", "right"),
+        (4, [p.rect("action:reboot")], "Restart Raspberry Pi", "right"),
     ], "Settings: System"), out, "settings-system")
 
     reboot = p.rect("action:reboot")

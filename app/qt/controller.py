@@ -26,6 +26,7 @@ from ..manager import DeviceManager, DeviceNotFound
 from ..backends.mqtt import MqttBackend, test_connection as test_mqtt
 from ..rooms import BUILTIN_DEFAULT, RoomLayout
 from ..scheduler import Scheduler
+from ..updater import UpdateError, Updater
 from ..settings import ACTIONS, SettingsStore, apply_to_config, validate
 from ..models import AREAS, KIND_ICONS, KIND_KEYS, QUIET_KINDS
 from . import format as fmt
@@ -673,6 +674,8 @@ class ActivityFilter(QObject):
 
 class Controller(QObject):
     _message = Signal(object)
+    _updateResult = Signal(object)        # from the update thread: (kind, value)
+    updateChanged = Signal()
     toast = Signal(str)
     deviceUpdated = Signal(str)
     userActivity = Signal()
@@ -696,7 +699,8 @@ class Controller(QObject):
     reboot_command = ["systemctl", "reboot"]
 
     def __init__(self, base_cfg: AppConfig, store: SettingsStore, config_file: Path | None = None,
-                 fullscreen: bool = False, restart_argv: list[str] | None = None):
+                 fullscreen: bool = False, restart_argv: list[str] | None = None,
+                 updater: Updater | None = None):
         super().__init__()
         # Command line for restarting the app: same interpreter, module and options
         self.restart_argv = restart_argv or [sys.executable, "-m", "app"]
@@ -733,6 +737,16 @@ class Controller(QObject):
         self._message.connect(self._on_message)
         self._theme_timer = QTimer(self, interval=30_000, timeout=self._update_theme)
         self._theme_timer.start()
+        # software update: checked a minute after the start and then once a day
+        self._updater = updater or Updater()
+        supported = self._updater.supported
+        self._update: dict[str, Any] = {"state": "idle" if supported else "unsupported",
+                                        "current": self._updater.installed() if supported else __version__,
+                                        "latest": "", "error": ""}
+        self._updateResult.connect(self._on_update_result)
+        self._update_timer = QTimer(self, interval=24 * 3600_000, timeout=self.checkUpdate)
+        if self._updater.supported:
+            self._update_timer.start()
 
     # ---------- lifecycle ----------
     def effective_config(self) -> AppConfig:
@@ -816,12 +830,88 @@ class Controller(QObject):
 
     def start(self) -> None:
         self.runner.submit(self._restart(self.effective_config()))
+        if self._updater.supported:
+            QTimer.singleShot(60_000, self, self.checkUpdate)
+
+    # ---------- software update ----------
+    def _set_update(self, **values: Any) -> None:
+        self._update = {**self._update, **values}
+        self.updateChanged.emit()
+
+    @Slot()
+    def checkUpdate(self) -> None:
+        if self._update["state"] in ("checking", "installing", "unsupported"):
+            return
+        self._set_update(state="checking", error="")
+
+        def work() -> None:
+            try:
+                result = ("checked", self._updater.check())
+            except UpdateError as e:
+                result = ("failed", str(e))
+            _emit_safely(self._updateResult, result)
+        threading.Thread(target=work, daemon=True).start()
+
+    @Slot()
+    def installUpdate(self) -> None:
+        """Installs the latest release found by checkUpdate and restarts the app."""
+        if self._update["state"] != "available":
+            return
+        tag = self._update["latest"]
+        self._set_update(state="installing", error="")
+
+        def work() -> None:
+            try:
+                self._updater.install(tag)
+                result = ("installed", tag)
+            except UpdateError as e:
+                result = ("install failed", str(e))
+            _emit_safely(self._updateResult, result)
+        threading.Thread(target=work, daemon=True).start()
+
+    def _on_update_result(self, result: tuple[str, Any]) -> None:
+        kind, value = result
+        if kind == "checked":
+            self._set_update(state="available" if value.available else "current",
+                             current=value.current, latest=value.latest)
+        elif kind == "installed":
+            log.info("Update %s installed, restarting", value)
+            self.restarting.emit(tr("Update installed. Restarting the app …"))
+            QTimer.singleShot(600, self._restart_app)
+        else:
+            log.warning("Update %s: %s", kind, value)
+            self._set_update(state="available" if kind == "install failed" else "failed", error=value)
+            if kind == "install failed":
+                self.toast.emit(tr("Update failed: {error}").format(error=value))
+
+    @Property("QVariantMap", notify=updateChanged)
+    def updateInfo(self) -> dict[str, Any]:
+        """State of the software update for Settings → System: text, button and whether it installs."""
+        u = self._update
+        state = u["state"]
+        text = {
+            "unsupported": tr("Only for installations with deploy/install.sh (git)"),
+            "idle": tr("Looks for a new release on GitHub"),
+            "checking": tr("Looking for updates …"),
+            "current": tr("Version {version} is up to date").format(version=u["current"]),
+            "available": tr("Version {latest} is available (installed: {current})").format(
+                latest=u["latest"].lstrip("v"), current=u["current"]),
+            "installing": tr("Installing version {latest} … The app restarts afterwards.").format(
+                latest=u["latest"].lstrip("v")),
+            "failed": tr("Update check failed: {error}").format(error=u["error"]),
+        }[state]
+        if state == "available" and u["error"]:
+            text = tr("Update failed: {error}").format(error=u["error"])
+        return {"state": state, "text": text, "latest": u["latest"].lstrip("v"),
+                "install": state == "available",
+                "busy": state in ("checking", "installing", "unsupported")}
 
     def shutdown(self) -> None:
         # stop timers first: if Python later frees this object from another thread,
         # active Qt timers of a deleted object would crash the event loop
         self._theme_timer.stop()
         self._since_timer.stop()
+        self._update_timer.stop()
         try:
             self.runner.submit(self._stop_manager()).result(timeout=3)
         except Exception:  # pragma: no cover
@@ -1347,9 +1437,9 @@ class Controller(QObject):
     def fullscreen(self) -> bool:
         return self._fullscreen
 
-    @Property(str, constant=True)
+    @Property(str, notify=updateChanged)
     def version(self) -> str:
-        return __version__
+        return self._update["current"]
 
     @Property(str, constant=True)
     def configPath(self) -> str:
