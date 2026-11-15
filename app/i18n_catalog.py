@@ -229,6 +229,8 @@ _ROWS: list[tuple[str, str, str, str, str]] = [
     ('Desk lamp', 'Schreibtischlampe', 'Lampe de bureau', 'Lampada da scrivania', 'Lámpara de escritorio'),
     ('Floor lamp', 'Stehlampe', 'Lampadaire', 'Lampada da terra', 'Lámpara de pie'),
     ('Globe lamp', 'Kugellampe', 'Lampe boule', 'Lampada a sfera', 'Lámpara de bola'),
+    ('Pendant light', 'Pendelleuchte', 'Suspension', 'Lampada a sospensione', 'Lámpara colgante'),
+    ('Fluorescent tube', 'Leuchtstoffröhre', 'Tube fluorescent', 'Tubo fluorescente', 'Tubo fluorescente'),
     ('LED strip', 'LED-Streifen', 'Ruban LED', 'Striscia LED', 'Tira LED'),
     ("Chandelier", "Kronleuchter", "Lustre", "Lampadario", "Araña", "Lustre"),
     ('Unlock %1?', '%1 aufschließen?', 'Déverrouiller %1 ?', 'Sbloccare %1?', '¿Desbloquear %1?'),

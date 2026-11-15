@@ -67,9 +67,9 @@ QUIET_KINDS = {"presence"}
 APPLIANCE_KINDS = ("switch", "plug", "coffee", "washer", "dishwasher", "fan")
 APPLIANCE_ICONS = {k: k for k in APPLIANCE_KINDS}
 # Lamp kinds of lights; only the icon changes (lamp: in config.yaml)
-LAMP_KINDS = ("bulb", "ceiling", "chandelier", "spot", "wall", "table", "desk", "floorlamp", "globe", "strip")
+LAMP_KINDS = ("bulb", "ceiling", "pendant", "chandelier", "spot", "wall", "table", "desk", "floorlamp", "globe", "tube", "strip")
 LAMP_ICONS = {"bulb": "light", "ceiling": "ceiling", "spot": "spot", "wall": "wall", "table": "table",
-              "desk": "desk", "floorlamp": "floorlamp", "globe": "globe", "strip": "strip",
+              "desk": "desk", "floorlamp": "floorlamp", "globe": "globe", "tube": "tube", "pendant": "pendant", "strip": "strip",
               "chandelier": "chandelier"}
 # Kinds of valves (HomeKit ValveType); generic valves (e.g. water shut-off) go under "Security"
 VALVE_KINDS = ("generic", "irrigation", "shower", "faucet")

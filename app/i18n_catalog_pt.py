@@ -189,6 +189,8 @@ PT: dict[str, str] = {
     'Desk lamp': 'Candeeiro de secretária',
     'Floor lamp': 'Candeeiro de pé',
     'Globe lamp': 'Candeeiro esférico',
+    'Pendant light': 'Candeeiro suspenso',
+    'Fluorescent tube': 'Tubo fluorescente',
     'LED strip': 'Fita LED',
     "Chandelier": "Lustre",
     'Unlock %1?': 'Destrancar %1?',
