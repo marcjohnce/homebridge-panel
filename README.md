@@ -92,12 +92,45 @@ cd ~/homebridge-panel                 # clone the repository
 | `./deploy/install.sh` | install only, adds an application menu entry |
 | `./deploy/install.sh --autostart` | also start in full screen at desktop login (labwc, wayfire, X11) |
 | `./deploy/install.sh --eglfs` | full screen **without a desktop** as a system service (Pi OS Lite) |
+| `./deploy/install.sh --autostart --rotate 180` | as `--autostart`, screen and touch rotated (see [Rotating the screen](#rotating-the-screen)) |
 
 For `--autostart`, enable desktop autologin: `sudo raspi-config` → *System Options* →
 *Boot / Auto Login* → *Desktop Autologin*.
 
 Then tap the settings icon at the bottom left, enter your Homebridge address, port and PIN,
 tap **Test connection** and **Apply**.
+
+### Rotating the screen
+
+For a display mounted upside down (180°) or in portrait (90° or 270°, clockwise). The panel
+adapts its layout to the rotated screen by itself (portrait screens get the top bar). Use
+**one** of the two ways – they would override each other.
+
+**A. With the install script (recommended)** – rotates the screen and the touchscreen:
+
+```bash
+./deploy/install.sh --autostart --rotate 180      # when installing
+./deploy/set-rotation.sh 180                      # or later, without installing again
+./deploy/set-rotation.sh 90 --output HDMI-A-1     # portrait on a specific output
+./deploy/set-rotation.sh 0                        # back to normal
+sudo reboot
+```
+
+The screen is rotated at every desktop login (`deploy/rotate.sh` with `wlr-randr`, or `xrandr` on
+X11), the touchscreen by a udev rule (`/etc/udev/rules.d/99-smarthome-panel-touch.rules`) –
+the desktop does not rotate touch input together with the screen on its own. Without `--output`
+the first active output is used; `wlr-randr` (in a terminal on the Pi's desktop) lists the
+names, e.g. `HDMI-A-1` or `DSI-1`. If the picture is right but touches land on the opposite
+side in portrait, run it again with `--touch 270` (or `--touch 90`).
+
+**B. By hand on the Pi's desktop** – *Raspberry menu → Preferences → Screen Configuration*,
+right-click the screen → *Orientation*, then *Apply*. Pi OS keeps the setting and usually rotates
+the touch input as well. If touches still land in the wrong place, add only the touch rule from A:
+`./deploy/set-rotation.sh 0 --touch 180` (or `90` / `270`) leaves the screen alone and rotates the touch.
+
+**Without a desktop (`--eglfs`)** the panel cannot be rotated: Qt's rotation setting for this mode
+does not apply to Qt Quick apps like the panel. For a rotated display use the desktop installation
+(`--autostart`).
 
 ### Updates
 
