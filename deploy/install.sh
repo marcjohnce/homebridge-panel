@@ -4,12 +4,42 @@
 #   ./deploy/install.sh               install the app (application menu entry)
 #   ./deploy/install.sh --autostart   also start in full screen when logging in to the desktop
 #   ./deploy/install.sh --eglfs       full screen without desktop as a system service (e.g. Pi OS Lite)
+#
+# Screen mounted upside down or in portrait (desktop only, also later via deploy/set-rotation.sh):
+#   ./deploy/install.sh --autostart --rotate 180                   rotate screen and touch by 180°
+#   ./deploy/install.sh --autostart --rotate 90 --output HDMI-A-1  portrait (90 or 270, clockwise)
 set -euo pipefail
 
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
-USER_NAME="${SUDO_USER:-$USER}"
+USER_NAME="${SUDO_USER:-${USER:-$(id -un)}}"
 HOME_DIR="$(getent passwd "$USER_NAME" | cut -d: -f6)"
-MODE="${1:-}"
+MODE=""
+ROTATE=""
+ROTATE_OPTS=()     # --output / --touch for deploy/set-rotation.sh
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --autostart|--eglfs) MODE="$1" ;;
+    --rotate) ROTATE="${2:-}"; shift ;;
+    --output|--touch) ROTATE_OPTS+=("$1" "${2:-}"); shift ;;
+    -h|--help) awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"; exit 0 ;;
+    *) echo "Unknown option: $1 (see --help)" >&2; exit 1 ;;
+  esac
+  shift
+done
+if [ ${#ROTATE_OPTS[@]} -gt 0 ] && [ -z "$ROTATE" ]; then
+  echo "--output and --touch belong to --rotate" >&2
+  exit 1
+fi
+if [ -n "$ROTATE" ]; then
+  if [ "$MODE" = --eglfs ]; then
+    echo "--rotate needs the desktop (--autostart); see README → Rotating the screen" >&2
+    exit 1
+  fi
+  case "$ROTATE" in
+    0|90|180|270) ;;
+    *) echo "--rotate must be 0, 90, 180 or 270" >&2; exit 1 ;;
+  esac
+fi
 
 echo "==> Installing Smart Home Panel in $DIR (user: $USER_NAME)"
 
@@ -76,6 +106,11 @@ case "$MODE" in
     echo "==> Service running: sudo systemctl status smarthome-panel"
     ;;
 esac
+
+if [ -n "$ROTATE" ]; then
+  chmod +x "$DIR/deploy/set-rotation.sh"
+  "$DIR/deploy/set-rotation.sh" "$ROTATE" "${ROTATE_OPTS[@]}"
+fi
 
 chown -R "$USER_NAME": "$HOME_DIR/.local/share/applications" "$HOME_DIR/.config" 2>/dev/null || true
 echo "==> Done. Start with: $DIR/deploy/start.sh  (window instead of full screen: .venv/bin/python -m app)"
