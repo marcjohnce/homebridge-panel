@@ -485,4 +485,7 @@ PT: dict[str, str] = {
     "No values for this period yet.": "Ainda não há valores para este período.",
     "History could not be read: {error}": "Não foi possível ler o histórico: {error}",
     "HAP read failed: {error}": "A leitura HAP falhou: {error}",
+    "Upside down": "Invertido",
+    "Turns the picture by 180° for a display mounted the other way round; touch follows":
+        "Roda a imagem 180° para um ecrã montado ao contrário; o toque acompanha",
 }

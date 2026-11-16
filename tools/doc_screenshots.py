@@ -375,14 +375,14 @@ def main() -> int:
 
     p.win.setProperty("openDevice", "")
     p.win.setProperty("settingsOpen", True)
-    wait(300)
+    p.win.findChild(QObject, "toast").setProperty("shown", False)    # alarm message of the views above
+    wait(400)
     p.item("settingsFlick").setProperty("contentY", 0)
     save(annotate(p.grab(), [
         (1, [p.rect("section:display")], "Display settings (saved immediately)", "left"),
         (2, [p.rect("section:rooms")], "Rooms and devices", "left"),
-        (3, [p.rect("section:homebridge")], "Homebridge connection", "left"),
-        (4, [p.rect("testButton")], "Test connection", "bottom"),
-        (5, [p.rect("applyButton")], "Apply", "bottom"),
+        (3, [p.rect("testButton")], "Test connection", "bottom"),
+        (4, [p.rect("applyButton")], "Apply", "bottom"),
     ], "Settings"), out, "settings")
 
     rooms_row = p.rect("row:rooms_page")

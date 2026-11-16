@@ -728,6 +728,7 @@ class Controller(QObject):
     climateChanged = Signal()
     themeChanged = Signal()
     idleChanged = Signal()
+    upsideDownChanged = Signal()
     restarting = Signal(str)
     languageChanged = Signal()
 
@@ -1036,6 +1037,8 @@ class Controller(QObject):
             self.apply_language()
         if "idle_seconds" in keys:
             self.idleChanged.emit()
+        if "upside_down" in keys:
+            self.upsideDownChanged.emit()
         if "show_general" in keys:
             self._refresh_rooms()
         if any(k.startswith("mqtt_") for k in keys) and not any(k.startswith("hap_") for k in keys):
@@ -1490,6 +1493,10 @@ class Controller(QObject):
     @Property(str, notify=themeChanged)
     def theme(self) -> str:
         return self._theme
+
+    @Property(bool, notify=upsideDownChanged)
+    def upsideDown(self) -> bool:
+        return bool(self.store.get("upside_down"))
 
     @Property(int, notify=idleChanged)
     def idleSeconds(self) -> int:

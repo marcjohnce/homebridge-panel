@@ -359,12 +359,12 @@ devices:
 
 | # | Element | What it does |
 |---|---|---|
-| 1 | Display | *Appearance* (Automatic, Light, Dark, Dark blue), *Language* and *Screen saver after*. Saved immediately |
+| 1 | Display | *Appearance* (Automatic, Light, Dark, Dark blue), *Language*, *Screen saver after* and *Upside down* (turns the picture and touch by 180° for a display mounted the other way round). Saved immediately |
 | 2 | Rooms and devices | Opens the room management (see below); shows the number of rooms |
 | – | Security | *PIN to disarm* the alarm system: 4 to 8 digits, empty for none. Saved immediately |
-| 3 | Homebridge | *Connect to Homebridge*, *Address*, *Port* and *PIN*. Changes are collected until you apply them |
-| 4 | Test connection | Tries the entered address, port and PIN without saving and reports how many devices were found |
-| 5 | Apply | Saves the Homebridge settings and reconnects without restarting the app. Enabled only when something changed |
+| – | Homebridge | *Connect to Homebridge*, *Address*, *Port* and *PIN* (further down). Changes are collected until you apply them |
+| 3 | Test connection | Tries the entered address, port and PIN without saving and reports how many devices were found |
+| 4 | Apply | Saves the Homebridge settings and reconnects without restarting the app. Enabled only when something changed |
 
 *Automatic* switches to dark from 7 pm to 7 am. Scroll down for the **Info** section with
 connection details, number of devices, file locations and version.

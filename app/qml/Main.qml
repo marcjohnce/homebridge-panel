@@ -40,6 +40,18 @@ ApplicationWindow {
         value: Math.max(1, Math.min(1.3, window.width / 1024, window.height / 600))
     }
 
+    // Upside down (Settings → Display): the whole window content including popups turns by 180°.
+    // Qt maps touches and clicks through the rotation. Rotating here is much cheaper than
+    // rotating the screen in the desktop, which then has to redraw every frame turned.
+    property Item rootItem: null                 // the window's root item: popups turn too
+    Component.onCompleted: rootItem = contentItem.Window.contentItem
+    Binding {
+        target: window.rootItem
+        when: window.rootItem !== null
+        property: "rotation"
+        value: panel.upsideDown ? 180 : 0
+    }
+
     HomeScreen {
         anchors.fill: parent
         onOpenDetail: id => window.openDevice = id
@@ -74,6 +86,7 @@ ApplicationWindow {
 
     Toast {
         id: toast
+        objectName: "toast"
     }
 
     // Shown while the app or the device restarts
