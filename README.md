@@ -92,7 +92,7 @@ cd ~/homebridge-panel                 # clone the repository
 | `./deploy/install.sh` | install only, adds an application menu entry |
 | `./deploy/install.sh --autostart` | also start in full screen at desktop login (labwc, wayfire, X11) |
 | `./deploy/install.sh --eglfs` | full screen **without a desktop** as a system service (Pi OS Lite) |
-| `./deploy/install.sh --autostart --rotate 180` | as `--autostart`, screen and touch rotated (see [Rotating the screen](#rotating-the-screen)) |
+| `./deploy/install.sh --autostart --rotate 90` | as `--autostart`, screen and touch rotated for portrait (see [Rotating the screen](#rotating-the-screen)) |
 
 For `--autostart`, enable desktop autologin: `sudo raspi-config` → *System Options* →
 *Boot / Auto Login* → *Desktop Autologin*.
@@ -102,16 +102,23 @@ tap **Test connection** and **Apply**.
 
 ### Rotating the screen
 
-For a display mounted upside down (180°) or in portrait (90° or 270°, clockwise). The panel
-adapts its layout to the rotated screen by itself (portrait screens get the top bar). Use
-**one** of the two ways – they would override each other.
+**Upside down (180°): use the panel's own setting** – *Settings → Display → Upside down*. The
+panel turns its picture itself and Qt maps the touches accordingly. This costs nothing, while a
+screen rotated by the desktop has to be redrawn turned for every frame, which makes the panel
+noticeably slower on a Raspberry Pi. Works with and without desktop (also `--eglfs`). Leave the
+screen itself unrotated (`./deploy/set-rotation.sh 0` if you rotated it before) – otherwise the two
+rotations cancel each other out.
+
+**Portrait (90° or 270°, clockwise)** needs the screen rotated by the desktop. The panel adapts its
+layout to the rotated screen by itself (portrait screens get the top bar). Use **one** of the two
+ways – they would override each other.
 
 **A. With the install script (recommended)** – rotates the screen and the touchscreen:
 
 ```bash
-./deploy/install.sh --autostart --rotate 180      # when installing
-./deploy/set-rotation.sh 180                      # or later, without installing again
-./deploy/set-rotation.sh 90 --output HDMI-A-1     # portrait on a specific output
+./deploy/install.sh --autostart --rotate 90       # when installing
+./deploy/set-rotation.sh 270                      # or later, without installing again
+./deploy/set-rotation.sh 90 --output HDMI-A-1     # on a specific output
 ./deploy/set-rotation.sh 0                        # back to normal
 sudo reboot
 ```
@@ -131,8 +138,8 @@ place, force a touch rotation with `--touch 90|180|270` (`--touch 0` removes it 
 first *Screen → DSI-1 (or HDMI-A-1) → Touchscreen* and tick your touchscreen, *Apply* and reboot;
 then *Screen → … → Orientation*, choose the direction and *Apply*. Screen and touch rotate together.
 
-**Without a desktop (`--eglfs`)** the panel cannot be rotated: Qt's rotation setting for this mode
-does not apply to Qt Quick apps like the panel. For a rotated display use the desktop installation
+**Without a desktop (`--eglfs`)** only *Upside down* is available: Qt's rotation setting for this
+mode does not apply to Qt Quick apps like the panel. For portrait use the desktop installation
 (`--autostart`).
 
 ### Updates
@@ -158,7 +165,7 @@ In the app (icon at the bottom left), stored in `~/.config/smarthome-panel/setti
 |---|---|---|
 | Display | Appearance: Automatic (dark 7 pm – 7 am), Light, Dark, Dark blue | saved immediately |
 | Display | Language: System, English, Deutsch, Français, Italiano, Español, Português | saved immediately |
-| Display | Screen saver after: never, 1, 2, 5, 15 minutes | saved immediately |
+| Display | Screen saver after: never, 1, 2, 5, 15 minutes; upside down (180°) | saved immediately |
 | Rooms | Rooms and devices: rooms, display names, kind of sensors, switches and plugs (TV, washing machine …), menu entry, outdoor sensors, hidden devices, room of each device | saved immediately |
 | Rooms | Show the "General" room (on/off) | saved immediately |
 | Homebridge | Connect to Homebridge (on/off) | saved with **Apply** |

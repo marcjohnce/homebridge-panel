@@ -64,6 +64,9 @@ FIELDS = [
           options=(("auto", "System"), *LANGUAGES.items())),
     Field("idle_seconds", "display", "Screen saver after", "choice", 120,
           options=((0, "Never"), (60, "1 min"), (120, "2 min"), (300, "5 min"), (900, "15 min"))),
+    # the panel turns its picture itself: cheaper than rotating the screen in the desktop
+    Field("upside_down", "display", "Upside down", "toggle", False,
+          help="Turns the picture by 180° for a display mounted the other way round; touch follows"),
     # Pages open a sub-page of the settings (SettingsPage.qml); their data is stored separately
     Field("rooms_page", "rooms", "Rooms and devices", "page", None,
           help="Create rooms, rename devices and choose their room"),

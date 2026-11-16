@@ -5,9 +5,10 @@
 #   ./deploy/install.sh --autostart   also start in full screen when logging in to the desktop
 #   ./deploy/install.sh --eglfs       full screen without desktop as a system service (e.g. Pi OS Lite)
 #
-# Screen mounted upside down or in portrait (desktop only, also later via deploy/set-rotation.sh):
-#   ./deploy/install.sh --autostart --rotate 180                   rotate screen and touch by 180°
-#   ./deploy/install.sh --autostart --rotate 90 --output HDMI-A-1  portrait (90 or 270, clockwise)
+# Screen in portrait (desktop only, also later via deploy/set-rotation.sh); for upside down
+# rather use Settings → Display → Upside down in the panel (much faster):
+#   ./deploy/install.sh --autostart --rotate 90                    portrait (90 or 270, clockwise)
+#   ./deploy/install.sh --autostart --rotate 270 --output HDMI-A-1 on a specific output
 set -euo pipefail
 
 DIR="$(cd "$(dirname "$0")/.." && pwd)"

@@ -874,7 +874,8 @@ def test_virtual_device_over_mqtt(qapp, tmp_path):
     assert ed.saveVirtual({"name": "Pressure", "topic": ""}) != ""
     assert ed.saveVirtual({"name": "Water pressure", "topic": "boiler/pressure", "unit": "bar", "decimals": 1,
                            "room": "Kitchen", "icon": "none"}) == ""
-    assert pump_until(lambda: ctl.mqtt_backend() is not None and ctl.mqtt_backend().devices, timeout=10)
+    assert pump_until(lambda: ctl.mqtt_backend() is not None and ctl.mqtt_backend().devices
+                      and ctl.mqtt_backend()._client is not None, timeout=10)   # started, not only created
     backend = ctl.mqtt_backend()
     assert isinstance(backend, MqttBackend) and not backend.connected
     backend._client.loop_stop()                   # no broker here: stop retrying, pretend it answered
@@ -1031,7 +1032,8 @@ def test_groups_and_virtual_devices_as_favorites(qapp, tmp_path):
     group = "group:" + ctl.store.groups[0]["id"]
     choice = "choice:" + ctl.store.switch_groups[0]["id"]
     virtual = "mqtt:" + ctl.store.virtual[0]["id"]
-    assert pump_until(lambda: ctl.mqtt_backend() is not None and ctl.mqtt_backend().devices, timeout=10)
+    assert pump_until(lambda: ctl.mqtt_backend() is not None and ctl.mqtt_backend().devices
+                      and ctl.mqtt_backend()._client is not None, timeout=10)   # started, not only created
     backend = ctl.mqtt_backend()
     backend._client.loop_stop()                   # no broker here: pretend it answered
     backend._connected.set()
@@ -1074,3 +1076,51 @@ def test_temperature_history(qapp, tmp_path):
     assert pump_until(lambda: len(got) == 3)
     assert got[2][2]["points"] == [] and got[2][2]["error"] == ""
     ctl.shutdown()
+
+
+def test_upside_down(qapp, tmp_path):
+    from PySide6.QtCore import QPointF, Qt
+    from PySide6.QtQml import QQmlApplicationEngine
+    from PySide6.QtQuick import QQuickWindow
+    from PySide6.QtTest import QTest
+    from shiboken6 import Shiboken
+    from app.qt.main import QML_DIR
+
+    ctl = make_controller(tmp_path)
+    engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty("panel", ctl)
+    engine.rootContext().setContextProperty("initialWidth", 1024)
+    engine.rootContext().setContextProperty("initialHeight", 600)
+    engine.load(QML_DIR / "Main.qml")
+    win = Shiboken.wrapInstance(Shiboken.getCppPointer(engine.rootObjects()[0])[0], QQuickWindow)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 29)
+
+    def find(name, item=None):
+        for child in (item or win.contentItem()).childItems():
+            if child.objectName() == name and child.isVisible():
+                return child
+            if (hit := find(name, child)) is not None:
+                return hit
+        return None
+
+    def center(name):
+        it = find(name)
+        return it.mapToScene(QPointF(it.width() / 2, it.height() / 2))
+
+    before = center("category:climate")
+    assert win.contentItem().property("rotation") == 0
+    assert ctl.settings.save({"upside_down": True}) == {}
+    pump_until(lambda: False, timeout=0.3)
+    assert win.contentItem().property("rotation") == 180
+    after = center("category:climate")
+    assert abs(after.x() - (1024 - before.x())) < 1 and abs(after.y() - (600 - before.y())) < 1
+    QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, after.toPoint())
+    assert pump_until(lambda: ctl.category == "climate")              # the tap reaches the turned item
+    assert ctl.settings.save({"upside_down": False}) == {}
+    pump_until(lambda: False, timeout=0.3)
+    assert win.contentItem().property("rotation") == 0
+    ctl.shutdown()
+    win.close()
+    engine.deleteLater()
+    pump_until(lambda: False, timeout=0.3)

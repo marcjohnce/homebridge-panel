@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Rotates screen and touchscreen of the desktop session, e.g. for a display mounted upside down
-# (180) or in portrait (90 or 270, clockwise). Takes effect after a reboot.
+# Rotates screen and touchscreen of the desktop session for a display in portrait (90 or 270,
+# clockwise). Takes effect after a reboot. Upside down (180) also works, but the panel's own setting
+# (Settings → Display → Upside down) is much faster: a rotated screen is redrawn for every frame.
 #
 #   ./deploy/set-rotation.sh 180                     rotate by 180°
 #   ./deploy/set-rotation.sh 90 --output HDMI-A-1    only this output (default: the first connected one)
@@ -176,4 +177,8 @@ if [ "$ROTATION" = 0 ]; then
   echo "==> Screen not rotated; $TOUCH_NOTE. Reboot to apply: sudo reboot"
 else
   echo "==> Screen rotated by $ROTATION°${OUTPUT:+ on $OUTPUT}; $TOUCH_NOTE. Reboot to apply: sudo reboot"
+  if [ "$ROTATION" = 180 ]; then
+    echo "    Faster: leave the screen unrotated (./deploy/set-rotation.sh 0) and turn on"
+    echo "    Settings → Display → Upside down in the panel instead."
+  fi
 fi
