@@ -54,10 +54,15 @@ Rectangle {
     function saveInstant(key, value) {
         const change = {};
         change[key] = value;
-        const errs = panel.settings.save(change);
-        errors = Object.assign({}, errors, errs);
+        Busy.run(qsTr("Saving …"), () => {
+            const errs = panel.settings.save(change);
+            root.errors = Object.assign({}, root.errors, errs);
+        });
     }
     function apply() {
+        Busy.run(qsTr("Saving …"), applyNow);
+    }
+    function applyNow() {
         const errs = panel.settings.save(changes);
         errors = errs;
         if (Object.keys(errs).length > 0) {
@@ -168,7 +173,7 @@ Rectangle {
                         errors: root.errors
                         onEdit: (key, value) => section.instant ? root.saveInstant(key, value) : root.setDraft(key, value)
                         onEditRequested: (field, value) => root.editValue(field, value)
-                        onActionRequested: field => field.kind === "page" ? root.subPage = field.key
+                        onActionRequested: field => field.kind === "page" ? Busy.run(qsTr("Loading …"), () => root.subPage = field.key)
                                                  : field.kind === "update" ? root.update(field)
                                                  : field.key === "mqtt_test" ? root.testMqtt()
                                                  : field.confirm ? confirm.ask(field) : panel.settings.runAction(field.key)

@@ -42,6 +42,9 @@ Popup {
         open();
     }
     function save() {
+        Busy.run(qsTr("Saving …"), saveNow);
+    }
+    function saveNow() {
         const err = panel.roomEditor.saveVirtual({
             id: device ? device.virtual.id : "", name: draftName, unit: draftUnit, topic: draftTopic,
             jsonKey: draftJsonKey, decimals: draftDecimals, icon: draftIcon, room: draftRoom,
@@ -234,10 +237,10 @@ Popup {
             PillButton {
                 visible: !!root.device
                 text: qsTr("Delete")
-                onClicked: {
+                onClicked: Busy.run(qsTr("Saving …"), () => {
                     panel.roomEditor.deleteVirtual(root.device.virtual.id);
                     root.close();
-                }
+                })
             }
             Item {
                 Layout.fillWidth: true

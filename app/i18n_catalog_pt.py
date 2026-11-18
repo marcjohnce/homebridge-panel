@@ -488,4 +488,8 @@ PT: dict[str, str] = {
     "Upside down": "Invertido",
     "Turns the picture by 180° for a display mounted the other way round; touch follows":
         "Roda a imagem 180° para um ecrã montado ao contrário; o toque acompanha",
+    "Busy": "Ocupado",
+    "Loading settings …": "A carregar as definições …",
+    "Loading devices …": "A carregar os dispositivos …",
+    "Saving …": "A guardar …",
 }

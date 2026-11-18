@@ -44,7 +44,10 @@ ApplicationWindow {
     // Qt maps touches and clicks through the rotation. Rotating here is much cheaper than
     // rotating the screen in the desktop, which then has to redraw every frame turned.
     property Item rootItem: null                 // the window's root item: popups turn too
-    Component.onCompleted: rootItem = contentItem.Window.contentItem
+    Component.onCompleted: {
+        rootItem = contentItem.Window.contentItem;
+        Busy.popup = busyPopup;
+    }
     Binding {
         target: window.rootItem
         when: window.rootItem !== null
@@ -55,7 +58,7 @@ ApplicationWindow {
     HomeScreen {
         anchors.fill: parent
         onOpenDetail: id => window.openDevice = id
-        onOpenSettings: window.settingsOpen = true
+        onOpenSettings: Busy.run(qsTr("Loading settings …"), () => window.settingsOpen = true)
     }
 
     Loader {
@@ -154,5 +157,10 @@ ApplicationWindow {
     OpenCloseConfirm {
         id: openCloseConfirm
         objectName: "openCloseDialog"
+    }
+
+    // spinner while a page is built or something is saved (Busy.run)
+    BusyPopup {
+        id: busyPopup
     }
 }

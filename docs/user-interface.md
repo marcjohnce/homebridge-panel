@@ -369,6 +369,9 @@ devices:
 *Automatic* switches to dark from 7 pm to 7 am. Scroll down for the **Info** section with
 connection details, number of devices, file locations and version.
 
+While a page is being built or a change is saved, the panel blocks taps and – if it takes longer
+than a moment, e.g. on a Raspberry Pi 3 – shows a turning spinner with *Loading …* or *Saving …*.
+
 ### Language
 
 The panel speaks English, German, French, Italian, Spanish and Portuguese. *System* follows the language of

@@ -71,6 +71,9 @@ Popup {
         draftMembers = m;
     }
     function save() {
+        Busy.run(qsTr("Saving …"), saveNow);
+    }
+    function saveNow() {
         const err = panel.roomEditor.saveSwitchGroup({
             id: device ? device.switchGroup.id : "", name: draftName, room: draftRoom,
             members: draftMembers, hide: draftHide, allowOff: draftAllowOff, area: draftArea,
@@ -360,10 +363,10 @@ Popup {
             PillButton {
                 visible: !!root.device
                 text: qsTr("Delete")
-                onClicked: {
+                onClicked: Busy.run(qsTr("Saving …"), () => {
                     panel.roomEditor.deleteSwitchGroup(root.device.switchGroup.id);
                     root.close();
-                }
+                })
             }
             Item {
                 Layout.fillWidth: true
