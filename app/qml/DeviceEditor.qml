@@ -37,6 +37,9 @@ Popup {
         open();
     }
     function save() {
+        Busy.run(qsTr("Saving …"), saveNow);
+    }
+    function saveNow() {
         const err = panel.roomEditor.saveDevice(device.id, {
             name: draftName, kind: draftKind, room: draftRoom, area: draftArea,
             hidden: draftHidden, favorite: draftFavorite, outdoor: draftOutdoor, quiet: canQuiet ? draftQuiet : false

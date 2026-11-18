@@ -108,7 +108,7 @@ Rectangle {
                 objectName: "tab:devices"
                 text: qsTr("Devices")
                 selected: root.tab === 1
-                onClicked: root.tab = 1
+                onClicked: if (root.tab !== 1) Busy.run(qsTr("Loading devices …"), () => root.tab = 1)
             }
         }
 
@@ -211,8 +211,10 @@ Rectangle {
                                         enabled: roomItem.index > 0
                                         onClicked: {
                                             const name = roomItem.modelData.name;       // the row is rebuilt by the move
-                                            root.keepInPlace("room:" + name, -1, roomRow.height + 1);
-                                            root.editor.moveRoom(name, -1);
+                                            Busy.run(qsTr("Saving …"), () => {
+                                                root.keepInPlace("room:" + name, -1, roomRow.height + 1);
+                                                root.editor.moveRoom(name, -1);
+                                            });
                                         }
                                     }
                                     IconButton {
@@ -221,8 +223,10 @@ Rectangle {
                                         enabled: roomItem.index < root.rooms.length - 1
                                         onClicked: {
                                             const name = roomItem.modelData.name;       // the row is rebuilt by the move
-                                            root.keepInPlace("room:" + name, 1, roomRow.height + 1);
-                                            root.editor.moveRoom(name, 1);
+                                            Busy.run(qsTr("Saving …"), () => {
+                                                root.keepInPlace("room:" + name, 1, roomRow.height + 1);
+                                                root.editor.moveRoom(name, 1);
+                                            });
                                         }
                                     }
                                     IconButton {
@@ -312,11 +316,14 @@ Rectangle {
                         readonly property var members: favorites ? root.favorites
                             : root.devices.filter(d => d.room === modelData.name)
                         function move(id, delta) {
-                            root.keepInPlace((favorites ? "favorite:" : "device:") + id, delta, Theme.s(60) + 1);
-                            if (favorites)
-                                root.editor.moveFavorite(id, delta);
-                            else
-                                root.editor.moveDevice(id, delta);
+                            const fav = favorites;          // the row may be rebuilt by the move
+                            Busy.run(qsTr("Saving …"), () => {
+                                root.keepInPlace((fav ? "favorite:" : "device:") + id, delta, Theme.s(60) + 1);
+                                if (fav)
+                                    root.editor.moveFavorite(id, delta);
+                                else
+                                    root.editor.moveDevice(id, delta);
+                            });
                         }
                         Layout.fillWidth: true
                         spacing: 8
@@ -467,6 +474,6 @@ Rectangle {
     ConfirmDialog {
         id: confirm
         objectName: "roomConfirm"
-        onConfirmed: name => root.message = root.editor.deleteRoom(name)
+        onConfirmed: name => Busy.run(qsTr("Saving …"), () => root.message = root.editor.deleteRoom(name))
     }
 }

@@ -1124,3 +1124,52 @@ def test_upside_down(qapp, tmp_path):
     win.close()
     engine.deleteLater()
     pump_until(lambda: False, timeout=0.3)
+
+
+def test_busy_feedback_while_opening_and_saving(qapp, tmp_path):
+    """Pages and saving run through Busy.run: the popup opens first, the work follows a frame
+    later, then the popup closes again; taps are blocked meanwhile."""
+    from PySide6.QtCore import QObject, QPointF, Qt
+    from PySide6.QtQml import QQmlApplicationEngine
+    from PySide6.QtQuick import QQuickWindow
+    from PySide6.QtTest import QTest
+    from shiboken6 import Shiboken
+    from app.qt.main import QML_DIR
+
+    ctl = make_controller(tmp_path)
+    engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty("panel", ctl)
+    engine.rootContext().setContextProperty("initialWidth", 1024)
+    engine.rootContext().setContextProperty("initialHeight", 600)
+    engine.load(QML_DIR / "Main.qml")
+    win = Shiboken.wrapInstance(Shiboken.getCppPointer(engine.rootObjects()[0])[0], QQuickWindow)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 29)
+    popup = win.findChild(QObject, "busyPopup")
+
+    def find(name, item=None):
+        for child in (item or win.contentItem()).childItems():
+            if child.objectName() == name and child.isVisible():
+                return child
+            if (hit := find(name, child)) is not None:
+                return hit
+        return None
+
+    def tap(name):
+        assert pump_until(lambda: find(name) is not None), name
+        it = find(name)
+        p = it.mapToScene(QPointF(it.width() / 2, it.height() / 2)).toPoint()
+        QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, p)
+
+    tap("settingsButton")
+    assert popup.property("opened") and not win.property("settingsOpen")   # feedback first …
+    assert pump_until(lambda: win.property("settingsOpen") and not popup.property("opened"))   # … then the page
+    tap("row:rooms_page")
+    assert pump_until(lambda: find("roomsPage") is not None and not popup.property("opened"))
+    tap("tab:devices")
+    assert popup.property("opened")
+    assert pump_until(lambda: find("device:demo:coffee") is not None and not popup.property("opened"))
+    ctl.shutdown()
+    win.close()
+    engine.deleteLater()
+    pump_until(lambda: False, timeout=0.3)
