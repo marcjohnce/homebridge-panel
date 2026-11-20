@@ -275,6 +275,7 @@ def test_room_editor_changes_rooms_and_persists(qapp, tmp_path):
     assert "Office" in ctl.rooms and "Kitchen" not in ctl.rooms
     assert ed.renameRoom("Office", "Büro") == "" and ctl.device(coffee)["room"] == "Büro"
     ed.moveRoom("Büro", -99)
+    ed.finishMoves()                                       # leaving the page: saved and shown
     assert ctl.rooms[0] == "Büro"
     assert ed.deleteRoom("Büro") == "" and ctl.device(coffee)["room"] == "General"
     assert next(r for r in ed.rooms if r["name"] == "General")["isDefault"]
@@ -345,8 +346,17 @@ def test_rooms_page_rename_with_keyboard(qapp, tmp_path):
     assert pump_until(lambda: "Koch area" in ctl.rooms)
     assert item("headerTitle").property("text") != ""                    # qsTr falls back to English
 
+    # moving a room: the row changes places at once, saved when the tab is left
+    first = ctl.roomEditor.rooms[0]["name"]
+    row = item("room:" + first).parentItem()
+    tap("roomDown:" + first)
+    assert pump_until(lambda: row.property("index") == 1)
+    assert item("room:" + first).parentItem() is row                  # moved, not built again
+    assert ctl.roomEditor.rooms[0]["name"] == first and ctl.rooms[0] == first     # not yet everywhere
+
     # tapping the same arrow again moves the same device further (the list follows it)
     tap("tab:devices")
+    assert pump_until(lambda: ctl.roomEditor.rooms[1]["name"] == first)    # the tab change finished the move
     ed = ctl.roomEditor
     room = max(ctl.rooms, key=lambda r: sum(d["room"] == r for d in ed.devices))
     target = [d["id"] for d in ed.devices if d["room"] == room][1]
@@ -356,12 +366,25 @@ def test_rooms_page_rename_with_keyboard(qapp, tmp_path):
     pump_until(lambda: False, timeout=0.3)
     down = item("deviceDown:" + target)
     spot = down.mapToScene(QPointF(down.width() / 2, down.height() / 2)).toPoint()
+    row = item("device:" + target).parentItem()          # the delegate: moved, not built again
+    neighbour = item("device:" + [d["id"] for d in ed.devices if d["room"] == room][2]).parentItem()
+    y0 = row.y()
     busy = win.findChild(QObject, "busyPopup")
+    assert pump_until(lambda: not busy.property("visible"))     # "Loading devices …" is gone
+    stored = lambda: SettingsStore(tmp_path / "settings.json").rooms.get("device_order", {}).get(room)   # noqa: E731
+    before = stored()
     for expected in (2, 3, 4):
+        y = row.y()
         QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, spot)
-        assert pump_until(lambda: [d["id"] for d in ed.devices if d["room"] == room].index(target) == expected)
-        # the "Saving …" popup blocks taps until it is gone (a person is never this fast)
-        assert pump_until(lambda: not busy.property("visible"))
+        assert pump_until(lambda: row.property("index") == expected)
+        assert pump_until(lambda: row.y() > y)              # placed on the next frame (a person is slower)
+        ed.notify()                                         # a device update meanwhile changes nothing here                                      # a device update meanwhile changes nothing here
+    assert item("device:" + target).parentItem() is row and row.y() > y0
+    assert neighbour.property("index") == 1 and neighbour.y() < y0 + 1      # moved up into its place
+    assert stored() == before                           # not saved after every move …
+    tap("tab:rooms")                                     # … but when the tab or the page is left
+    assert [d["id"] for d in ed.devices if d["room"] == room].index(target) == 4
+    assert stored().index(target) == 4
     ctl.shutdown()
     win.close()
     qapp.removeTranslator(translator)
@@ -782,6 +805,7 @@ def test_manual_device_order_per_room(qapp, tmp_path):
     before = room()
     last = next(d for d in ed.devices if d["name"] == before[-1])
     ed.moveDevice(last["id"], -99)
+    ed.finishMoves()
     assert room()[0] == before[-1]
     ctl.selectCategory("light")
     ctl.selectRoom("")                     # all rooms
@@ -945,6 +969,7 @@ def test_favorites_start_page(qapp, tmp_path):
         assert ed.saveDevice(i, {"favorite": True}) == ""
     assert [d["id"] for d in ed.favorites] == ids[::-1]
     ed.moveFavorite(ids[0], -99)                        # back to the front
+    ed.finishMoves()
     assert [d["id"] for d in ed.favorites] == [ids[0], ids[2], ids[1]]
 
     ctl.selectCategory("favorites")
@@ -961,6 +986,7 @@ def test_favorites_start_page(qapp, tmp_path):
     assert ctl.devices._rows == [ids[1]]
     assert ed.saveDevice(ids[0], {"favorite": True}) == ""
     ed.moveFavorite(ids[0], -99)
+    ed.save_moves()                                     # a few seconds after the last move
     stored = SettingsStore(tmp_path / "settings.json").rooms["favorites"]
     assert stored == [ids[0], ids[2], ids[1]]
     ctl.shutdown()
@@ -1318,6 +1344,7 @@ def test_wifi_tile_in_the_favorites(qapp, tmp_path):
     assert [d["id"] for d in ctl.roomEditor.favorites] == ["wifi:guest", "demo:coffee"]
     assert ctl.roomEditor.favorites[0]["panelTile"] is True
     ctl.roomEditor.moveFavorite("wifi:guest", 1)
+    ctl.roomEditor.finishMoves()
     assert [d["id"] for d in ctl.roomEditor.favorites] == ["demo:coffee", "wifi:guest"]
     assert ctl.devices._rows == ["demo:coffee", "wifi:guest"]
     assert ctl.roomEditor.saveDevice("demo:coffee", {"favorite": False}) == ""

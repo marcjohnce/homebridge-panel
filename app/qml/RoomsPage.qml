@@ -2,7 +2,9 @@ import QtQuick
 import QtQuick.Layouts
 
 // Settings → Rooms and devices. Rooms can be added, renamed, reordered and deleted;
-// devices get a display name, a room and (security sensors) a kind. Every change is saved and shown on the home screen at once.
+// devices get a display name, a room and (security sensors) a kind. Every change is saved and
+// shown on the home screen at once – except moving rows up and down: the rows only change places
+// here, the new order is saved when the page or the tab is left (editor.finishMoves).
 Rectangle {
     id: root
 
@@ -18,13 +20,64 @@ Rectangle {
     readonly property var favorites: editor.favorites
     // groups of the Devices tab: favorites first (their order is the order on the start page),
     // then the rooms; only while the tab is shown
-    readonly property var groups: tab !== 1 ? []
-        : (favorites.length > 0 ? [{ name: qsTr("Favorites"), favorites: true }] : []).concat(filledRooms)
+    readonly property string favoritesKey: "\u0001favorites"     // not a room name
+    readonly property var groupKeys: tab !== 1 ? []
+        : (favorites.length > 0 ? [favoritesKey] : []).concat(filledRooms.map(r => r.name))
+    onGroupKeysChanged: fill(groupModel, groupKeys)
     readonly property var filledRooms: rooms.filter(r => r.count > 0)
     readonly property string defaultRoom: {
         const r = rooms.find(r => r.isDefault);
         return r ? r.name : "";
     }
+
+    // The lists hold only keys (ListModel): moving a row up or down moves its delegate, nothing
+    // is built again – also on a Raspberry Pi with many devices. The data come from these maps.
+    readonly property var roomByName: {
+        const out = {};
+        for (const r of rooms)
+            out[r.name] = r;
+        return out;
+    }
+    readonly property var deviceById: {
+        const out = {};
+        for (const d of devices.concat(favorites))
+            out[d.id] = d;
+        return out;
+    }
+    // fills a ListModel with the keys of a list after the lists changed in the editor – only if
+    // they differ from the rows shown: a device update must not rebuild the list (and lose the
+    // scroll position) while rows are being moved; the rows read their data from the maps above
+    function fill(model, keys) {
+        if (model.count === keys.length && keys.every((k, i) => model.get(i).key === k))
+            return;
+        model.clear();
+        for (const key of keys)
+            model.append({ key: key });
+    }
+    // moves the row at `index` of a ListModel by one place; false at either end
+    function shift(model, index, delta) {
+        const to = index + delta;
+        if (index < 0 || to < 0 || to >= model.count)
+            return false;
+        model.move(index, to, 1);
+        return true;
+    }
+    function moveRoom(name, index, delta, rowHeight) {
+        if (!shift(roomModel, index, delta))
+            return;
+        keepInPlace("room:" + name, delta, rowHeight);
+        editor.moveRoom(name, delta);
+    }
+
+    ListModel {
+        id: roomModel
+    }
+    ListModel {
+        id: groupModel
+    }
+    onRoomsChanged: fill(roomModel, rooms.map(r => r.name))
+    Component.onCompleted: fill(roomModel, rooms.map(r => r.name))
+    Component.onDestruction: if (panel) panel.roomEditor.finishMoves()
 
     function countText(n) {
         return n === 0 ? qsTr("No devices") : n === 1 ? qsTr("1 device") : qsTr("%1 devices").arg(n);
@@ -68,6 +121,7 @@ Rectangle {
     }
 
     onTabChanged: {
+        editor.finishMoves();       // the other tab shows the new order
         moved = "";
         settleList();
     }
@@ -164,11 +218,12 @@ Rectangle {
                         id: roomRows
                         width: parent.width
                         Repeater {
-                            model: root.rooms
+                            model: roomModel
                             Column {
                                 id: roomItem
-                                required property var modelData
-                                required property int index
+                                required property string key
+                                required property int index          // place as shown, follows moves
+                                readonly property var modelData: root.roomByName[key] || ({ name: key, count: 0 })
                                 width: roomRows.width
 
                                 Rectangle {
@@ -208,28 +263,18 @@ Rectangle {
                                         }
                                     }
                                     IconButton {
+                                        objectName: "roomUp:" + roomItem.key
                                         iconName: "up"
                                         label: qsTr("Move %1 up").arg(roomItem.modelData.name)
                                         enabled: roomItem.index > 0
-                                        onClicked: {
-                                            const name = roomItem.modelData.name;       // the row is rebuilt by the move
-                                            Busy.run(qsTr("Saving …"), () => {
-                                                root.keepInPlace("room:" + name, -1, roomRow.height + 1);
-                                                root.editor.moveRoom(name, -1);
-                                            });
-                                        }
+                                        onClicked: root.moveRoom(roomItem.key, roomItem.index, -1, roomRow.height + 1)
                                     }
                                     IconButton {
+                                        objectName: "roomDown:" + roomItem.key
                                         iconName: "down"
                                         label: qsTr("Move %1 down").arg(roomItem.modelData.name)
-                                        enabled: roomItem.index < root.rooms.length - 1
-                                        onClicked: {
-                                            const name = roomItem.modelData.name;       // the row is rebuilt by the move
-                                            Busy.run(qsTr("Saving …"), () => {
-                                                root.keepInPlace("room:" + name, 1, roomRow.height + 1);
-                                                root.editor.moveRoom(name, 1);
-                                            });
-                                        }
+                                        enabled: roomItem.index < roomModel.count - 1
+                                        onClicked: root.moveRoom(roomItem.key, roomItem.index, 1, roomRow.height + 1)
                                     }
                                     IconButton {
                                         objectName: "rename:" + roomItem.modelData.name
@@ -310,22 +355,24 @@ Rectangle {
                 }
 
                 Repeater {
-                    model: root.groups
+                    model: groupModel
                     ColumnLayout {
                         id: group
-                        required property var modelData
-                        readonly property bool favorites: !!modelData.favorites
+                        required property string key
+                        readonly property bool favorites: key === root.favoritesKey
+                        readonly property var modelData: ({ name: favorites ? qsTr("Favorites") : key })
                         readonly property var members: favorites ? root.favorites
                             : root.devices.filter(d => d.room === modelData.name)
-                        function move(id, delta) {
-                            const fav = favorites;          // the row may be rebuilt by the move
-                            Busy.run(qsTr("Saving …"), () => {
-                                root.keepInPlace((fav ? "favorite:" : "device:") + id, delta, Theme.s(60) + 1);
-                                if (fav)
-                                    root.editor.moveFavorite(id, delta);
-                                else
-                                    root.editor.moveDevice(id, delta);
-                            });
+                        onMembersChanged: root.fill(memberModel, members.map(d => d.id))
+                        Component.onCompleted: root.fill(memberModel, members.map(d => d.id))
+                        function move(id, index, delta) {
+                            if (!root.shift(memberModel, index, delta))
+                                return;
+                            root.keepInPlace((favorites ? "favorite:" : "device:") + id, delta, Theme.s(60) + 1);
+                            if (favorites)
+                                root.editor.moveFavorite(id, delta);
+                            else
+                                root.editor.moveDevice(id, delta);
                         }
                         Layout.fillWidth: true
                         spacing: 8
@@ -347,12 +394,16 @@ Rectangle {
                             Column {
                                 id: memberRows
                                 width: parent.width
+                                ListModel {
+                                    id: memberModel
+                                }
                                 Repeater {
-                                    model: group.members
+                                    model: memberModel
                                     Column {
                                         id: devItem
-                                        required property var modelData
-                                        required property int index
+                                        required property string key
+                                        required property int index          // place as shown, follows moves
+                                        readonly property var modelData: root.deviceById[key] || ({ id: key, name: "", icon: "", room: "" })
                                         width: memberRows.width
 
                                         Rectangle {
@@ -417,14 +468,14 @@ Rectangle {
                                                     iconName: "up"
                                                     label: qsTr("Move %1 up").arg(devItem.modelData.name)
                                                     enabled: devItem.index > 0
-                                                    onClicked: group.move(devItem.modelData.id, -1)
+                                                    onClicked: group.move(devItem.key, devItem.index, -1)
                                                 }
                                                 IconButton {
                                                     objectName: (group.favorites ? "favoriteDown:" : "deviceDown:") + devItem.modelData.id
                                                     iconName: "down"
                                                     label: qsTr("Move %1 down").arg(devItem.modelData.name)
-                                                    enabled: devItem.index < group.members.length - 1
-                                                    onClicked: group.move(devItem.modelData.id, 1)
+                                                    enabled: devItem.index < memberModel.count - 1
+                                                    onClicked: group.move(devItem.key, devItem.index, 1)
                                                 }
                                                 LineIcon {
                                                     Layout.preferredWidth: 20

@@ -436,6 +436,11 @@ The arrows next to each device set the order of the tiles in the room (under *Al
 then this order; alarms stay in front under *Security*). The list follows the moved device and
 marks it, so tapping the same arrow again keeps moving the same device.
 
+Moving rooms and devices is not saved after every tap: the rows only change places on this page.
+The new order is saved and shown on the home screen when you switch the tab or leave the page
+(and written to the settings file a few seconds after the last move, in case the panel loses
+power).
+
 **Virtual devices (MQTT)** show a value received on an MQTT topic, e.g. the water pressure of a
 boiler in bar. Set up the broker first under *Settings → MQTT* (address, port, protocol MQTT /
 MQTT over TLS / WebSocket, user name, password, *Test*). *Virtual device (MQTT)* then asks for
