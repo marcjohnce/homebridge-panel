@@ -492,4 +492,9 @@ PT: dict[str, str] = {
     "Loading settings …": "A carregar as definições …",
     "Loading devices …": "A carregar os dispositivos …",
     "Saving …": "A guardar …",
+    "Display off after": "Ecrã desligado após",
+    "Time after the screen saver starts; a touch or an alarm switches it on again":
+        "Tempo após o início da proteção de ecrã; um toque ou um alarme volta a ligá-lo",
+    "30 min": "30 min",
+    "1 h": "1 h",
 }

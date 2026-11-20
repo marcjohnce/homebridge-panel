@@ -1164,11 +1164,66 @@ def test_busy_feedback_while_opening_and_saving(qapp, tmp_path):
     tap("settingsButton")
     assert popup.property("opened") and not win.property("settingsOpen")   # feedback first …
     assert pump_until(lambda: win.property("settingsOpen") and not popup.property("opened"))   # … then the page
+    row, flick = find("row:rooms_page"), find("settingsFlick")
+    flick.setProperty("contentY", row.mapToItem(flick.property("contentItem"), QPointF(0, 0)).y() - 100)
+    pump_until(lambda: False, timeout=0.2)
     tap("row:rooms_page")
     assert pump_until(lambda: find("roomsPage") is not None and not popup.property("opened"))
     tap("tab:devices")
     assert popup.property("opened")
     assert pump_until(lambda: find("device:demo:coffee") is not None and not popup.property("opened"))
+    ctl.shutdown()
+    win.close()
+    engine.deleteLater()
+    pump_until(lambda: False, timeout=0.3)
+
+
+def test_display_off_after_screen_saver(qapp, tmp_path):
+    from PySide6.QtCore import QObject, QPointF, Qt
+    from PySide6.QtQml import QQmlApplicationEngine
+    from PySide6.QtQuick import QQuickWindow
+    from PySide6.QtTest import QTest
+    from shiboken6 import Shiboken
+    from app.display_power import DisplayPower
+    from app.qt.main import QML_DIR
+
+    class FakePower(DisplayPower):
+        def __init__(self):
+            super().__init__(tmp_path / "none", env={})
+            self.calls = []
+
+        def set(self, on):
+            self.calls.append(on)
+            self.is_on = on
+            return True
+
+    store = SettingsStore(tmp_path / "settings.json")
+    store.update({"hap_enabled": False, "language": "en", "idle_seconds": 60, "display_off": 300})
+    power = FakePower()
+    ctl = Controller(AppConfig.model_validate({"demo": {"enabled": True}}), store, display_power=power)
+    engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty("panel", ctl)
+    engine.rootContext().setContextProperty("initialWidth", 1024)
+    engine.rootContext().setContextProperty("initialHeight", 600)
+    engine.load(QML_DIR / "Main.qml")
+    win = Shiboken.wrapInstance(Shiboken.getCppPointer(engine.rootObjects()[0])[0], QQuickWindow)
+    timer = win.findChild(QObject, "displayOffTimer")
+    assert ctl.displayOffSeconds == 300 and not timer.property("running")
+    win.setProperty("idle", True)                                  # screen saver
+    assert timer.property("running") and timer.property("interval") == 300_000
+    timer.setProperty("interval", 50)                              # don't wait five minutes
+    assert pump_until(lambda: power.calls == [False])              # display off
+    QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPointF(500, 300).toPoint())
+    assert pump_until(lambda: power.calls == [False, True])        # a touch: on again, screen saver over
+    assert not win.property("idle") and not timer.property("running")
+    win.setProperty("idle", True)
+    timer.setProperty("interval", 50)
+    assert pump_until(lambda: power.calls == [False, True, False])
+    ctl.securityAlarm.emit("Water detected")                       # an alarm switches it on as well
+    assert pump_until(lambda: power.calls == [False, True, False, True])
+    assert ctl.settings.save({"display_off": 0}) == {} and ctl.displayOffSeconds == 0
+    win.setProperty("idle", True)
+    assert not timer.property("running")                           # never
     ctl.shutdown()
     win.close()
     engine.deleteLater()

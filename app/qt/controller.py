@@ -28,6 +28,7 @@ from ..rooms import BUILTIN_DEFAULT, RoomLayout
 from ..scheduler import Scheduler
 from ..updater import UpdateError, Updater
 from ..eve_history import TemperatureHistory, bucket
+from ..display_power import DisplayPower
 from ..settings import ACTIONS, SettingsStore, apply_to_config, validate
 from ..models import AREAS, KIND_ICONS, KIND_KEYS, QUIET_KINDS
 from . import format as fmt
@@ -729,6 +730,7 @@ class Controller(QObject):
     themeChanged = Signal()
     idleChanged = Signal()
     upsideDownChanged = Signal()
+    displayOffChanged = Signal()
     restarting = Signal(str)
     languageChanged = Signal()
 
@@ -737,7 +739,7 @@ class Controller(QObject):
 
     def __init__(self, base_cfg: AppConfig, store: SettingsStore, config_file: Path | None = None,
                  fullscreen: bool = False, restart_argv: list[str] | None = None,
-                 updater: Updater | None = None):
+                 updater: Updater | None = None, display_power: DisplayPower | None = None):
         super().__init__()
         # Command line for restarting the app: same interpreter, module and options
         self.restart_argv = restart_argv or [sys.executable, "-m", "app"]
@@ -774,6 +776,9 @@ class Controller(QObject):
         self._message.connect(self._on_message)
         self._theme_timer = QTimer(self, interval=30_000, timeout=self._update_theme)
         self._theme_timer.start()
+        self._display = display_power or DisplayPower()
+        self._display_on = True                     # wanted state; switched in order by one worker
+        self._display_worker = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         # Eve history read from the devices, kept next to settings.json
         self._history = TemperatureHistory(Path(store.path).with_name("history.json"))
         # software update: checked a minute after the start and then once a day
@@ -946,6 +951,9 @@ class Controller(QObject):
                 "busy": state in ("checking", "installing", "unsupported")}
 
     def shutdown(self) -> None:
+        self._display_worker.shutdown(wait=True)
+        if not self._display.is_on:          # never leave the screen dark (restart, update)
+            self._display.set(True)
         # stop timers first: if Python later frees this object from another thread,
         # active Qt timers of a deleted object would crash the event loop
         self._theme_timer.stop()
@@ -1039,6 +1047,8 @@ class Controller(QObject):
             self.idleChanged.emit()
         if "upside_down" in keys:
             self.upsideDownChanged.emit()
+        if "display_off" in keys:
+            self.displayOffChanged.emit()
         if "show_general" in keys:
             self._refresh_rooms()
         if any(k.startswith("mqtt_") for k in keys) and not any(k.startswith("hap_") for k in keys):
@@ -1493,6 +1503,22 @@ class Controller(QObject):
     @Property(str, notify=themeChanged)
     def theme(self) -> str:
         return self._theme
+
+    @Property(int, notify=displayOffChanged)
+    def displayOffSeconds(self) -> int:
+        """Display off this long after the screen saver started (0 = never)."""
+        return int(self.store.get("display_off") or 0)
+
+    @Slot(bool)
+    def setDisplayPower(self, on: bool) -> None:
+        """Called by Main.qml: off after the screen saver, on with the next touch or an alarm."""
+        if on == self._display_on:
+            return
+        self._display_on = on
+        try:
+            self._display_worker.submit(self._display.set, on)
+        except RuntimeError:                  # shut down meanwhile
+            pass
 
     @Property(bool, notify=upsideDownChanged)
     def upsideDown(self) -> bool:

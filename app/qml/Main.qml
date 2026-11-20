@@ -126,6 +126,17 @@ ApplicationWindow {
         }
     }
 
+    // display off some time after the screen saver started (Settings → Display); a touch ends
+    // the screen saver and with it switches the display on again, as does an alarm
+    Timer {
+        id: displayOffTimer
+        objectName: "displayOffTimer"
+        interval: Math.max(1, panel.displayOffSeconds) * 1000
+        running: window.idle && panel.displayOffSeconds > 0
+        onTriggered: panel.setDisplayPower(false)
+    }
+    onIdleChanged: if (!idle) panel.setDisplayPower(true)
+
     Connections {
         target: panel
         function onUserActivity() {
