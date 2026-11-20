@@ -548,8 +548,9 @@ def snapshot_to_state(s: ServiceSnapshot) -> tuple[DeviceType, dict[str, Any], l
     if "CurrentTemperature" in c:
         state["current_temp"] = _num(s.get("CurrentTemperature"))
         caps.append("current_temp")
-        if s.history:
-            meta["history"] = True          # temperature chart from the Eve history
+
+    if s.history and any(k in state for k in ("current_temp", "humidity", "pressure")):
+        meta["history"] = True              # charts from the Eve history
 
     level = _num(s.get("BatteryLevel"))
     if level is not None:

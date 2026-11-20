@@ -90,12 +90,17 @@ async def run(cfg: AppConfig) -> int:
             continue
         check(devs[name].meta.get("history") is True, f"{name} has an Eve history")
         try:
-            pts = await m.temperature_history(devs[name].id)
+            series = await m.device_history(devs[name].id)
+            pts = series.get("temperature", [])
         except Exception as e:                           # noqa: BLE001 – report and go on
             check(False, f"{name} history: {e}")
             continue
         check(len(pts) == count and pts[-1][1] == last, f"{name} history: {len(pts)} values, last {pts[-1:]}")
         check(all(b[0] - a[0] == 600 for a, b in zip(pts, pts[1:])), f"{name} history: every 10 minutes")
+        if name == "History Weather":
+            hum, pres = series.get("humidity", []), series.get("pressure", [])
+            check(len(hum) == count and hum[-1][1] == 80, f"{name} humidity: {len(hum)} values, last {hum[-1:]}")
+            check(len(pres) == count and pres[-1][1] == 1013, f"{name} pressure: {len(pres)} values, last {pres[-1:]}")
     await m.stop()
     print("\nFAILED:\n  " + "\n  ".join(fails) if fails else "\nall checks passed")
     return 1 if fails else 0

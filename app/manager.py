@@ -7,7 +7,7 @@ import time
 from typing import Any
 
 from .backends import Backend, BackendError
-from .eve_history import HistoryError, TemperatureHistory
+from .eve_history import DeviceHistory, HistoryError, Series
 from .config import AppConfig
 from .hap_types import ServiceSnapshot, command_to_writes, snapshot_to_state
 from .models import APPLIANCE_ICONS, DEFAULT_ICONS, LAMP_ICONS, SECURITY_ICONS, VALVE_ICONS, Device, DeviceType
@@ -22,9 +22,9 @@ class DeviceNotFound(KeyError):
 
 
 class DeviceManager:
-    def __init__(self, cfg: AppConfig, backends: list[Backend], history: TemperatureHistory | None = None):
+    def __init__(self, cfg: AppConfig, backends: list[Backend], history: DeviceHistory | None = None):
         self.cfg = cfg
-        self.history = history or TemperatureHistory()
+        self.history = history or DeviceHistory()
         self.backends = {b.name: b for b in backends}
         self.snapshots: dict[str, tuple[Backend, ServiceSnapshot]] = {}
         self.devices: dict[str, Device] = {}
@@ -205,12 +205,13 @@ class DeviceManager:
         self._follow_movement(backend)
         return dev
 
-    async def temperature_history(self, ref: str) -> list[tuple[float, float]]:
-        """Temperature history of a device from its Eve history service: [(Unix time, °C)], oldest first."""
+    async def device_history(self, ref: str) -> Series:
+        """History of a device from its Eve history service: {quantity: [(Unix time, value)]},
+        quantities "temperature" (°C), "humidity" (%) and "pressure" (hPa), oldest point first."""
         dev_id = self.resolve(ref)
         backend, snap = self.snapshots[dev_id]
         if not snap.history or not hasattr(backend, "read_char"):
-            return []
+            return {}
         # Every poll of /accessories also runs the entries' get handler and would take entries
         # away from the transfer, so the backend is not polled meanwhile.
         async with self._locks[backend.name]:

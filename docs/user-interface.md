@@ -195,7 +195,7 @@ Changes are sent shortly after you stop dragging or tapping, so a quick series o
 results in one command.
 
 Thermostats with an Eve history (e.g. radiator thermostats of Eve-compatible plugins) also have a
-*History* page with the room temperature, see [Temperature history](#temperature-history).
+*History* page with the room temperature, see [History](#history).
 
 ## Lights and fans
 
@@ -310,25 +310,26 @@ CO₂ sensor reports a high level.
 | 2 | Temperature | In °C |
 | 3 | Humidity | Relative humidity in % |
 | 4 | Air pressure | In hPa |
-| 5 | History | Only for devices with an Eve history (see below): switches to the temperature chart |
+| 5 | History | Only for devices with an Eve history (see below): switches to the charts of the readings |
 
 ![Light sensor at 1280 × 800](images/sensor-light.png)
 
-### Temperature history
+### History
 
 Many Homebridge plugins keep a history of their readings for the Eve app (plugins built on
 *fakegato-history* or *homebridge-lib*, e.g. weather stations, room sensors and radiator
 thermostats). For these devices the detail view has a second page, *History*, with a chart of
-the temperature over the last 24 hours, 7 or 30 days (as far back as the device keeps it, usually
-about four weeks of 10-minute values).
+the temperature, humidity or air pressure over the last 24 hours, 7 or 30 days (as far back as
+the device keeps it, usually about four weeks of 10-minute values).
 
-![Temperature history](images/history.png)
+![History](images/history.png)
 
 | # | Element | What it does |
 |---|---|---|
-| 1 | 24 hours, 7 days, 30 days | Period of the chart |
-| 2 | Lowest, highest | Lowest and highest temperature in this period |
-| 3 | Touch the chart | Shows the time and temperature at that point; disappears after a few seconds |
+| 1 | Temperature, humidity, air pressure | Reading shown in the chart; only those the device measures, and only when there is more than one |
+| 2 | 24 hours, 7 days, 30 days | Period of the chart |
+| 3 | Lowest, highest | Lowest and highest value in this period |
+| 4 | Touch the chart | Shows the time and value at that point; disappears after a few seconds |
 
 The panel reads the history directly from Homebridge (HAP connection; the Homebridge UI
 connection does not give access to it). The first time a chart is opened it reads everything the
@@ -552,7 +553,7 @@ tap *Create backup*.
 
 The backups are kept on the Pi in `~/.config/smarthome-panel/backups/` (one JSON file each), next
 to the settings. To move the settings to another panel, copy a backup file into the same folder
-there and restore it. `config.yaml` (scenes, schedules) and the temperature history are not
+there and restore it. `config.yaml` (scenes, schedules) and the history of the readings are not
 part of a backup.
 
 ## Screen saver

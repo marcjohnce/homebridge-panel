@@ -2,22 +2,35 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Shapes
 
-// Temperature history of a device (Eve history): 24 hours, 7 or 30 days as a line.
-// Touch the chart to read a value.
+// History of a device (Eve history): temperature, humidity or air pressure over 24 hours,
+// 7 or 30 days as a line. Touch the chart to read a value.
 ColumnLayout {
     id: root
 
     required property string deviceId
     property int days: 1
+    property string kind: "temperature"  // chosen quantity; the first one the device has if it lacks it
     property var result: null            // answer of panel.loadHistory
-    readonly property var points: result ? result.points : []
+    readonly property var kinds: result ? result.kinds : []
+    readonly property string shown: kinds.indexOf(kind) >= 0 ? kind : kinds.length ? kinds[0] : kind
+    readonly property var series: result && result.series[shown] ? result.series[shown] : null
+    readonly property var points: series ? series.points : []
     readonly property bool loading: result === null
-    // y range: whole degrees around the values, at least 2 °C high
-    readonly property real lo: points.length ? Math.floor(result.min - 0.3) : 0
-    readonly property real hi: points.length ? Math.max(Math.ceil(result.max + 0.3), lo + 2) : 1
+    // per quantity: unit, decimals, grid step, smallest y range and margin around the values
+    readonly property var scale: ({
+        temperature: { unit: "°C", decimals: 1, step: 1, span: 2, pad: 0.3 },
+        humidity: { unit: "%", decimals: 0, step: 10, span: 20, pad: 1 },
+        pressure: { unit: "hPa", decimals: 0, step: 1, span: 6, pad: 0.5 }
+    })[shown]
+    readonly property real lo: points.length ? Math.floor((series.min - scale.pad) / scale.step) * scale.step : 0
+    readonly property real hi: points.length
+        ? Math.max(Math.ceil((series.max + scale.pad) / scale.step) * scale.step, lo + scale.span) : 1
     property int probe: -1               // index of the touched point
     readonly property var probed: probe >= 0 && probe < points.length ? points[probe] : null
 
+    function text(v) {
+        return Theme.num(v, scale.decimals) + " " + scale.unit;
+    }
     function load() {
         probe = -1;
         result = null;
@@ -62,6 +75,7 @@ ColumnLayout {
     spacing: Theme.s(14)
     Component.onCompleted: load()
     onDaysChanged: load()
+    onShownChanged: probe = -1
 
     Connections {
         target: panel
@@ -71,31 +85,64 @@ ColumnLayout {
         }
     }
 
-    RowLayout {
+    // quantities (only when the device has more than one) and periods side by side; below each
+    // other when the names are too long for one line (e.g. "Pression atmosphérique")
+    GridLayout {
+        id: choices
+        readonly property real gap: Theme.s(28)
+        readonly property bool oneLine: kindRow.implicitWidth + rangeRow.implicitWidth + 2 * gap + 1 <= root.width
         Layout.fillWidth: true
-        spacing: Theme.s(28)
-        Repeater {
-            model: [{ days: 1, label: qsTr("24 hours") }, { days: 7, label: qsTr("7 days") },
-                    { days: 30, label: qsTr("30 days") }]
-            UnderlineButton {
-                required property var modelData
-                objectName: "historyRange:" + modelData.days
-                text: modelData.label
-                selected: root.days === modelData.days
-                onClicked: root.days = modelData.days
+        columns: oneLine ? 3 : 1
+        columnSpacing: gap
+        rowSpacing: Theme.s(6)
+
+        Row {
+            id: kindRow
+            visible: root.kinds.length > 1
+            spacing: choices.gap
+            Repeater {
+                model: root.kinds.length > 1 ? root.kinds : []
+                UnderlineButton {
+                    required property string modelData
+                    objectName: "historyKind:" + modelData
+                    text: modelData === "temperature" ? qsTr("Temperature")
+                        : modelData === "humidity" ? qsTr("Humidity") : qsTr("Air pressure")
+                    selected: root.shown === modelData
+                    onClicked: root.kind = modelData
+                }
             }
         }
-        Item {
-            Layout.fillWidth: true
+        Rectangle {
+            visible: kindRow.visible && choices.oneLine
+            Layout.preferredWidth: 1
+            Layout.preferredHeight: Theme.s(26)
+            color: Theme.line
         }
-        Text {
-            objectName: "historyRange"
-            visible: root.points.length > 0
-            text: qsTr("Lowest %1 °C").arg(Theme.fmt(root.result ? root.result.min : 0))
-                  + "    " + qsTr("Highest %1 °C").arg(Theme.fmt(root.result ? root.result.max : 0))
-            color: Theme.muted
-            font.pixelSize: Theme.s(16)
+        Row {
+            id: rangeRow
+            spacing: choices.gap
+            Repeater {
+                model: [{ days: 1, label: qsTr("24 hours") }, { days: 7, label: qsTr("7 days") },
+                        { days: 30, label: qsTr("30 days") }]
+                UnderlineButton {
+                    required property var modelData
+                    objectName: "historyRange:" + modelData.days
+                    text: modelData.label
+                    selected: root.days === modelData.days
+                    onClicked: root.days = modelData.days
+                }
+            }
         }
+    }
+
+    Text {
+        objectName: "historyRange"
+        Layout.topMargin: -Theme.s(4)
+        visible: root.points.length > 0
+        text: !root.series ? "" : qsTr("Lowest %1").arg(root.text(root.series.min))
+              + "    " + qsTr("Highest %1").arg(root.text(root.series.max))
+        color: Theme.muted
+        font.pixelSize: Theme.s(16)
     }
 
     Item {
@@ -120,7 +167,7 @@ ColumnLayout {
                     anchors.right: parent.left
                     anchors.rightMargin: -plot.x + 10
                     anchors.verticalCenter: parent.top
-                    text: Theme.num(parent.value, Number.isInteger(parent.value) ? 0 : 1) + " °C"
+                    text: Theme.num(parent.value, Number.isInteger(parent.value) ? 0 : 1) + " " + root.scale.unit
                     color: Theme.muted
                     font.pixelSize: Theme.s(14)
                 }
@@ -194,9 +241,9 @@ ColumnLayout {
                 Text {
                     id: probeText
                     anchors.centerIn: parent
-                    text: !root.probed ? "" : qsTr("%1: %2 °C")
+                    text: !root.probed ? "" : qsTr("%1: %2")
                         .arg(new Date(root.probed.t).toLocaleString(Theme.locale, root.days === 1 ? "HH:mm" : "ddd d MMM, HH:mm"))
-                        .arg(Theme.fmt(root.probed.v))
+                        .arg(root.text(root.probed.v))
                     color: Theme.ink
                     font.pixelSize: Theme.s(15)
                 }

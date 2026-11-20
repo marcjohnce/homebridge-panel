@@ -27,7 +27,7 @@ from ..backends.mqtt import MqttBackend, test_connection as test_mqtt
 from ..rooms import BUILTIN_DEFAULT, RoomLayout
 from ..scheduler import Scheduler
 from ..updater import UpdateError, Updater
-from ..eve_history import TemperatureHistory, bucket
+from ..eve_history import DeviceHistory, bucket
 from ..backup import BackupError, Backups
 from ..display_power import DisplayPower
 from ..settings import ACTIONS, SettingsStore, apply_to_config, validate
@@ -834,7 +834,7 @@ class Controller(QObject):
         self._display_on = True                     # wanted state; switched in order by one worker
         self._display_worker = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         # Eve history read from the devices, kept next to settings.json
-        self._history = TemperatureHistory(Path(store.path).with_name("history.json"))
+        self._history = DeviceHistory(Path(store.path).with_name("history.json"))
         # software update: checked a minute after the start and then once a day
         self._updater = updater or Updater()
         supported = self._updater.supported
@@ -1227,25 +1227,37 @@ class Controller(QObject):
 
     @Slot(str, int)
     def loadHistory(self, dev_id: str, days: int) -> None:
-        """Reads the temperature history of a device (new entries only) and answers with
-        historyLoaded: points {t: ms, v: °C} of the last `days` days, at most 240."""
+        """Reads the history of a device (new entries only) and answers with historyLoaded:
+        {kinds: ["temperature", "humidity", "pressure"] as far as the device has them,
+         series: {kind: {points: [{t: ms, v: value}] of the last `days` days (at most 240), min, max}},
+         since, until, error}. Only quantities the device shows now are offered: a weather
+        history without a barometer, for example, still records an air pressure."""
+        empty = {"kinds": [], "series": {}}
         if not self._mgr:
-            self.historyLoaded.emit(dev_id, days, {"points": [], "error": tr("Not connected to Homebridge yet.")})
+            self.historyLoaded.emit(dev_id, days, {**empty, "error": tr("Not connected to Homebridge yet.")})
             return
-        fut = self.runner.submit(self._mgr.temperature_history(dev_id))
+        mgr = self._mgr
+        fut = self.runner.submit(mgr.device_history(dev_id))
 
         def done(f: concurrent.futures.Future) -> None:
             e = f.exception()
             if e is not None:
                 log.warning("History of %s: %s", dev_id, e)
-                result = {"points": [], "error": tr("History could not be read: {error}").format(error=e)}
+                result = {**empty, "error": tr("History could not be read: {error}").format(error=e)}
             else:
                 now = time.time()
-                pts = bucket(f.result(), now - days * 86400, now)
-                vals = [v for _, v in pts]
-                result = {"points": [{"t": t * 1000, "v": v} for t, v in pts], "error": "",
-                          "since": (now - days * 86400) * 1000, "until": now * 1000,
-                          "min": min(vals) if vals else 0, "max": max(vals) if vals else 0}
+                dev = mgr.devices.get(dev_id)
+                state = dev.state if dev else {}
+                shown = {"temperature": "current_temp", "humidity": "humidity", "pressure": "pressure"}
+                result = {**empty, "error": "", "since": (now - days * 86400) * 1000, "until": now * 1000}
+                for kind, points in f.result().items():
+                    if shown[kind] not in state:
+                        continue
+                    pts = bucket(points, now - days * 86400, now)
+                    vals = [v for _, v in pts]
+                    result["kinds"].append(kind)
+                    result["series"][kind] = {"points": [{"t": t * 1000, "v": v} for t, v in pts],
+                                              "min": min(vals) if vals else 0, "max": max(vals) if vals else 0}
             _emit_safely(self.historyLoaded, dev_id, days, result)
         fut.add_done_callback(done)
 

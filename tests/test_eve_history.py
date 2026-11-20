@@ -1,6 +1,7 @@
 """Eve history: decoding (fakegato-history and homebridge-lib layouts), transfer and cache."""
 import asyncio
 import base64
+import json
 import struct
 import time
 
@@ -8,7 +9,7 @@ import pytest
 
 from app.backends.eve_sim import THERMO, WEATHER, EveHistorySim
 from app.backends.hap import HapBackend
-from app.eve_history import (EPOCH_2001, HistoryError, TemperatureHistory, bucket, parse_entries, parse_status,
+from app.eve_history import (EPOCH_2001, DeviceHistory, HistoryError, bucket, parse_entries, parse_status,
                              read_entries, request)
 
 
@@ -45,6 +46,7 @@ def test_fakegato_weather_status_and_entries():
     assert not end and ref_after == ref and len(entries) == 2 and entries[0].values == {}
     e = entries[1]
     assert e.number == 2 and e.time == EPOCH_2001 + ref + 600 and e.temperature == 12.34
+    assert e.value("humidity") == 65.0 and e.value("pressure") == 1014.2
     assert parse_entries(b64(b"\x00"), s.fingerprint, ref) == ([], ref, True)
 
 
@@ -60,6 +62,14 @@ def test_homebridge_lib_layout_and_negative_temperature():
     cold = struct.pack("<BIIB", 12, 3, 1200, 0b001) + struct.pack("<h", -725)
     entries, _, _ = parse_entries(b64(only_humidity + cold), fp, ref)
     assert [e.temperature for e in entries] == [None, -7.25]
+    assert [e.value("humidity") for e in entries] == [50.0, None]
+
+
+def test_implausible_values_are_left_out():
+    # fakegato-history records 0 hPa for a weather accessory without a barometer
+    rec = struct.pack("<BIIB", 16, 2, 600, 0b111) + struct.pack("<hHH", 2100, 4500, 0)
+    e = parse_entries(b64(rec), WEATHER, 0)[0][0]
+    assert (e.temperature, e.value("humidity"), e.value("pressure")) == (21.0, 45.0, None)
 
 
 def test_unknown_layout_is_ignored():
@@ -98,15 +108,30 @@ def test_cache_reads_only_new_entries_and_restarts_after_a_reset(tmp_path):
     now = int(time.time())
     sim = EveHistorySim(THERMO, [(now - (20 - i) * 600, [2000 + i, 2100, 40, 0, 0]) for i in range(20)])
     path = tmp_path / "history.json"
-    hist = TemperatureHistory(path)
-    pts = asyncio.run(hist.update("d", REFS, *sim_io(sim)))
+    hist = DeviceHistory(path)
+    pts = asyncio.run(hist.update("d", REFS, *sim_io(sim)))["temperature"]
     assert len(pts) == 20 and pts[-1][1] == 20.19
     reads = sim.reads
     sim.add(now, [2500, 2100, 40, 0, 0])
-    pts = asyncio.run(TemperatureHistory(path).update("d", REFS, *sim_io(sim)))   # from the file
+    pts = asyncio.run(DeviceHistory(path).update("d", REFS, *sim_io(sim)))["temperature"]   # from the file
     assert len(pts) == 21 and pts[-1] == (now, 25.0) and sim.reads - reads == 1     # one new entry
     fresh = EveHistorySim(THERMO, [(now, [1800, 2100, 40, 0, 0])])                 # device memory cleared
-    assert asyncio.run(hist.update("d", REFS, *sim_io(fresh))) == [(now, 18.0)]
+    assert asyncio.run(hist.update("d", REFS, *sim_io(fresh))) == {"temperature": [(now, 18.0)]}
+
+
+def test_weather_series_and_cache_of_an_older_version(tmp_path):
+    now = int(time.time())
+    sim = EveHistorySim(WEATHER, [(now - (10 - i) * 600, [2000 + i, 6000 - i * 100, 10130 + i]) for i in range(10)])
+    path = tmp_path / "history.json"
+    # cache written by the previous version: temperatures only, some older than the device memory
+    old = [[now - 20 * 600, 15.0], [now - 15 * 600, 16.0], [now - 5 * 600, 99.0]]
+    path.write_text(json.dumps({"d": {"ref": parse_status(sim.status()).ref_time, "last": sim.last, "points": old}}))
+    series = asyncio.run(DeviceHistory(path).update("d", REFS, *sim_io(sim)))
+    assert series["humidity"][-1][1] == 51.0 and series["pressure"][-1][1] == 1013.9 and len(series["pressure"]) == 10
+    temps = series["temperature"]
+    assert temps[:2] == [(now - 20 * 600, 15.0), (now - 15 * 600, 16.0)]     # older ones kept …
+    assert len(temps) == 12 and (now - 5 * 600, 99.0) not in temps          # … the rest read again
+    assert "series" in json.loads(path.read_text())["d"]
 
 
 def test_bucket():
