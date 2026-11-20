@@ -263,6 +263,18 @@ Rectangle {
         }
     }
 
+    Loader {
+        anchors.fill: parent
+        active: root.subPage === "wifi_page"
+        sourceComponent: WifiPage {
+            objectName: "wifiPage"
+            onClosed: {
+                root.subPage = "";
+                root.forceActiveFocus();
+            }
+        }
+    }
+
     Keypad {
         id: keypad
         objectName: "keypad"
