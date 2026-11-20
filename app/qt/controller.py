@@ -32,14 +32,15 @@ from ..backup import BackupError, Backups
 from ..display_power import DisplayPower
 from ..settings import ACTIONS, SettingsStore, apply_to_config, validate
 from ..models import AREAS, KIND_ICONS, KIND_KEYS, QUIET_KINDS
-from ..wifi import WifiError, guest_wifi, qr_image
+from ..wifi import Wifi, qr_image
 from . import format as fmt
 from .format import (air_warning, alert_level, battery_low, battery_text, category, fmt_temp, has_detail,
                      short_name, state_text)
 
 log = logging.getLogger(__name__)
 ALL_ROOMS = ""
-FAVORITES = "favorites"            # first menu entry: favorite devices of every room
+FAVORITES = "favorites"
+WIFI_TILE = "wifi:guest"            # tile of the panel itself: shows the guest Wi-Fi as a QR code            # first menu entry: favorite devices of every room
 NIGHT_FROM, NIGHT_TO = 19, 7
 
 
@@ -143,10 +144,10 @@ class DeviceModel(QAbstractListModel):
         return self.layout.sort({d["room"] for d in self.shown() if not cat or category(d) == cat})
 
     def device_rooms(self) -> dict[str, str]:
-        return {d["id"]: d["room"] for d in self._all.values()}
+        return {d["id"]: d["room"] for d in self.all()}
 
     def base_rooms(self) -> dict[str, str]:
-        return {d["id"]: d["baseRoom"] for d in self._all.values()}
+        return {d["id"]: d["baseRoom"] for d in self.all()}
 
     def _place(self, d: dict[str, Any]) -> dict[str, Any]:
         """Applies what was set on the panel: room, display name, kind (security sensors, switches,
@@ -198,7 +199,7 @@ class DeviceModel(QAbstractListModel):
 
     def _visible(self) -> list[str]:
         if self._category == FAVORITES:      # every room, in the order set in the settings
-            favs = [d for d in self.shown() if d.get("favorite")]
+            favs = [d for d in self.shown() + self.tiles() if d.get("favorite")]
             return [d["id"] for d in sorted(favs, key=lambda d: self.layout.favorite_rank(d["id"]))]
         devs = [d for d in self.shown() if self._room in (ALL_ROOMS, d["room"])
                 and self._category in ("", category(d))]
@@ -210,7 +211,7 @@ class DeviceModel(QAbstractListModel):
     def ordered(self, devs: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Room order, then the manual order in the room (settings), then kind of device,
         order from config.yaml and name."""
-        room_rank = {r: i for i, r in enumerate(self.layout.all_rooms(d["room"] for d in self._all.values()))}
+        room_rank = {r: i for i, r in enumerate(self.layout.all_rooms(d["room"] for d in self.all()))}
         return sorted(devs, key=lambda d: (room_rank.get(d["room"], 0), self.layout.device_rank(d["room"], d["id"]),
                                            self.RANK.get(d["type"], 0), d.get("order", 100), d["name"].casefold()))
 
@@ -229,7 +230,11 @@ class DeviceModel(QAbstractListModel):
                       key=lambda d: self.layout.favorite_rank(d["id"]))
 
     def shown(self) -> list[dict[str, Any]]:
-        return [d for d in self._all.values() if not d.get("hidden") and not d.get("grouped")]
+        return [d for d in self.all() if not d.get("hidden") and not d.get("grouped")]
+
+    def tiles(self) -> list[dict[str, Any]]:
+        """Tiles of the panel itself (the Wi-Fi code): only among the favorites, not counted as devices."""
+        return [d for d in self._all.values() if d.get("panelTile")]
 
     def _relayout(self) -> None:
         rows = self._visible()
@@ -243,8 +248,10 @@ class DeviceModel(QAbstractListModel):
         self._relayout()
 
     def set_all(self, devices: list[dict[str, Any]]) -> None:
+        """New devices from the backends; the tiles of the panel itself stay."""
         self.beginResetModel()
-        self._all = {d["id"]: self._place(d) for d in devices}
+        tiles = {d["id"]: d for d in self.tiles()}
+        self._all = {**{d["id"]: self._place(d) for d in devices}, **tiles}
         self._rows = self._visible()
         self.endResetModel()
 
@@ -275,7 +282,8 @@ class DeviceModel(QAbstractListModel):
             self.dataChanged.emit(self.index(0), self.index(len(self._rows) - 1))
 
     def all(self) -> list[dict[str, Any]]:
-        return list(self._all.values())
+        """Devices, without the tiles of the panel itself."""
+        return [d for d in self._all.values() if not d.get("panelTile")]
 
 
 class SettingsBridge(QObject):
@@ -777,6 +785,7 @@ class Controller(QObject):
     summaryChanged = Signal()
     alarmPinChanged = Signal()
     detailRequested = Signal(str)     # show the detail view of a device (e.g. a motorized window)
+    wifiRequested = Signal()          # the Wi-Fi tile was tapped: show the code
     confirmRequested = Signal(str)    # a garage door or lock tile was tapped: ask before opening/closing
     securityAlarm = Signal(str)       # new leak / glass break / smoke / CO alarm: wake up and show "Security"
     scenesChanged = Signal()
@@ -812,6 +821,7 @@ class Controller(QObject):
         self._rooms: list[str] = []
         self._room = ALL_ROOMS
         self._room_auto = True        # follow the first room until one is chosen
+        self._sync_wifi_tile()
         self._category = self._start_category()
         self._model._category = self._category
         self._scenes = [{**s.model_dump(include={"id", "name", "icon", "room"}), "count": len(s.actions)}
@@ -1096,6 +1106,9 @@ class Controller(QObject):
             self._update_theme()
         if "alarm_pin" in keys:
             self.alarmPinChanged.emit()
+        if keys & {"wifi_ssid", "wifi_favorite"}:
+            self._sync_wifi_tile()
+            self._refresh_rooms()
         if "language" in keys:
             self.apply_language()
         if "idle_seconds" in keys:
@@ -1172,7 +1185,7 @@ class Controller(QObject):
     def _start_category(self) -> str:
         """The panel starts with the favorites if there are any, otherwise with the lights."""
         if self._model.all():
-            return FAVORITES if any(d.get("favorite") for d in self._model.shown()) else "light"
+            return FAVORITES if any(d.get("favorite") for d in self._model.shown() + self._model.tiles()) else "light"
         return FAVORITES if self._model.layout.favorites else "light"
 
     def _tab_rooms(self) -> list[str]:
@@ -1267,6 +1280,9 @@ class Controller(QObject):
         d = self._model.get(dev_id)
         if not d:
             return
+        if d["type"] == "wifi":                     # the Wi-Fi tile: show the code
+            self.wifiRequested.emit()
+            return
         if d.get("meta", {}).get("group"):          # a group: all lights on, or all off if any is on
             self.setAttrs(dev_id, {"on": not d["state"].get("on")})
             return
@@ -1298,23 +1314,31 @@ class Controller(QObject):
     def alarmPinSet(self) -> bool:
         return bool(self.store.get("alarm_pin"))
 
-    @Slot(str, result="QVariantMap")
-    def wifiCode(self, pin: str) -> dict[str, Any]:
-        """Wi-Fi for guests as a QR code, only with the PIN: {error, wrong_pin, ssid, password,
-        image (PNG data URI)}."""
-        want = str(self.store.get("alarm_pin") or "")
-        if not want:
-            return {"error": tr("Set a PIN under Security first.")}
-        if pin != want:
-            return {"error": tr("Wrong PIN"), "wrong_pin": True}
-        try:
-            wifi = guest_wifi(str(self.store.get("wifi_ssid") or ""), str(self.store.get("wifi_password") or ""))
-        except WifiError as e:
-            log.info("Wi-Fi code: %s", e)
-            if str(e) == "password unknown":
-                return {"error": tr("The password of the current Wi-Fi cannot be read. Enter it under Settings → Wi-Fi for guests.")}
-            return {"error": tr("The panel is not connected to a Wi-Fi. Enter a network under Settings → Wi-Fi for guests.")}
+    @Slot(result="QVariantMap")
+    def wifiCode(self) -> dict[str, Any]:
+        """The guest Wi-Fi of the settings as a QR code: {error, ssid, password, image (PNG data URI)}."""
+        ssid = str(self.store.get("wifi_ssid") or "").strip()
+        if not ssid:
+            return {"error": tr("Enter the guest Wi-Fi under Settings → Wi-Fi for guests.")}
+        wifi = Wifi(ssid, str(self.store.get("wifi_password") or ""))
         return {"error": "", "ssid": wifi.ssid, "password": wifi.password, "image": qr_image(wifi.uri())}
+
+    def _sync_wifi_tile(self) -> None:
+        """The "Wi-Fi QR code" tile in the favorites: there while it is switched on and a guest
+        network is set; new ones go to the end of the favorites."""
+        ssid = str(self.store.get("wifi_ssid") or "").strip()
+        wanted = bool(self.store.get("wifi_favorite")) and bool(ssid)
+        layout = self._model.layout
+        if wanted != (WIFI_TILE in layout.favorites):
+            layout.set_favorite(WIFI_TILE, wanted)
+            self.store.rooms = layout.to_dict()
+            self.store.save()
+        if wanted:
+            self._model.upsert({"id": WIFI_TILE, "name": tr("Wi-Fi QR code"), "type": "wifi", "backend": "panel",
+                                "room": "", "icon": "wifi", "state": {"ssid": ssid}, "capabilities": [],
+                                "reachable": True, "order": 100, "meta": {}, "panelTile": True})
+        else:
+            self._model.remove(WIFI_TILE)
 
     @Slot(str, str, result=str)
     def disarm(self, dev_id: str, pin: str) -> str:
@@ -1436,6 +1460,7 @@ class Controller(QObject):
         i18n.set_language(i18n.resolve(self.store.get("language")))
         self.languageChanged.emit()
         self._model.reassign()          # the default room name is translated
+        self._sync_wifi_tile()          # its name too
         self._refresh_rooms()
         self._settings.sectionsChanged.emit()
         self.statusChanged.emit()

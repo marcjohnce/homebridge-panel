@@ -1297,19 +1297,37 @@ def test_display_off_after_screen_saver(qapp, tmp_path):
     pump_until(lambda: False, timeout=0.3)
 
 
-def test_wifi_code_needs_the_pin(qapp, tmp_path):
+def test_wifi_tile_in_the_favorites(qapp, tmp_path):
     ctl = make_controller(tmp_path)
-    assert ctl.wifiCode("1234")["error"] == "Set a PIN under Security first."
-    assert ctl.settings.save({"alarm_pin": "1234", "wifi_ssid": "Guests", "wifi_password": "welcome"}) == {}
-    wrong = ctl.wifiCode("9999")
-    assert wrong["error"] == "Wrong PIN" and wrong["wrong_pin"] and "image" not in wrong
-    ok = ctl.wifiCode("1234")
-    assert (ok["error"], ok["ssid"], ok["password"]) == ("", "Guests", "welcome")
-    assert ok["image"].startswith("data:image/png;base64,")
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 29)
+    assert ctl.wifiCode()["error"].startswith("Enter the guest Wi-Fi")
+    assert ctl.settings.save({"wifi_favorite": True}) == {}
+    assert ctl._model.get("wifi:guest") is None                    # no network yet: no tile
+    assert ctl.settings.save({"wifi_ssid": "Guests", "wifi_password": "welcome"}) == {}
+    ctl.selectCategory("favorites")
+    assert ctl.devices._rows == ["wifi:guest"]                     # the only favorite
+    tile = ctl._model.get("wifi:guest")
+    assert tile["name"] == "Wi-Fi QR code" and tile["icon"] == "wifi"
+    assert ctl.devices.role_value(tile, "stateText") == "Guests"
+    # not a device: not counted, in no room, not in the room settings
+    assert len(ctl.devices.all()) == 29 and "" not in ctl.rooms
+    assert all(d["id"] != "wifi:guest" for d in ctl.roomEditor.devices)
+    asked = []
+    ctl.wifiRequested.connect(lambda: asked.append(True))
+    ctl.toggle("wifi:guest")
+    assert asked == [True]
+    code = ctl.wifiCode()
+    assert (code["error"], code["ssid"], code["password"]) == ("", "Guests", "welcome")
+    assert code["image"].startswith("data:image/png;base64,")
+    assert "wifi:guest" in SettingsStore(tmp_path / "settings.json").rooms["favorites"]
+    assert ctl.settings.save({"wifi_favorite": False}) == {}
+    assert ctl._model.get("wifi:guest") is None and ctl.devices.rowCount() == 0
+    assert "wifi:guest" not in SettingsStore(tmp_path / "settings.json").rooms["favorites"]
     ctl.shutdown()
 
 
-def test_wifi_page(qapp, tmp_path):
+def test_wifi_dialog_from_the_tile(qapp, tmp_path):
     from PySide6.QtCore import QObject, QPointF, Qt
     from PySide6.QtQml import QQmlApplicationEngine
     from PySide6.QtQuick import QQuickWindow
@@ -1318,7 +1336,7 @@ def test_wifi_page(qapp, tmp_path):
     from app.qt.main import QML_DIR
 
     ctl = make_controller(tmp_path)
-    assert ctl.settings.save({"alarm_pin": "2468", "wifi_ssid": "Guests", "wifi_password": "welcome"}) == {}
+    assert ctl.settings.save({"wifi_ssid": "Guests", "wifi_password": "welcome", "wifi_favorite": True}) == {}
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextProperty("panel", ctl)
     engine.rootContext().setContextProperty("initialWidth", 1024)
@@ -1327,7 +1345,8 @@ def test_wifi_page(qapp, tmp_path):
     win = Shiboken.wrapInstance(Shiboken.getCppPointer(engine.rootObjects()[0])[0], QQuickWindow)
     ctl.start()
     assert pump_until(lambda: len(ctl.devices.all()) == 29)
-    busy = win.findChild(QObject, "busyPopup")
+    ctl.selectCategory("favorites")
+    dialog = win.findChild(QObject, "wifiDialog")
 
     def find(name, item=None):
         for child in (item or win.contentItem()).childItems():
@@ -1339,34 +1358,20 @@ def test_wifi_page(qapp, tmp_path):
 
     def tap(name):
         assert pump_until(lambda: find(name) is not None), name
-        assert pump_until(lambda: not busy.property("visible"))
         it = find(name)
         p = it.mapToScene(QPointF(it.width() / 2, it.height() / 2)).toPoint()
         QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, p)
 
-    def pin(digits):
-        for d in digits:
-            QTest.keyClick(win, getattr(Qt.Key, f"Key_{d}"))
+    def popup_item(name):
+        return find(name, dialog.property("contentItem"))
 
-    tap("settingsButton")
-    assert pump_until(lambda: find("row:wifi_page") is not None)
-    row, flick = find("row:wifi_page"), find("settingsFlick")
-    flick.setProperty("contentY", row.mapToItem(flick.property("contentItem"), QPointF(0, 0)).y() - 100)
-    pump_until(lambda: False, timeout=0.2)
-    tap("row:wifi_page")
-    assert pump_until(lambda: find("wifiPin") is not None)
-    pin("1111")
-    tap("wifiShow")
-    assert pump_until(lambda: find("wifiPin").property("error") == "Wrong PIN")
-    assert find("wifiQr") is None
-    pin("2468")
-    tap("wifiShow")
-    assert pump_until(lambda: find("wifiQr") is not None)
-    assert find("wifiSsid").property("text") == "Guests" and find("wifiPassword").property("text") == "welcome"
-    assert pump_until(lambda: find("wifiQr").property("implicitWidth") > 20)     # the PNG is decoded
-    tap("wifiHide")
-    assert pump_until(lambda: find("wifiQr") is None and find("wifiPin") is not None)
-    assert find("wifiPin").property("entry") == ""                         # the PIN is asked again
+    tap("tile:wifi:guest")
+    assert pump_until(lambda: dialog.property("opened"))               # no PIN
+    assert popup_item("wifiSsid").property("text") == "Guests"
+    assert popup_item("wifiPassword").property("text") == "welcome"
+    assert pump_until(lambda: popup_item("wifiQr").property("implicitWidth") > 20)     # the PNG is decoded
+    tap("wifiClose")
+    assert pump_until(lambda: not dialog.property("visible"))
     ctl.shutdown()
     win.close()
     engine.deleteLater()

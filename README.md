@@ -64,7 +64,7 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 - **Light / dark / dark blue / automatic** appearance and a **screen saver** with a large clock
 - **Settings page** for appearance, screen saver and the Homebridge connection (address, port, PIN)
   with keypad, connection test and apply without restart; **restart** the app or the Raspberry Pi
-- **Wi-Fi for guests**: QR code of the Wi-Fi (or a guest network) in the settings, shown after the PIN
+- **Wi-Fi for guests**: a tile in the favorites shows the guest Wi-Fi as a QR code for the phone camera
 - **Backups** of the panel settings (rooms, names, favorites, groups, connection), restored with one tap
 - **Updates** from the settings: new stable releases are found automatically and installed with one tap
 - Optimized for **1280×800** and **720×720**; also works on 800×480, 1024×600, 1280×720 and portrait displays
@@ -170,8 +170,8 @@ In the app (icon at the bottom left), stored in `~/.config/smarthome-panel/setti
 | Display | Screen saver after: never, 1, 2, 5, 15 minutes; display off after: never, 5, 15, 30 minutes, 1 hour (after the screen saver started); upside down (180°) | saved immediately |
 | Rooms | Rooms and devices: rooms, display names, kind of sensors, switches and plugs (TV, washing machine …), menu entry, outdoor sensors, hidden devices, room of each device | saved immediately |
 | Rooms | Show the "General" room (on/off) | saved immediately |
-| Security | PIN to disarm (alarm system, door locks, Wi-Fi code) | saved immediately |
-| Wi-Fi for guests | Wi-Fi QR code (after the PIN); network name (empty: the current Wi-Fi) and password | saved immediately |
+| Security | PIN to disarm (alarm system, door locks) | saved immediately |
+| Wi-Fi for guests | Network name and password of the guest Wi-Fi; show the QR code tile in the favorites | saved immediately |
 | Homebridge | Connect to Homebridge (on/off) | saved with **Apply** |
 | Homebridge | Address (IP or host name), port, PIN | saved with **Apply**, try **Test connection** first |
 | MQTT | Connect to an MQTT broker, address, port, protocol, user name, password, Test | saved with **Apply** |

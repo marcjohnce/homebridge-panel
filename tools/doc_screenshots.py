@@ -502,39 +502,37 @@ def main() -> int:
     ], "Backups"), out, "backups")
     p.win.setProperty("settingsOpen", False)
     wait(300)
-    p.ctl.settings.save({"alarm_pin": "2468", "wifi_ssid": "Holiday Home Guests", "wifi_password": "sunny-days-42"})
+    p.ctl.settings.save({"wifi_ssid": "Holiday Home Guests", "wifi_password": "sunny-days-42", "wifi_favorite": True})
     p.win.setProperty("settingsOpen", True)
     wait(1200)
 
-    # Wi-Fi for guests: section, PIN, code (a guest network, as the demo has no Wi-Fi to read)
+    # Wi-Fi for guests: section, tile in the favorites, code
     flick = p.item("settingsFlick")
     top = p.item("section:wifi").mapToItem(flick.property("contentItem"), QPointF(0, 0)).y()
     flick.setProperty("contentY", min(top - 40, max(0, flick.property("contentHeight") - flick.height())))
     wait(300)
     save(annotate(p.grab(), [
-        (1, [p.rect("row:wifi_page")], "Wi-Fi QR code (after the PIN)", "right"),
-        (2, [p.rect("row:wifi_ssid")], "Network name: empty for the current Wi-Fi", "right"),
-        (3, [p.rect("row:wifi_password")], "Password, if it cannot be read", "right"),
+        (1, [p.rect("row:wifi_ssid")], "Name of the guest Wi-Fi", "right"),
+        (2, [p.rect("row:wifi_password")], "Password (empty: open network)", "right"),
+        (3, [p.rect("row:wifi_favorite")], "Tile in the favorites", "right"),
     ], "Settings: Wi-Fi for guests"), out, "settings-wifi")
-    p.tap("row:wifi_page")
-    wait(500)
-    for digit in "24":
-        p.key(getattr(Qt.Key, f"Key_{digit}"), digit)
+    p.win.setProperty("settingsOpen", False)
+    wait(300)
+    p.ctl.selectCategory("favorites")
+    wait(400)
     save(annotate(p.grab(), [
-        (1, [p.rect("wifiPin")], "PIN of the panel (the one under Security)", "left"),
-        (2, [p.rect("wifiShow")], "Show code", "bottom"),
-    ], "Wi-Fi QR code: PIN"), out, "wifi-pin")
-    for digit in "68":
-        p.key(getattr(Qt.Key, f"Key_{digit}"), digit)
-    p.key(Qt.Key.Key_Return)
-    wait(800)
+        (1, [p.rect("tile:wifi:guest")], "Wi-Fi QR code: tap to show it", "bottom"),
+    ], "Wi-Fi tile in the favorites"), out, "wifi-tile")
+    tile = p.rect("tile:wifi:guest")
+    p.click(tile.center().x(), tile.center().y())
+    wait(600)
     save(annotate(p.grab(), [
         (1, [p.rect("wifiQr")], "Scan with the phone camera", "left"),
         (2, [p.rect("wifiSsid"), p.rect("wifiPassword")], "Name and password for typing", "right"),
-        (3, [p.rect("wifiHide")], "Hide (also after two minutes)", "right"),
+        (3, [p.rect("wifiClose")], "Close", "right"),
     ], "Wi-Fi QR code"), out, "wifi-code")
     p.key(Qt.Key.Key_Escape)
-    p.win.setProperty("settingsOpen", False)
+    wait(300)
 
     p.win.setProperty("idle", True)
     wait(900)   # let the fade-in finish
