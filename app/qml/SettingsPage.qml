@@ -89,19 +89,21 @@ Rectangle {
                                 current("mqtt_user"), current("mqtt_password"));
     }
     // text and passwords with the on-screen keyboard, numbers and addresses with the keypad
-    function editValue(field, value) {
+    // instant: the section saves at once (e.g. Wi-Fi for guests), otherwise the entry waits for "Apply"
+    function editValue(field, value, instant) {
+        const take = v => instant ? root.saveInstant(field.key, v) : root.setDraft(field.key, v);
         if (field.kind === "text" || field.kind === "password") {
             textKeyboard.edit(field.label, String(value), text => {
                 const err = panel.settings.validate(field.key, text);
                 if (err === "")
-                    root.setDraft(field.key, text);
+                    take(text);
                 return err;
             }, { hint: field.help, maxLength: 200, autoCapitalize: false, secret: field.kind === "password" });
         } else if (field.kind === "code") {
             // secret digits (alarm PIN): start empty, saved at once; empty = no PIN
             keypad.edit(field, "", v => root.saveInstant(field.key, v));
         } else {
-            keypad.edit(field, value, v => root.setDraft(field.key, v));
+            keypad.edit(field, value, take);
         }
     }
     function testConnection() {
@@ -172,7 +174,7 @@ Rectangle {
                         draft: root.draft
                         errors: root.errors
                         onEdit: (key, value) => section.instant ? root.saveInstant(key, value) : root.setDraft(key, value)
-                        onEditRequested: (field, value) => root.editValue(field, value)
+                        onEditRequested: (field, value) => root.editValue(field, value, section.instant)
                         onActionRequested: field => field.kind === "page" ? Busy.run(qsTr("Loading …"), () => root.subPage = field.key)
                                                  : field.kind === "update" ? root.update(field)
                                                  : field.key === "mqtt_test" ? root.testMqtt()

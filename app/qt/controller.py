@@ -518,6 +518,10 @@ class RoomsBridge(QObject):
         """Favorites in their order, listed like the devices above."""
         ids = [d["id"] for d in self._ctl._model.favorites()]
         devs = {d["id"]: d for d in self.devices}
+        # tiles of the panel itself (the Wi-Fi code): listed to be moved, set up elsewhere
+        devs.update({d["id"]: {"id": d["id"], "name": d["name"], "icon": d["icon"], "room": tr("Wi-Fi for guests"),
+                               "reachable": True, "hidden": False, "panelTile": True}
+                     for d in self._ctl._model.tiles()})
         return [devs[i] for i in ids if i in devs]
 
     @Slot(str, int)
@@ -1339,6 +1343,7 @@ class Controller(QObject):
                                 "reachable": True, "order": 100, "meta": {}, "panelTile": True})
         else:
             self._model.remove(WIFI_TILE)
+        self._room_editor.notify()          # the favorites list in the settings
 
     @Slot(str, str, result=str)
     def disarm(self, dev_id: str, pin: str) -> str:
