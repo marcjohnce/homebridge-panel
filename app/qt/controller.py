@@ -432,14 +432,36 @@ def _cached(fn):
 
 
 class RoomsBridge(QObject):
-    """Room management in the settings (RoomsPage.qml). Changes apply and save immediately."""
+    """Room management in the settings (RoomsPage.qml). Changes apply and save immediately –
+    except moving rooms and devices up and down: the page moves the rows itself, the new order
+    is saved and shown on the home screen once the page is left (finishMoves), and written to
+    the settings file a few seconds after the last move in case the panel loses power."""
     changed = Signal()
+    SAVE_DELAY = 4000       # ms after the last move
 
     def __init__(self, store: SettingsStore, controller: "Controller"):
         super().__init__(controller)
         self._store = store
         self._ctl = controller
         self._cache: dict[str, Any] = {}
+        self._moves_pending = False
+        self._save_timer = QTimer(self, singleShot=True, interval=self.SAVE_DELAY, timeout=self.save_moves)
+
+    def _moved(self) -> None:
+        self._moves_pending = True
+        self._save_timer.start()
+
+    def save_moves(self) -> None:
+        """Writes the order to the settings file (nothing on screen changes)."""
+        self._save_timer.stop()
+        self._store.rooms = self._layout.to_dict()
+        self._store.save()
+
+    @Slot()
+    def finishMoves(self) -> None:
+        """After moving: save the order, let the home screen and the lists follow."""
+        if self._moves_pending:
+            self._commit()
 
     def notify(self) -> None:
         """Lists changed: build them again when read. (Not a slot on `changed`: QML bindings
@@ -452,8 +474,8 @@ class RoomsBridge(QObject):
         return self._ctl._model.layout
 
     def _commit(self) -> None:
-        self._store.rooms = self._layout.to_dict()
-        self._store.save()
+        self._moves_pending = False
+        self.save_moves()
         self._ctl._model.reassign()
         self._ctl._refresh_rooms()
         self._ctl.climateChanged.emit()     # hidden sensors leave the temperature average
@@ -527,7 +549,7 @@ class RoomsBridge(QObject):
     @Slot(str, int)
     def moveFavorite(self, dev_id: str, delta: int) -> None:
         self._layout.move_favorite(dev_id, delta, [d["id"] for d in self._ctl._model.favorites()])
-        self._commit()
+        self._moved()
 
     @Slot(str, int)
     def moveDevice(self, dev_id: str, delta: int) -> None:
@@ -538,7 +560,7 @@ class RoomsBridge(QObject):
             return
         ids = [x["id"] for x in m.ordered(m.all()) if x["room"] == d["room"]]
         self._layout.move_device(d["room"], dev_id, delta, ids)
-        self._commit()
+        self._moved()
 
     # ---------- virtual devices (MQTT) ----------
     @Slot("QVariantMap", result=str)
@@ -744,7 +766,7 @@ class RoomsBridge(QObject):
     @Slot(str, int)
     def moveRoom(self, name: str, delta: int) -> None:
         self._layout.move(name, delta, self._ctl._model.device_rooms())
-        self._commit()
+        self._moved()
 
     @Slot(str, str, result=str)
     def assign(self, dev_id: str, room: str) -> str:
@@ -1020,6 +1042,9 @@ class Controller(QObject):
                 "busy": state in ("checking", "installing", "unsupported")}
 
     def shutdown(self) -> None:
+        if self._room_editor._moves_pending:     # moved rows not saved yet
+            self._room_editor.save_moves()
+        self._room_editor._save_timer.stop()
         self._display_worker.shutdown(wait=True)
         if not self._display.is_on:          # never leave the screen dark (restart, update)
             self._display.set(True)
