@@ -75,6 +75,14 @@ devices:
   "Bedroom Humidifier":        { room: Bedroom }
   # "homebridge:12.10":        { hidden: true }
 
+# --- Ignore devices completely -----------------------------------------------------
+# Every device whose original name (as in Homebridge) contains one of these texts is
+# left out entirely: no tile, not in the settings, no alarms, not usable in scenes.
+# Upper/lower case doesn't matter.
+blacklist:
+#  - "Test"              # e.g. "Test Switch", "Dummy Test Light"
+#  - "Bridge Status"
+
 # --- Scenes (icon: moon, sun, film, leaf, home, power) -----------------------------
 # room: the scene appears under that room in the "Scenes" menu; without room it is for the
 #       whole house and appears under "All"

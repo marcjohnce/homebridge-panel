@@ -427,7 +427,8 @@ The *Devices* tab lists the favorites first, then all devices grouped by room. T
 *Hide on the home screen* removes a device from the tiles – also
 under *All* and in the default room – and from the menu status, alarms and temperatures. It stays
 listed here, marked *Hidden*, so it can be shown again. (`hidden: true` in `config.yaml` removes a
-device completely, also from the settings.)
+device completely, also from the settings. `blacklist:` in `config.yaml` does the same for every
+device whose original name contains one of the listed texts, e.g. `blacklist: ["Test"]`.)
 
 The arrows next to each device set the order of the tiles in the room (under *All*: rooms first,
 then this order; alarms stay in front under *Security*). The list follows the moved device and
