@@ -1310,9 +1310,17 @@ def test_wifi_tile_in_the_favorites(qapp, tmp_path):
     tile = ctl._model.get("wifi:guest")
     assert tile["name"] == "Wi-Fi QR code" and tile["icon"] == "wifi"
     assert ctl.devices.role_value(tile, "stateText") == "Guests"
-    # not a device: not counted, in no room, not in the room settings
+    # not a device: not counted, in no room, not among the devices of the room settings …
     assert len(ctl.devices.all()) == 29 and "" not in ctl.rooms
     assert all(d["id"] != "wifi:guest" for d in ctl.roomEditor.devices)
+    # … but listed with the favorites there, to be moved
+    assert ctl.roomEditor.saveDevice("demo:coffee", {"favorite": True}) == ""
+    assert [d["id"] for d in ctl.roomEditor.favorites] == ["wifi:guest", "demo:coffee"]
+    assert ctl.roomEditor.favorites[0]["panelTile"] is True
+    ctl.roomEditor.moveFavorite("wifi:guest", 1)
+    assert [d["id"] for d in ctl.roomEditor.favorites] == ["demo:coffee", "wifi:guest"]
+    assert ctl.devices._rows == ["demo:coffee", "wifi:guest"]
+    assert ctl.roomEditor.saveDevice("demo:coffee", {"favorite": False}) == ""
     asked = []
     ctl.wifiRequested.connect(lambda: asked.append(True))
     ctl.toggle("wifi:guest")
@@ -1325,6 +1333,68 @@ def test_wifi_tile_in_the_favorites(qapp, tmp_path):
     assert ctl._model.get("wifi:guest") is None and ctl.devices.rowCount() == 0
     assert "wifi:guest" not in SettingsStore(tmp_path / "settings.json").rooms["favorites"]
     ctl.shutdown()
+
+
+def test_wifi_settings_entered_on_the_panel(qapp, tmp_path):
+    """Text entries of a section that saves at once (Wi-Fi for guests) are saved when the
+    keyboard closes, not kept for "Apply"; then the tile appears."""
+    from PySide6.QtCore import QObject, QPointF, Qt
+    from PySide6.QtQml import QQmlApplicationEngine
+    from PySide6.QtQuick import QQuickWindow
+    from PySide6.QtTest import QTest
+    from shiboken6 import Shiboken
+    from app.qt.main import QML_DIR
+
+    ctl = make_controller(tmp_path)
+    engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty("panel", ctl)
+    engine.rootContext().setContextProperty("initialWidth", 1280)
+    engine.rootContext().setContextProperty("initialHeight", 800)
+    engine.load(QML_DIR / "Main.qml")
+    win = Shiboken.wrapInstance(Shiboken.getCppPointer(engine.rootObjects()[0])[0], QQuickWindow)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 29)
+    busy = win.findChild(QObject, "busyPopup")
+
+    def find(name, item=None):
+        for child in (item or win.contentItem()).childItems():
+            if child.objectName() == name and child.isVisible():
+                return child
+            if (hit := find(name, child)) is not None:
+                return hit
+        return None
+
+    def tap(name, fx=0.5):
+        assert pump_until(lambda: find(name) is not None), name
+        assert pump_until(lambda: not busy.property("visible"))
+        it = find(name)
+        p = it.mapToScene(QPointF(it.width() * fx, it.height() / 2)).toPoint()
+        QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, p)
+
+    def scroll_to(name):
+        assert pump_until(lambda: not busy.property("visible"))
+        pump_until(lambda: False, timeout=0.2)          # the page is rebuilt after saving
+        row, flick = find(name), find("settingsFlick")
+        flick.setProperty("contentY", row.mapToItem(flick.property("contentItem"), QPointF(0, 0)).y() - 100)
+        pump_until(lambda: False, timeout=0.2)
+
+    tap("settingsButton")
+    assert pump_until(lambda: find("row:wifi_ssid") is not None)
+    for key, text in (("wifi_ssid", "gast"), ("wifi_password", "abc")):
+        scroll_to(f"row:{key}")
+        tap(f"row:{key}", 0.95)
+        for ch in text:
+            tap("key:" + ch)
+        tap("keyboardDone")
+        assert pump_until(lambda: ctl.store.get(key) == text), key
+    scroll_to("row:wifi_favorite")
+    tap("row:wifi_favorite", 0.97)
+    assert pump_until(lambda: ctl._model.get("wifi:guest") is not None)
+    assert ctl.wifiCode()["ssid"] == "gast"
+    ctl.shutdown()
+    win.close()
+    engine.deleteLater()
+    pump_until(lambda: False, timeout=0.3)
 
 
 def test_wifi_dialog_from_the_tile(qapp, tmp_path):

@@ -33,6 +33,8 @@ Rectangle {
         keyboard.edit(qsTr("New room"), "", text => root.editor.addRoom(text));
     }
     function openDevice(d) {
+        if (d.panelTile)
+            return;                 // the Wi-Fi tile: set up under Settings → Wi-Fi for guests
         if (d.virtual)
             virtualEditor.edit(d);
         else if (d.group)
@@ -427,6 +429,7 @@ Rectangle {
                                                 LineIcon {
                                                     Layout.preferredWidth: 20
                                                     Layout.preferredHeight: 20
+                                                    opacity: devItem.modelData.panelTile ? 0 : 1
                                                     name: "chevron"
                                                     color: Theme.muted
                                                 }

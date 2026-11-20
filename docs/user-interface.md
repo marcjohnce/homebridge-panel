@@ -506,8 +506,9 @@ A connected keyboard works as well, including letters for host names.
 
 Shows the guest Wi-Fi as a QR code: guests point the phone camera at it and join without typing
 the password. Enter the network in the settings and switch on *Show in favorites*; a tile
-*Wi-Fi QR code* then appears at the end of the favorites. Tapping it shows the code – without a PIN,
-so share a guest network here, not your own.
+*Wi-Fi QR code* then appears at the end of the favorites. Like the other favorites it can be moved
+in *Rooms and devices* (Devices tab, *Favorites*). Tapping it shows the code – without a PIN, so
+share a guest network here, not your own.
 
 ![Settings: Wi-Fi for guests](images/settings-wifi.png)
 
