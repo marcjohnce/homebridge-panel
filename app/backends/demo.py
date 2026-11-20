@@ -8,11 +8,11 @@ from typing import Any
 
 from ..hap_types import Char, ServiceSnapshot
 from .base import Backend
-from .eve_sim import THERMO, WEATHER, EveHistorySim, demo_temperatures
+from .eve_sim import THERMO, WEATHER, EveHistorySim, demo_pressure, demo_temperatures
 
-# devices with an Eve history: fingerprint, mean temperature and daily swing
-_HISTORY = {"weather-station": (WEATHER, 5.0, 4.0), "living-climate": (WEATHER, 21.0, 0.7),
-            "heating-living": (THERMO, 20.0, 1.0)}
+# devices with an Eve history: fingerprint, mean temperature, daily swing and mean humidity
+_HISTORY = {"weather-station": (WEATHER, 5.0, 4.0, 82.0), "living-climate": (WEATHER, 21.0, 0.7, 46.0),
+            "heating-living": (THERMO, 20.0, 1.0, 0.0)}
 
 _DEVICES = [
     ("living-ceiling", "Lightbulb", "Living Room Ceiling Light",
@@ -118,10 +118,15 @@ class DemoBackend(Backend):
         # Eve history (temperature charts)
         self.history: dict[str, EveHistorySim] = {}
         now = time.time()
-        for key, (fingerprint, base, swing) in _HISTORY.items():
-            raw = [(t, [round(v * 100), 8000 if fingerprint is WEATHER else 2100,
-                        10140 if fingerprint is WEATHER else 40] + ([0, 0] if fingerprint is THERMO else []))
-                   for t, v in demo_temperatures(now, base, swing)]
+        for key, (fingerprint, base, swing, humidity) in _HISTORY.items():
+            if fingerprint is WEATHER:
+                # humidity falls when it gets warmer; like fakegato-history, the living room
+                # sensor without a barometer records 0 hPa
+                raw = [(t, [round(v * 100), round(max(0.0, min(100.0, humidity - 3 * (v - base))) * 100),
+                            round(demo_pressure(t) * 10) if key == "weather-station" else 0])
+                       for t, v in demo_temperatures(now, base, swing)]
+            else:
+                raw = [(t, [round(v * 100), 2100, 40, 0, 0]) for t, v in demo_temperatures(now, base, swing)]
             self.history[key] = EveHistorySim(fingerprint, raw)
             self._services[key].history = {part: (key, part) for part in ("status", "entries", "request")}
         # input sources of the television: services of their own, linked to it

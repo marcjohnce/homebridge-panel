@@ -8,7 +8,7 @@ the time and app version:
      "settings": {… settings.json …}}
 
 Restoring writes the settings back; the app then restarts to load them. config.yaml and the
-temperature history are not part of a backup.
+history of the readings are not part of a backup.
 """
 from __future__ import annotations
 

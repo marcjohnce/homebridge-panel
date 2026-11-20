@@ -1057,7 +1057,7 @@ def test_groups_and_virtual_devices_as_favorites(qapp, tmp_path):
     ctl.shutdown()
 
 
-def test_temperature_history(qapp, tmp_path):
+def test_device_history(qapp, tmp_path):
     ctl = make_controller(tmp_path)
     ctl.start()
     assert pump_until(lambda: len(ctl.devices.all()) == 29)
@@ -1069,16 +1069,79 @@ def test_temperature_history(qapp, tmp_path):
     assert pump_until(lambda: got)
     dev_id, days, result = got[0]
     assert (dev_id, days, result["error"]) == ("demo:weather-station", 1, "")
-    assert 140 <= len(result["points"]) <= 145 and result["min"] < result["max"]
-    assert result["since"] <= result["points"][0]["t"] <= result["points"][-1]["t"] <= result["until"]
+    assert result["kinds"] == ["temperature", "humidity", "pressure"]
+    for kind, (lo, hi) in {"temperature": (-10, 20), "humidity": (40, 100), "pressure": (980, 1040)}.items():
+        ser = result["series"][kind]
+        assert 140 <= len(ser["points"]) <= 145 and lo < ser["min"] < ser["max"] < hi, kind
+        assert result["since"] <= ser["points"][0]["t"] <= ser["points"][-1]["t"] <= result["until"]
     ctl.loadHistory("demo:weather-station", 30)
     assert pump_until(lambda: len(got) == 2)
-    assert len(got[1][2]["points"]) <= 240                  # averaged for the chart
+    assert all(len(s["points"]) <= 240 for s in got[1][2]["series"].values())    # averaged for the chart
     assert (tmp_path / "history.json").exists()             # kept for the next start
+    ctl.loadHistory("demo:living-climate", 7)               # no barometer: its 0 hPa are not offered
+    ctl.loadHistory("demo:heating-living", 7)
     ctl.loadHistory("demo:coffee", 1)                       # no history: empty, no error
-    assert pump_until(lambda: len(got) == 3)
-    assert got[2][2]["points"] == [] and got[2][2]["error"] == ""
+    assert pump_until(lambda: len(got) == 5)
+    kinds = {d: r["kinds"] for d, _, r in got[2:]}
+    assert kinds == {"demo:living-climate": ["temperature", "humidity"], "demo:heating-living": ["temperature"],
+                     "demo:coffee": []}
+    assert got[4][2]["series"] == {} and got[4][2]["error"] == ""
     ctl.shutdown()
+
+
+def test_history_chart_switches_between_quantities(qapp, tmp_path):
+    from PySide6.QtCore import QObject, QPointF, Qt
+    from PySide6.QtQml import QQmlApplicationEngine
+    from PySide6.QtQuick import QQuickWindow
+    from PySide6.QtTest import QTest
+    from shiboken6 import Shiboken
+    from app.qt.main import QML_DIR
+
+    ctl = make_controller(tmp_path)
+    engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty("panel", ctl)
+    engine.rootContext().setContextProperty("initialWidth", 1024)
+    engine.rootContext().setContextProperty("initialHeight", 600)
+    engine.load(QML_DIR / "Main.qml")
+    win = Shiboken.wrapInstance(Shiboken.getCppPointer(engine.rootObjects()[0])[0], QQuickWindow)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 29)
+
+    def find(name, item=None):
+        for child in (item or win.contentItem()).childItems():
+            if child.objectName() == name and child.isVisible():
+                return child
+            if (hit := find(name, child)) is not None:
+                return hit
+        return None
+
+    def tap(name):
+        assert pump_until(lambda: find(name) is not None), name
+        it = find(name)
+        p = it.mapToScene(QPointF(it.width() / 2, it.height() / 2)).toPoint()
+        QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, p)
+
+    def range_text():
+        assert pump_until(lambda: find("historyRange") is not None)
+        return find("historyRange").property("text")
+
+    win.setProperty("openDevice", "demo:weather-station")
+    tap("detailHistory")
+    assert "°C" in range_text()
+    tap("historyKind:humidity")
+    assert pump_until(lambda: range_text().endswith("%"))
+    tap("historyRange:7")
+    tap("historyKind:pressure")
+    assert pump_until(lambda: range_text().endswith("hPa"))
+    win.setProperty("openDevice", "")
+    pump_until(lambda: False, timeout=0.2)
+    win.setProperty("openDevice", "demo:heating-living")     # temperature only: no choice
+    tap("detailHistory")
+    assert "°C" in range_text() and find("historyKind:temperature") is None
+    ctl.shutdown()
+    win.close()
+    engine.deleteLater()
+    pump_until(lambda: False, timeout=0.3)
 
 
 def test_upside_down(qapp, tmp_path):

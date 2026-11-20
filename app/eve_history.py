@@ -14,7 +14,8 @@ Eve app uses it to show charts. The protocol (reverse engineered, see those libr
   seconds since the reference time (u32), bitmap (u8) and the values whose bit is set, in the
   order of the fingerprint. Bitmap 0x81 is a reference time record (reference time at offset 10).
 
-Only the temperature (tag 0x01, signed, 1/100 °C) is used for now.
+Used are the temperature (tag 0x01, signed, 1/100 °C), the relative humidity (tag 0x02,
+1/100 %) and the air pressure (tag 0x03, 1/10 hPa).
 """
 from __future__ import annotations
 
@@ -32,6 +33,15 @@ log = logging.getLogger(__name__)
 
 EPOCH_2001 = 978307200          # 2001-01-01 00:00:00 UTC in Unix time
 TAG_TEMPERATURE = 0x01
+TAG_HUMIDITY = 0x02
+TAG_PRESSURE = 0x03
+# quantity -> (tag, struct format, divisor, plausible range); values outside the range are
+# left out, e.g. the 0 hPa that fakegato-history records for a weather device without a barometer
+QUANTITIES = {
+    "temperature": (TAG_TEMPERATURE, "<h", 100, (-60.0, 100.0)),
+    "humidity": (TAG_HUMIDITY, "<H", 100, (0.0, 100.0)),
+    "pressure": (TAG_PRESSURE, "<H", 10, (300.0, 1200.0)),
+}
 REF_TIME = 0x81
 MAX_READS = 1000                # 11 entries per read: enough for the usual 4032 entries
 
@@ -59,10 +69,17 @@ class Entry:
     time: float                         # Unix time
     values: dict[int, bytes] = field(default_factory=dict)
 
+    def value(self, quantity: str) -> float | None:
+        tag, fmt, divisor, (lo, hi) = QUANTITIES[quantity]
+        raw = self.values.get(tag)
+        if not raw or len(raw) < 2:
+            return None
+        v = struct.unpack(fmt, raw[:2])[0] / divisor
+        return v if lo <= v <= hi else None
+
     @property
     def temperature(self) -> float | None:
-        raw = self.values.get(TAG_TEMPERATURE)
-        return struct.unpack("<h", raw[:2])[0] / 100 if raw and len(raw) >= 2 else None
+        return self.value("temperature")
 
 
 def _b64(value: Any) -> bytes:
@@ -165,8 +182,12 @@ async def read_entries(refs: dict[str, Any], read: Read, write: Write, start: in
     return status, [entries[n] for n in sorted(entries)]
 
 
-class TemperatureHistory:
-    """Temperature history per device, read incrementally and kept in a JSON file."""
+Series = dict[str, list[tuple[float, float]]]     # quantity -> [(Unix time, value)], oldest first
+
+
+class DeviceHistory:
+    """History per device (temperature, humidity, air pressure), read incrementally and kept in
+    a JSON file: {device: {"ref": …, "last": entry number, "series": {quantity: [[t, v], …]}}}."""
 
     KEEP = 40 * 86400       # seconds
 
@@ -190,21 +211,35 @@ class TemperatureHistory:
         except OSError as e:
             log.warning("History cache not saved: %s", e)
 
-    async def update(self, dev_id: str, refs: dict[str, Any], read: Read, write: Write) -> list[tuple[float, float]]:
-        """Reads the new entries of a device and returns all points (time, °C), oldest first."""
+    async def update(self, dev_id: str, refs: dict[str, Any], read: Read, write: Write) -> Series:
+        """Reads the new entries of a device and returns all its series, oldest point first."""
         cached = self.data.get(dev_id, {})
         status = parse_status(await read(refs["status"]))
         fresh = (cached.get("ref") != status.ref_time or cached.get("last", 0) > status.last)
-        start = 0 if fresh else cached.get("last", 0) + 1
+        # cache of an older version: temperatures only. Read the device memory again for the other
+        # quantities and keep the older temperatures the device no longer has.
+        migrate = not fresh and "series" not in cached
+        start = 0 if fresh or migrate else cached.get("last", 0) + 1
         status, entries = await read_entries(refs, read, write, start)
-        points = [] if fresh else [tuple(p) for p in cached.get("points", [])]
-        points += [(round(e.time), e.temperature) for e in entries if e.temperature is not None]
+        if fresh:
+            old: Series = {}
+        elif migrate:
+            old = {"temperature": [tuple(p) for p in cached.get("points", [])]}
+        else:
+            old = {q: [tuple(p) for p in pts] for q, pts in cached.get("series", {}).items()}
+        first_new = min((e.time for e in entries if e.values), default=None)
         cutoff = time.time() - self.KEEP
-        points = [p for p in points if p[0] >= cutoff]
-        last = max([cached.get("last", 0) if not fresh else 0] + [e.number for e in entries])
-        self.data[dev_id] = {"ref": status.ref_time, "last": last, "points": points}
+        series: Series = {}
+        for q in QUANTITIES:
+            pts = [p for p in old.get(q, []) if first_new is None or p[0] < first_new]
+            pts += [(round(e.time), v) for e in entries if (v := e.value(q)) is not None]
+            pts = [p for p in pts if p[0] >= cutoff]
+            if pts:
+                series[q] = pts
+        last = max([0 if fresh else cached.get("last", 0)] + [e.number for e in entries])
+        self.data[dev_id] = {"ref": status.ref_time, "last": last, "series": series}
         self._save()
-        return points
+        return series
 
 
 def bucket(points: list[tuple[float, float]], since: float, until: float, n: int = 240) -> list[tuple[float, float]]:

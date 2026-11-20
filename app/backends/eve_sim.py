@@ -59,7 +59,7 @@ class EveHistorySim:
             else:
                 _, t, values = self.entries[self.current - 2]
                 bitmap = (1 << len(values)) - 1
-                data = b"".join(struct.pack("<h" if length == 2 else "<b", v)
+                data = b"".join(struct.pack(("<h" if tag == 0x01 else "<H") if length == 2 else "<b", v)
                                 for (tag, length), v in zip(self.fingerprint, values))
                 out += struct.pack("<BIIB", 10 + len(data), self.current, int(t) - EPOCH_2001 - self.ref, bitmap) + data
             self.current += 1
@@ -76,3 +76,9 @@ def demo_temperatures(now: float, base: float, swing: float, days: int = 30, ste
         out.append((t, round(base + drift + swing * math.sin((hours - 9) / 24 * 2 * math.pi), 2)))
         t += step
     return out
+
+
+def demo_pressure(t: float) -> float:
+    """Air pressure in hPa drifting slowly over the days, like weather fronts passing."""
+    days = t / 86400
+    return round(1013 + 9 * math.sin(days / 2.3) + 4 * math.sin(days / 0.9), 1)

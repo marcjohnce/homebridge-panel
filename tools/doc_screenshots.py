@@ -327,7 +327,7 @@ def detail_views(p: Panel, out: Path, suffix: str, size: str) -> None:
         (2, [p.rect("reading:temp")], "Temperature", "bottom"),
         (3, [p.rect("reading:humidity")], "Humidity", "bottom"),
         (4, [p.rect("reading:pressure")], "Air pressure", "bottom"),
-        (5, [p.rect("detailHistory")], "History: temperature chart"),
+        (5, [p.rect("detailHistory")], "History: charts of the readings"),
     ], f"Weather station – {size}"), out, f"sensor{suffix}")
     tab = p.rect("detailHistory")
     p.click(tab.center().x(), tab.center().y())
@@ -335,13 +335,18 @@ def detail_views(p: Panel, out: Path, suffix: str, size: str) -> None:
     seven = p.rect("historyRange:7")
     p.click(seven.center().x(), seven.center().y())
     wait(600)
+    hum = p.rect("historyKind:humidity")
+    p.click(hum.center().x(), hum.center().y())
+    wait(400)
     plot = p.rect("historyPlot")
     p.click(plot.x() + plot.width() * 0.62, plot.center().y())
     save(annotate(p.grab(), [
-        (1, [p.rect("historyRange:1"), p.rect("historyRange:30")], "24 hours, 7 or 30 days"),
-        (2, [p.rect("historyRange")], "Lowest and highest value", "right"),
-        (3, [p.rect("historyProbe")], "Touch the chart: time and value", "right"),
-    ], f"Temperature history – {size}"), out, f"history{suffix}")
+        (1, [p.rect("historyKind:temperature"), p.rect("historyKind:pressure")],
+         "Temperature, humidity or air pressure", "top"),
+        (2, [p.rect("historyRange:1"), p.rect("historyRange:30")], "24 hours, 7 or 30 days", "top"),
+        (3, [p.rect("historyRange")], "Lowest and highest value", "right"),
+        (4, [p.rect("historyProbe")], "Touch the chart: time and value", "right"),
+    ], f"History – {size}"), out, f"history{suffix}")
     p.win.setProperty("openDevice", "")
     wait(200)
     p.win.setProperty("openDevice", p.device_id("Hall Light Sensor"))
