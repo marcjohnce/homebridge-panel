@@ -64,6 +64,9 @@ FIELDS = [
           options=(("auto", "System"), *LANGUAGES.items())),
     Field("idle_seconds", "display", "Screen saver after", "choice", 120,
           options=((0, "Never"), (60, "1 min"), (120, "2 min"), (300, "5 min"), (900, "15 min"))),
+    Field("display_off", "display", "Display off after", "choice", 0,
+          help="Time after the screen saver starts; a touch or an alarm switches it on again",
+          options=((0, "Never"), (300, "5 min"), (900, "15 min"), (1800, "30 min"), (3600, "1 h"))),
     # the panel turns its picture itself: cheaper than rotating the screen in the desktop
     Field("upside_down", "display", "Upside down", "toggle", False,
           help="Turns the picture by 180° for a display mounted the other way round; touch follows"),

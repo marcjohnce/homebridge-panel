@@ -121,6 +121,16 @@ class Panel:
             p = p.parentItem()
         return r
 
+    def tap(self, name: str, flick: str = "settingsFlick") -> None:
+        """Scrolls the item into view (if it is below the visible part) and taps it."""
+        f = self.item(flick)
+        top = self.item(name).mapToItem(f.property("contentItem"), QPointF(0, 0)).y()
+        if top + self.item(name).height() > f.property("contentY") + f.height():
+            f.setProperty("contentY", max(0, top - 100))
+            wait(200)
+        r = self.rect(name)
+        self.click(r.center().x(), r.center().y())
+
     def click(self, x: float, y: float) -> None:
         QTest.mouseClick(self.win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPointF(x, y).toPoint())
 
@@ -385,8 +395,7 @@ def main() -> int:
         (4, [p.rect("applyButton")], "Apply", "bottom"),
     ], "Settings"), out, "settings")
 
-    rooms_row = p.rect("row:rooms_page")
-    p.click(rooms_row.center().x(), rooms_row.center().y())
+    p.tap("row:rooms_page")
     wait(400)
     rooms_flick = p.item("roomsFlick")
     rooms_flick.setProperty("contentY", max(0, rooms_flick.property("contentHeight") - rooms_flick.height()))
@@ -518,8 +527,7 @@ def main() -> int:
     p.win.setProperty("openDevice", "")
     p.win.setProperty("settingsOpen", True)
     wait(300)
-    rooms_row = p.rect("row:rooms_page")
-    p.click(rooms_row.center().x(), rooms_row.center().y())
+    p.tap("row:rooms_page")
     wait(400)
     dev = next(d for d in p.ctl.roomEditor.devices if d["id"] == gid)
     QMetaObject.invokeMethod(p.engine.rootObjects()[0].findChild(QObject, "switchGroupEditor"), "edit",
@@ -613,8 +621,7 @@ def main() -> int:
     ], "Battery almost empty"), out, "battery-tile")
     p.win.setProperty("settingsOpen", True)
     wait(300)
-    row = p.rect("row:batteries_page")
-    p.click(row.center().x(), row.center().y())
+    p.tap("row:batteries_page")
     wait(400)
     save(annotate(p.grab(), [
         (1, [p.rect(f"batteryRow:{leak}")], "Almost empty ones first, in red", "right"),

@@ -47,6 +47,8 @@ echo "==> Installing Smart Home Panel in $DIR (user: $USER_NAME)"
 sudo apt-get update -qq
 sudo apt-get install -y -qq python3-venv python3-pip \
   libegl1 libgles2 libxkbcommon0 libxkbcommon-x11-0 libxcb-cursor0 libfontconfig1 libdbus-1-3
+# switching the display off (Settings → Display → Display off after): wlopm on Wayland
+sudo apt-get install -y -qq wlopm 2>/dev/null || true
 
 [ -d "$DIR/.venv" ] || python3 -m venv "$DIR/.venv"
 "$DIR/.venv/bin/pip" install -q --upgrade pip
@@ -69,6 +71,14 @@ polkit.addRule(function(action, subject) {
     }
 });
 EOF
+
+# Allow this user to switch the display's backlight off and on (Display off after)
+sudo tee /etc/udev/rules.d/99-smarthome-panel-backlight.rules >/dev/null <<'EOF'
+SUBSYSTEM=="backlight", ACTION=="add", RUN+="/bin/chgrp video /sys/class/backlight/%k/brightness /sys/class/backlight/%k/bl_power", RUN+="/bin/chmod g+w /sys/class/backlight/%k/brightness /sys/class/backlight/%k/bl_power"
+EOF
+sudo usermod -aG video "$USER_NAME"
+sudo udevadm control --reload-rules 2>/dev/null || true
+sudo udevadm trigger --subsystem-match=backlight --action=add 2>/dev/null || true
 
 # Application menu entry
 APPS="$HOME_DIR/.local/share/applications"

@@ -359,7 +359,7 @@ devices:
 
 | # | Element | What it does |
 |---|---|---|
-| 1 | Display | *Appearance* (Automatic, Light, Dark, Dark blue), *Language*, *Screen saver after* and *Upside down* (turns the picture and touch by 180° for a display mounted the other way round). Saved immediately |
+| 1 | Display | *Appearance* (Automatic, Light, Dark, Dark blue), *Language*, *Screen saver after*, *Display off after* and *Upside down* (turns the picture and touch by 180° for a display mounted the other way round). Saved immediately |
 | 2 | Rooms and devices | Opens the room management (see below); shows the number of rooms |
 | – | Security | *PIN to disarm* the alarm system: 4 to 8 digits, empty for none. Saved immediately |
 | – | Homebridge | *Connect to Homebridge*, *Address*, *Port* and *PIN* (further down). Changes are collected until you apply them |
@@ -537,6 +537,14 @@ reboot, also without a desktop session. If it is missing, the panel shows
 After the time set under *Screen saver after*, the panel shows a large clock with the
 indoor temperature. The first touch only wakes the panel and does not trigger anything
 underneath.
+
+*Display off after* switches the display off completely some time after the screen saver
+started (5, 15 or 30 minutes or 1 hour). A touch switches it on again – like waking the screen
+saver it does not trigger anything – and so does an alarm (leak, glass break, smoke, CO).
+The panel turns off the backlight where the display has one (DSI displays such as the Raspberry
+Pi Touch Display or Waveshare DSI LCDs; `deploy/install.sh` allows this for the panel user –
+run it again after updating, then reboot), otherwise it switches the screen off through the
+desktop (`wlopm` on Wayland, `xset` on X11).
 
 ![Screen saver](images/screensaver.png)
 
