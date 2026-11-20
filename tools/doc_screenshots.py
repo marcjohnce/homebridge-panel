@@ -467,8 +467,9 @@ def main() -> int:
     save(annotate(p.grab(), [
         (1, [p.rect("section:system")], "System", "left"),
         (2, [p.rect("action:update")], "Software update: install a new release", "right"),
-        (3, [p.rect("action:restart_app")], "Restart app", "right"),
-        (4, [p.rect("action:reboot")], "Restart Raspberry Pi", "right"),
+        (3, [p.rect("row:backups_page")], "Backups", "right"),
+        (4, [p.rect("action:restart_app")], "Restart app", "right"),
+        (5, [p.rect("action:reboot")], "Restart Raspberry Pi", "right"),
     ], "Settings: System"), out, "settings-system")
 
     reboot = p.rect("action:reboot")
@@ -478,6 +479,22 @@ def main() -> int:
         (1, [p.rect("confirmCancel")], "Cancel", "bottom"),
         (2, [p.rect("confirmOk")], "Restart", "bottom"),
     ], "Confirmation"), out, "confirm-restart")
+    p.key(Qt.Key.Key_Escape)
+    wait(300)
+
+    p.ctl.settings.createBackup()
+    wait(1100)                              # a second one with another time
+    p.ctl.roomEditor.saveDevice(p.device_id("Coffee Maker"), {"favorite": True})
+    p.ctl.settings.createBackup()
+    p.tap("row:backups_page")
+    wait(500)
+    first = p.ctl.settings.backups[0]["name"]
+    save(annotate(p.grab(), [
+        (1, [p.rect("createBackup")], "Create backup", "left"),
+        (2, [p.rect(f"backup:{first}")], "Backup: date and what it holds", "left"),
+        (3, [p.rect(f"restore:{first}")], "Restore (asks first, then the app restarts)", "top"),
+        (4, [p.rect(f"deleteBackup:{first}")], "Delete", "right"),
+    ], "Backups"), out, "backups")
     p.key(Qt.Key.Key_Escape)
     p.win.setProperty("settingsOpen", False)
 

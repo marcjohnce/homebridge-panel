@@ -356,9 +356,12 @@ def test_rooms_page_rename_with_keyboard(qapp, tmp_path):
     pump_until(lambda: False, timeout=0.3)
     down = item("deviceDown:" + target)
     spot = down.mapToScene(QPointF(down.width() / 2, down.height() / 2)).toPoint()
+    busy = win.findChild(QObject, "busyPopup")
     for expected in (2, 3, 4):
         QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, spot)
         assert pump_until(lambda: [d["id"] for d in ed.devices if d["room"] == room].index(target) == expected)
+        # the "Saving …" popup blocks taps until it is gone (a person is never this fast)
+        assert pump_until(lambda: not busy.property("visible"))
     ctl.shutdown()
     win.close()
     qapp.removeTranslator(translator)
@@ -1228,3 +1231,30 @@ def test_display_off_after_screen_saver(qapp, tmp_path):
     win.close()
     engine.deleteLater()
     pump_until(lambda: False, timeout=0.3)
+
+
+def test_backup_and_restore_in_the_settings(qapp, tmp_path):
+    ctl = make_controller(tmp_path)
+    calls, messages = [], []
+    ctl._exec = lambda path, argv: calls.append(argv)
+    ctl.restarting.connect(messages.append)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 29)
+    s = ctl.settings
+    assert s.backups == []
+    assert ctl.roomEditor.saveDevice("demo:coffee", {"favorite": True, "name": "Espresso"}) == ""
+    assert s.createBackup() == ""
+    [b] = s.backups
+    assert b["favorites"] == 1 and "1 favorite" in b["text"] and s.backupFolder.endswith("backups")
+
+    assert ctl.roomEditor.saveDevice("demo:coffee", {"favorite": False, "name": ""}) == ""
+    assert s.save({"theme": "dark"}) == {}
+    assert s.restoreBackup("../settings.json").startswith("Restore failed")
+    assert s.restoreBackup(b["name"]) == ""
+    assert pump_until(lambda: calls)                                # restarts to load them
+    assert messages == ["Settings restored. Restarting the app …"]
+    restored = SettingsStore(tmp_path / "settings.json")
+    assert restored.rooms["favorites"] == ["demo:coffee"] and restored.rooms["names"]["demo:coffee"] == "Espresso"
+    assert restored.get("theme") != "dark"
+    s.deleteBackup(b["name"])
+    assert s.backups == []

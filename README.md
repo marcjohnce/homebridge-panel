@@ -64,6 +64,7 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 - **Light / dark / dark blue / automatic** appearance and a **screen saver** with a large clock
 - **Settings page** for appearance, screen saver and the Homebridge connection (address, port, PIN)
   with keypad, connection test and apply without restart; **restart** the app or the Raspberry Pi
+- **Backups** of the panel settings (rooms, names, favorites, groups, connection), restored with one tap
 - **Updates** from the settings: new stable releases are found automatically and installed with one tap
 - Optimized for **1280×800** and **720×720**; also works on 800×480, 1024×600, 1280×720 and portrait displays
 
@@ -171,7 +172,7 @@ In the app (icon at the bottom left), stored in `~/.config/smarthome-panel/setti
 | Homebridge | Connect to Homebridge (on/off) | saved with **Apply** |
 | Homebridge | Address (IP or host name), port, PIN | saved with **Apply**, try **Test connection** first |
 | MQTT | Connect to an MQTT broker, address, port, protocol, user name, password, Test | saved with **Apply** |
-| System | Restart app, Restart Raspberry Pi | buttons with a confirmation dialog |
+| System | Software update; Backups: create, restore and delete backups of the panel settings (`~/.config/smarthome-panel/backups/`); Restart app, Restart Raspberry Pi | buttons with a confirmation dialog |
 
 Entries are validated (port 1–65535, PIN as 123-45-678, valid IP address or host name).
 After **Apply** the app reconnects without restarting.

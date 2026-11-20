@@ -100,6 +100,8 @@ FIELDS = [
           help="Tries the entered values without saving them", button="Test"),
     # Software update: state and button come from the controller (Controller.updateInfo)
     Field("update", "system", "Software update", "update", None),
+    Field("backups_page", "system", "Backups", "page", None,
+          help="Save the panel settings and restore them later"),
     # Actions are buttons, not stored values. The controller runs them (Controller.run_action).
     Field("restart_app", "system", "Restart app", "action", None,
           help="Reloads the panel and reconnects to Homebridge",
