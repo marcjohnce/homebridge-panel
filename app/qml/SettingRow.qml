@@ -142,6 +142,9 @@ Item {
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.field.key === "rooms_page" ? panel.roomEditor.summary
+                    : root.field.key === "backups_page"
+                      ? (panel.settings.backups.length === 1 ? qsTr("1 backup")
+                         : qsTr("%1 backups").arg(panel.settings.backups.length))
                     : root.field.key === "batteries_page"
                       ? (panel.lowBatteryCount > 0 ? qsTr("%1 almost empty").arg(panel.lowBatteryCount)
                          : panel.batteries.length > 0 ? qsTr("All OK") : qsTr("No battery devices"))

@@ -251,6 +251,18 @@ Rectangle {
         }
     }
 
+    Loader {
+        anchors.fill: parent
+        active: root.subPage === "backups_page"
+        sourceComponent: BackupsPage {
+            objectName: "backupsPage"
+            onClosed: {
+                root.subPage = "";
+                root.forceActiveFocus();
+            }
+        }
+    }
+
     Keypad {
         id: keypad
         objectName: "keypad"

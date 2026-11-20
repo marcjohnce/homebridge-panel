@@ -28,6 +28,7 @@ from ..rooms import BUILTIN_DEFAULT, RoomLayout
 from ..scheduler import Scheduler
 from ..updater import UpdateError, Updater
 from ..eve_history import TemperatureHistory, bucket
+from ..backup import BackupError, Backups
 from ..display_power import DisplayPower
 from ..settings import ACTIONS, SettingsStore, apply_to_config, validate
 from ..models import AREAS, KIND_ICONS, KIND_KEYS, QUIET_KINDS
@@ -279,11 +280,64 @@ class DeviceModel(QAbstractListModel):
 class SettingsBridge(QObject):
     sectionsChanged = Signal()
     testFinished = Signal(bool, str)
+    backupsChanged = Signal()
 
     def __init__(self, store: SettingsStore, controller: "Controller"):
         super().__init__(controller)
         self._store = store
         self._ctl = controller
+        self._backups = Backups(store.path, __version__)
+
+    # ---------- backups (Settings → System → Backups) ----------
+    @Property("QVariantList", notify=backupsChanged)
+    def backups(self) -> list[dict[str, Any]]:
+        """Newest first, with a short text of what each one contains."""
+        def plural(n: int, one: str, many: str) -> str:
+            return one if n == 1 else many.format(n=n)
+        out = []
+        for b in self._backups.list():
+            parts = [plural(b["rooms"], tr("1 room"), tr("{n} rooms")),
+                     plural(b["favorites"], tr("1 favorite"), tr("{n} favorites"))]
+            if b["groups"]:
+                parts.append(plural(b["groups"], tr("1 group"), tr("{n} groups")))
+            if b["virtual"]:
+                parts.append(plural(b["virtual"], tr("1 virtual device"), tr("{n} virtual devices")))
+            out.append({**b, "text": ", ".join(parts)})
+        return out
+
+    @Property(str, constant=True)
+    def backupFolder(self) -> str:
+        return str(self._backups.folder)
+
+    @Slot(result=str)
+    def createBackup(self) -> str:
+        """Saves the current settings; returns an error text or ""."""
+        try:
+            self._store.save()                  # what is on screen is what gets saved
+            self._backups.create()
+        except (BackupError, OSError) as e:
+            return tr("Backup failed: {error}").format(error=e)
+        self.backupsChanged.emit()
+        return ""
+
+    @Slot(str, result=str)
+    def restoreBackup(self, name: str) -> str:
+        """Puts the settings of a backup back and restarts the app to load them."""
+        try:
+            self._backups.restore(name)
+        except BackupError as e:
+            return tr("Restore failed: {error}").format(error=e)
+        self._ctl.restarting.emit(tr("Settings restored. Restarting the app …"))
+        QTimer.singleShot(600, self._ctl._restart_app)
+        return ""
+
+    @Slot(str)
+    def deleteBackup(self, name: str) -> None:
+        try:
+            self._backups.delete(name)
+        except BackupError as e:
+            self._ctl.toast.emit(str(e))
+        self.backupsChanged.emit()
 
     @Property("QVariantList", notify=sectionsChanged)
     def sections(self) -> list[dict[str, Any]]:

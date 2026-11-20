@@ -499,7 +499,7 @@ Tapping *Address*, *Port* or *PIN* opens a keypad.
 
 A connected keyboard works as well, including letters for host names.
 
-### System: update and restart
+### System: update, backups and restart
 
 At the bottom of the settings page, above *Info*.
 
@@ -509,8 +509,9 @@ At the bottom of the settings page, above *Info*.
 |---|---|---|
 | 1 | System | Actions that act on the app or the device |
 | 2 | Software update | Shows whether a new release is available. *Check now* looks again; *Install* (after a confirmation) installs it and restarts the app |
-| 3 | Restart app | Closes and starts the panel again with the same options and reconnects to Homebridge – useful after editing `config.yaml` |
-| 4 | Restart Raspberry Pi | Reboots the device; the panel is back after about a minute |
+| 3 | Backups | Saves the panel settings and puts them back later, see [Backups](#backups) |
+| 4 | Restart app | Closes and starts the panel again with the same options and reconnects to Homebridge – useful after editing `config.yaml` |
+| 5 | Restart Raspberry Pi | Reboots the device; the panel is back after about a minute |
 
 The panel looks for updates on GitHub a minute after it starts and then once a day. Only
 stable releases count – pre-releases and the latest commits on `main` are not offered. The
@@ -531,6 +532,27 @@ Both restart buttons ask before they run. While restarting, the panel shows *Res
 Rebooting needs permission. `deploy/install.sh` installs a rule that allows the panel user to
 reboot, also without a desktop session. If it is missing, the panel shows
 *Restart not allowed* – run the install script again.
+
+### Backups
+
+*Settings → System → Backups* saves everything set up on the panel: rooms and their order,
+device names and kinds, favorites, light and switch groups, virtual devices, the display
+settings, the Homebridge and MQTT connection and the alarm PIN. A backup is only made when you
+tap *Create backup*.
+
+![Backups](images/backups.png)
+
+| # | Element | What it does |
+|---|---|---|
+| 1 | Create backup | Saves the current settings as a new backup |
+| 2 | Backup | When it was made and what it holds (rooms, favorites, groups, virtual devices) |
+| 3 | Restore | After a confirmation the current settings are replaced by the backup and the app restarts |
+| 4 | Delete | Removes the backup (after a confirmation) |
+
+The backups are kept on the Pi in `~/.config/smarthome-panel/backups/` (one JSON file each), next
+to the settings. To move the settings to another panel, copy a backup file into the same folder
+there and restore it. `config.yaml` (scenes, schedules) and the temperature history are not
+part of a backup.
 
 ## Screen saver
 
