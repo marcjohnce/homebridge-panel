@@ -362,7 +362,8 @@ devices:
 |---|---|---|
 | 1 | Display | *Appearance* (Automatic, Light, Dark, Dark blue), *Language*, *Screen saver after*, *Display off after* and *Upside down* (turns the picture and touch by 180° for a display mounted the other way round). Saved immediately |
 | 2 | Rooms and devices | Opens the room management (see below); shows the number of rooms |
-| – | Security | *PIN to disarm* the alarm system: 4 to 8 digits, empty for none. Saved immediately |
+| – | Security | *PIN to disarm* the alarm system: 4 to 8 digits, empty for none. Also asked for when unlocking doors and for the Wi-Fi code. Saved immediately |
+| – | Wi-Fi for guests | *Wi-Fi QR code* (see [Wi-Fi for guests](#wi-fi-for-guests)), *Network name* and *Wi-Fi password*. Saved immediately |
 | – | Homebridge | *Connect to Homebridge*, *Address*, *Port* and *PIN* (further down). Changes are collected until you apply them |
 | 3 | Test connection | Tries the entered address, port and PIN without saving and reports how many devices were found |
 | 4 | Apply | Saves the Homebridge settings and reconnects without restarting the app. Enabled only when something changed |
@@ -500,6 +501,40 @@ Tapping *Address*, *Port* or *PIN* opens a keypad.
 | 4 | Done | Checks the entry and takes it over; *Cancel* or Esc discards it |
 
 A connected keyboard works as well, including letters for host names.
+
+### Wi-Fi for guests
+
+Shows the Wi-Fi as a QR code: guests point the phone camera at it and join without typing the
+password. The code only appears after the PIN of the panel (*Security → PIN to disarm*); without
+a PIN set, the page asks to set one first.
+
+![Settings: Wi-Fi for guests](images/settings-wifi.png)
+
+| # | Element | What it does |
+|---|---|---|
+| 1 | Wi-Fi QR code | Opens the page with the PIN entry |
+| 2 | Network name | Empty: the Wi-Fi the panel is connected to. Enter a separate guest network here to share that one instead |
+| 3 | Wi-Fi password | Password of the network above, or of the current Wi-Fi if the panel cannot read it (see below) |
+
+![Wi-Fi QR code: PIN](images/wifi-pin.png)
+
+![Wi-Fi QR code](images/wifi-code.png)
+
+| # | Element | What it does |
+|---|---|---|
+| 1 | QR code | Read by the camera app of iPhones and Android phones; the phone offers to join the network |
+| 2 | Network, password | For devices without a camera, e.g. a laptop |
+| 3 | Hide | Hides the code again; it also disappears by itself after two minutes, so the PIN is asked again |
+
+The panel reads the current network and its password from NetworkManager (`nmcli`, Raspberry Pi
+OS Bookworm and later). The password is a "secret" there: the user logged in on the desktop may
+read it, a panel started as a service without a desktop session usually not. Then the page says
+so – enter the password under *Wi-Fi password*. On older systems without NetworkManager the name
+comes from `iwgetid` and the password from `/etc/wpa_supplicant/wpa_supplicant.conf` if that file
+is readable.
+
+Note: anyone at the panel can open the settings and change the PIN there; the PIN keeps the
+password from being read in passing, it is not a lock on the settings.
 
 ### System: update, backups and restart
 

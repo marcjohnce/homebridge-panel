@@ -4,3 +4,4 @@ httpx>=0.27
 pydantic>=2.6
 PyYAML>=6.0
 paho-mqtt>=2.0
+segno>=1.5

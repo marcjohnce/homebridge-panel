@@ -1297,6 +1297,82 @@ def test_display_off_after_screen_saver(qapp, tmp_path):
     pump_until(lambda: False, timeout=0.3)
 
 
+def test_wifi_code_needs_the_pin(qapp, tmp_path):
+    ctl = make_controller(tmp_path)
+    assert ctl.wifiCode("1234")["error"] == "Set a PIN under Security first."
+    assert ctl.settings.save({"alarm_pin": "1234", "wifi_ssid": "Guests", "wifi_password": "welcome"}) == {}
+    wrong = ctl.wifiCode("9999")
+    assert wrong["error"] == "Wrong PIN" and wrong["wrong_pin"] and "image" not in wrong
+    ok = ctl.wifiCode("1234")
+    assert (ok["error"], ok["ssid"], ok["password"]) == ("", "Guests", "welcome")
+    assert ok["image"].startswith("data:image/png;base64,")
+    ctl.shutdown()
+
+
+def test_wifi_page(qapp, tmp_path):
+    from PySide6.QtCore import QObject, QPointF, Qt
+    from PySide6.QtQml import QQmlApplicationEngine
+    from PySide6.QtQuick import QQuickWindow
+    from PySide6.QtTest import QTest
+    from shiboken6 import Shiboken
+    from app.qt.main import QML_DIR
+
+    ctl = make_controller(tmp_path)
+    assert ctl.settings.save({"alarm_pin": "2468", "wifi_ssid": "Guests", "wifi_password": "welcome"}) == {}
+    engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty("panel", ctl)
+    engine.rootContext().setContextProperty("initialWidth", 1024)
+    engine.rootContext().setContextProperty("initialHeight", 600)
+    engine.load(QML_DIR / "Main.qml")
+    win = Shiboken.wrapInstance(Shiboken.getCppPointer(engine.rootObjects()[0])[0], QQuickWindow)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 29)
+    busy = win.findChild(QObject, "busyPopup")
+
+    def find(name, item=None):
+        for child in (item or win.contentItem()).childItems():
+            if child.objectName() == name and child.isVisible():
+                return child
+            if (hit := find(name, child)) is not None:
+                return hit
+        return None
+
+    def tap(name):
+        assert pump_until(lambda: find(name) is not None), name
+        assert pump_until(lambda: not busy.property("visible"))
+        it = find(name)
+        p = it.mapToScene(QPointF(it.width() / 2, it.height() / 2)).toPoint()
+        QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, p)
+
+    def pin(digits):
+        for d in digits:
+            QTest.keyClick(win, getattr(Qt.Key, f"Key_{d}"))
+
+    tap("settingsButton")
+    assert pump_until(lambda: find("row:wifi_page") is not None)
+    row, flick = find("row:wifi_page"), find("settingsFlick")
+    flick.setProperty("contentY", row.mapToItem(flick.property("contentItem"), QPointF(0, 0)).y() - 100)
+    pump_until(lambda: False, timeout=0.2)
+    tap("row:wifi_page")
+    assert pump_until(lambda: find("wifiPin") is not None)
+    pin("1111")
+    tap("wifiShow")
+    assert pump_until(lambda: find("wifiPin").property("error") == "Wrong PIN")
+    assert find("wifiQr") is None
+    pin("2468")
+    tap("wifiShow")
+    assert pump_until(lambda: find("wifiQr") is not None)
+    assert find("wifiSsid").property("text") == "Guests" and find("wifiPassword").property("text") == "welcome"
+    assert pump_until(lambda: find("wifiQr").property("implicitWidth") > 20)     # the PNG is decoded
+    tap("wifiHide")
+    assert pump_until(lambda: find("wifiQr") is None and find("wifiPin") is not None)
+    assert find("wifiPin").property("entry") == ""                         # the PIN is asked again
+    ctl.shutdown()
+    win.close()
+    engine.deleteLater()
+    pump_until(lambda: False, timeout=0.3)
+
+
 def test_backup_and_restore_in_the_settings(qapp, tmp_path):
     ctl = make_controller(tmp_path)
     calls, messages = [], []

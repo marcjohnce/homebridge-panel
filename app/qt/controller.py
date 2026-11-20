@@ -32,6 +32,7 @@ from ..backup import BackupError, Backups
 from ..display_power import DisplayPower
 from ..settings import ACTIONS, SettingsStore, apply_to_config, validate
 from ..models import AREAS, KIND_ICONS, KIND_KEYS, QUIET_KINDS
+from ..wifi import WifiError, guest_wifi, qr_image
 from . import format as fmt
 from .format import (air_warning, alert_level, battery_low, battery_text, category, fmt_temp, has_detail,
                      short_name, state_text)
@@ -1296,6 +1297,24 @@ class Controller(QObject):
     @Property(bool, notify=alarmPinChanged)
     def alarmPinSet(self) -> bool:
         return bool(self.store.get("alarm_pin"))
+
+    @Slot(str, result="QVariantMap")
+    def wifiCode(self, pin: str) -> dict[str, Any]:
+        """Wi-Fi for guests as a QR code, only with the PIN: {error, wrong_pin, ssid, password,
+        image (PNG data URI)}."""
+        want = str(self.store.get("alarm_pin") or "")
+        if not want:
+            return {"error": tr("Set a PIN under Security first.")}
+        if pin != want:
+            return {"error": tr("Wrong PIN"), "wrong_pin": True}
+        try:
+            wifi = guest_wifi(str(self.store.get("wifi_ssid") or ""), str(self.store.get("wifi_password") or ""))
+        except WifiError as e:
+            log.info("Wi-Fi code: %s", e)
+            if str(e) == "password unknown":
+                return {"error": tr("The password of the current Wi-Fi cannot be read. Enter it under Settings → Wi-Fi for guests.")}
+            return {"error": tr("The panel is not connected to a Wi-Fi. Enter a network under Settings → Wi-Fi for guests.")}
+        return {"error": "", "ssid": wifi.ssid, "password": wifi.password, "image": qr_image(wifi.uri())}
 
     @Slot(str, str, result=str)
     def disarm(self, dev_id: str, pin: str) -> str:
