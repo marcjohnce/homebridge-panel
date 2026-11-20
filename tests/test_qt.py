@@ -1160,6 +1160,7 @@ def test_busy_feedback_while_opening_and_saving(qapp, tmp_path):
 
     def tap(name):
         assert pump_until(lambda: find(name) is not None), name
+        assert pump_until(lambda: not popup.property("visible"))    # a closing popup still takes taps
         it = find(name)
         p = it.mapToScene(QPointF(it.width() / 2, it.height() / 2)).toPoint()
         QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, p)

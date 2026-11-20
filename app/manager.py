@@ -130,6 +130,8 @@ class DeviceManager:
             asyncio.get_running_loop().call_later(MOVING_POLL, lambda: asyncio.ensure_future(again()))
 
     def _build(self, dev_id: str, backend: Backend, snap: ServiceSnapshot) -> Device | None:
+        if self.cfg.blacklisted(snap.name):
+            return None
         ov = self.cfg.devices.get(dev_id) or self.cfg.devices.get(snap.name)
         if ov and ov.hidden:
             return None

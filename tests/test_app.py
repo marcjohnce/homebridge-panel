@@ -194,6 +194,26 @@ def test_manager_with_demo_backend():
     asyncio.run(run())
 
 
+def test_blacklist_ignores_devices_by_part_of_the_original_name():
+    cfg = demo_cfg(blacklist=["heating", "TV Plug", "  ", ""],
+                   devices={"Kitchen Light": {"name": "Heating Kitchen"}})
+    assert cfg.blacklisted("Bathroom Heating") and cfg.blacklisted("tv plug") and not cfg.blacklisted("Kitchen Light")
+    assert AppConfig.model_validate({"blacklist": None}).blacklist == []
+    assert AppConfig.model_validate({"blacklist": "Fan"}).blacklist == ["Fan"]
+
+    async def run():
+        m = DeviceManager(cfg, create_backends(cfg))
+        await m.start()
+        names = {m.snapshots[d][1].name for d in m.devices}
+        assert not any("Heating" in n for n in names) and "TV Plug" not in names
+        assert "Kitchen Light" in names           # the new display name does not count
+        assert len(m.devices) > 20                # empty entries hide nothing
+        with pytest.raises(DeviceNotFound):
+            await m.command("Bathroom Heating", {"mode": "heat"})
+        await m.stop()
+    asyncio.run(run())
+
+
 def test_scheduler_due():
     cfg = AppConfig.model_validate({"schedules": [
         {"time": "06:30", "days": ["Mo", "Di"], "scene": "a"},  # "Di" = German alias for "tu"

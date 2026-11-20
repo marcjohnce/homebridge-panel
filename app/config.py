@@ -147,8 +147,30 @@ class AppConfig(BaseModel):
     mqtt: MqttConfig | None = None
     virtual: list[VirtualDevice] = []
     devices: dict[str, DeviceOverride] = {}
+    blacklist: list[str] = Field(
+        [], description="Devices whose original name contains one of these texts are ignored completely "
+                        "(case doesn't matter)")
     scenes: list[Scene] = []
     schedules: list[Schedule] = []
+
+    @field_validator("blacklist", mode="before")
+    @classmethod
+    def _blacklist_list(cls, v: Any) -> Any:
+        # a single text or an empty `blacklist:` are accepted; numbers become texts
+        if v is None:
+            return []
+        if isinstance(v, (str, int, float)):
+            v = [v]
+        return [str(x) for x in v if x is not None] if isinstance(v, list) else v
+
+    def blacklisted(self, name: str) -> bool:
+        """True if the original device name contains a text of the blacklist (empty entries are ignored)."""
+        name = name.casefold()
+        return any(b in name for b in self._blacklist_texts)
+
+    @property
+    def _blacklist_texts(self) -> list[str]:
+        return [b.casefold() for b in self.blacklist if b.strip()]
 
 
 def _expand_env(obj: Any) -> Any:
