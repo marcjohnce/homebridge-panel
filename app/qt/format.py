@@ -257,6 +257,8 @@ def state_text(d: dict[str, Any]) -> str:
     s = d.get("state", {})
     if d["type"] == "value":
         return value_text(d)
+    if d["type"] == "wifi":          # the Wi-Fi tile: name of the guest network
+        return s.get("ssid", "")
     if d["type"] == "alarm":
         return alarm_text(s)
     if d["type"] == "valve":

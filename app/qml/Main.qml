@@ -160,6 +160,9 @@ ApplicationWindow {
         function onConfirmRequested(id) {
             openCloseConfirm.ask(id);
         }
+        function onWifiRequested() {
+            wifiCode.show();
+        }
         function onRestarting(message) {
             restartOverlay.message = message;
         }
@@ -168,6 +171,11 @@ ApplicationWindow {
     OpenCloseConfirm {
         id: openCloseConfirm
         objectName: "openCloseDialog"
+    }
+
+    WifiCodeDialog {
+        id: wifiCode
+        objectName: "wifiDialog"
     }
 
     // spinner while a page is built or something is saved (Busy.run)
