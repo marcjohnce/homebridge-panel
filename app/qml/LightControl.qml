@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 
-// Lights and fans: brightness/speed, color, white tone and power
+// Lights, fans, switches and plugs: brightness/speed, color, white tone, power draw and power button
 ColumnLayout {
     id: root
 
@@ -37,6 +37,46 @@ ColumnLayout {
         spacing: 0
 
         Item { Layout.fillWidth: true }
+
+        // plugs that measure: power now and total consumption
+        Row {
+            objectName: "powerReadings"
+            visible: root.st.power !== undefined && root.st.power !== null
+            Layout.alignment: Qt.AlignVCenter
+            spacing: Theme.s(72)
+            Repeater {
+                model: [{ key: "power", label: qsTr("Power now"),
+                          value: Theme.num(root.st.power || 0, (root.st.power || 0) < 10 ? 1 : 0), unit: "W" },
+                        { key: "energy", label: qsTr("Total consumption"),
+                          value: Theme.num(root.st.energy || 0, 1), unit: "kWh" }]
+                    .filter(r => root.st[r.key] !== undefined && root.st[r.key] !== null)
+                Column {
+                    required property var modelData
+                    objectName: "reading:" + modelData.key
+                    spacing: Theme.s(4)
+                    Row {
+                        spacing: Theme.s(8)
+                        Text {
+                            text: modelData.value
+                            color: Theme.ink
+                            font.pixelSize: Theme.s(60)
+                            font.weight: Font.Light
+                        }
+                        Text {
+                            anchors.baseline: parent.children[0].baseline
+                            text: modelData.unit
+                            color: Theme.muted
+                            font.pixelSize: Theme.s(22)
+                        }
+                    }
+                    Text {
+                        text: modelData.label
+                        color: Theme.muted
+                        font.pixelSize: Theme.s(16)
+                    }
+                }
+            }
+        }
 
         BrightnessBar {
             objectName: "brightnessBar"

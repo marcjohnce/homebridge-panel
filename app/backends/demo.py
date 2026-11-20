@@ -8,7 +8,7 @@ from typing import Any
 
 from ..hap_types import Char, ServiceSnapshot
 from .base import Backend
-from .eve_sim import THERMO, WEATHER, EveHistorySim, demo_pressure, demo_temperatures
+from .eve_sim import ENERGY, THERMO, WEATHER, EveHistorySim, demo_power, demo_pressure, demo_temperatures
 
 # devices with an Eve history: fingerprint, mean temperature, daily swing and mean humidity
 _HISTORY = {"weather-station": (WEATHER, 5.0, 4.0, 82.0), "living-climate": (WEATHER, 21.0, 0.7, 46.0),
@@ -25,7 +25,8 @@ _DEVICES = [
       ("ColorTemperature", 300, True, dict(min=140, max=500, step=1))]),
     ("coffee", "Outlet", "Coffee Maker", [("On", False, True, {}), ("OutletInUse", False, False, {})]),
     ("tv", "Outlet", "TV Plug", [("On", True, True, {}), ("OutletInUse", True, False, {})]),
-    ("washer", "Outlet", "Washing Machine", [("On", True, True, {}), ("OutletInUse", True, False, {})]),
+    ("washer", "Outlet", "Washing Machine", [("On", True, True, {}), ("OutletInUse", True, False, {}),
+                                             ("EvePower", 384.0, False, {}), ("EveEnergy", 213.4, False, {})]),
     ("heating-living", "Thermostat", "Living Room Heating",
      [("TargetHeatingCoolingState", 1, True, dict(min=0, max=3)), ("CurrentHeatingCoolingState", 1, False, {}),
       ("TargetTemperature", 21.0, True, dict(min=10, max=30, step=0.5)), ("CurrentTemperature", 19.6, False, {})]),
@@ -129,6 +130,9 @@ class DemoBackend(Backend):
                 raw = [(t, [round(v * 100), 2100, 40, 0, 0]) for t, v in demo_temperatures(now, base, swing)]
             self.history[key] = EveHistorySim(fingerprint, raw)
             self._services[key].history = {part: (key, part) for part in ("status", "entries", "request")}
+        # power history of the washing machine plug (fakegato "energy")
+        self.history["washer"] = EveHistorySim(ENERGY, [(t, [round(w * 10)]) for t, w in demo_power(now)])
+        self._services["washer"].history = {part: ("washer", part) for part in ("status", "entries", "request")}
         # input sources of the television: services of their own, linked to it
         for ident, label in ((1, "HDMI 1"), (2, "HDMI 2"), (3, "Netflix")):
             key = f"tv-input-{ident}"

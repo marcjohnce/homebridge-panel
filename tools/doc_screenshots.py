@@ -347,6 +347,27 @@ def detail_views(p: Panel, out: Path, suffix: str, size: str) -> None:
         (3, [p.rect("historyRange")], "Lowest and highest value", "right"),
         (4, [p.rect("historyProbe")], "Touch the chart: time and value", "right"),
     ], f"History – {size}"), out, f"history{suffix}")
+    # plug that measures power: readings and power history (only once, at the detail size)
+    if not suffix:
+        p.win.setProperty("openDevice", "")
+        wait(200)
+        p.win.setProperty("openDevice", p.device_id("Washing Machine"))
+        wait(500)
+        save(annotate(p.grab(), [
+            (1, [p.rect("reading:power")], "Power now", "bottom"),
+            (2, [p.rect("reading:energy")], "Total consumption", "bottom"),
+            (3, [p.rect("detailHistory")], "History: power draw"),
+        ], f"Plug that measures power – {size}"), out, "plug-power")
+        tab = p.rect("detailHistory")
+        p.click(tab.center().x(), tab.center().y())
+        wait(600)
+        seven = p.rect("historyRange:7")
+        p.click(seven.center().x(), seven.center().y())
+        wait(800)
+        save(annotate(p.grab(), [
+            (1, [p.rect("historyRange")], "Highest and consumption in the period", "right"),
+            (2, [p.rect("historyPlot")], "Power draw", "right"),
+        ], f"Power history – {size}"), out, "history-power")
     p.win.setProperty("openDevice", "")
     wait(200)
     p.win.setProperty("openDevice", p.device_id("Hall Light Sensor"))

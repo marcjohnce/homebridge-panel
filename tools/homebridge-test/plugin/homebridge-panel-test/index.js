@@ -136,5 +136,25 @@ class PanelTest {
     for (let i = 150; i >= 1; i--) {
       th.addEntry({ time: now - i * 600, currentTemp: 20 + (i % 10) / 10, setTemp: 21, valvePosition: 40 });
     }
+    // plug that measures like an Eve Energy: watts now, kWh in total and a power history
+    const eve = (name, uuid, unit) => class extends hap.Characteristic {
+      constructor() {
+        super(name, uuid, { format: hap.Formats.FLOAT, unit, minValue: 0, maxValue: 100000, minStep: 0.1,
+                            perms: [hap.Perms.PAIRED_READ, hap.Perms.NOTIFY] });
+        this.value = 0;
+      }
+    };
+    const Watt = eve("Consumption", "E863F10D-079E-48FF-8F27-9C2605A29F52", "W");
+    const KWh = eve("Total Consumption", "E863F10C-079E-48FF-8F27-9C2605A29F52", "kWh");
+    const hp = mk("History Plug");
+    const outlet = hp.add(S.Outlet, "History Plug", [[C.On, true], [C.OutletInUse, true]]);
+    outlet.addCharacteristic(Watt).updateValue(123.4);
+    outlet.addCharacteristic(KWh).updateValue(42.5);
+    Object.assign(hp, { displayName: "History Plug", log: this.log });
+    const eh = new FakeGato("energy", hp, { disableTimer: true, size: 4032 });
+    hp.services.push(eh);
+    for (let i = 144; i >= 1; i--) {
+      eh.addEntry({ time: now - i * 600, power: i % 12 < 3 ? 1500 : 2.5 });
+    }
   }
 }

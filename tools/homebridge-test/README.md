@@ -5,7 +5,7 @@ panel supports: lights (color, white tone), plug, switch, fan, thermostat with b
 window with battery, leak, motion, occupancy, smoke and CO sensors, weather and air quality
 sensors, light sensor, alarm system, valve, garage door, a television with input sources and
 speaker, motorized window and door, speaker, smart speaker, air purifier, humidifier and door lock,
-plus – when `fakegato-history` is installed – a weather sensor and a thermostat with an Eve history. `check.py` runs the panel's device
+plus – when `fakegato-history` is installed – a weather sensor, a thermostat and a power measuring plug (Eve consumption characteristics, fakegato *energy* history) with an Eve history. `check.py` runs the panel's device
 manager against it and checks that every device is recognized and every command arrives.
 
 ```sh

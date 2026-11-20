@@ -34,7 +34,8 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 - **Sensors**: temperature, humidity, air pressure (Eve), light level, air quality, CO₂, fine dust (PM2.5/PM10)
   and VOC; bad air or high CO₂ shown in red; sensors of one device
   combined into one tile; outdoor sensors shown as outdoor temperature
-- **History**: charts of temperature, humidity and air pressure over the last 24 hours, 7 or 30 days for devices with an Eve history
+- **History**: charts of temperature, humidity, air pressure and the power draw of plugs over the last 24 hours, 7 or 30 days for devices with an Eve history
+- **Power measuring plugs** (Eve characteristics): power on the tile, power now and total consumption in kWh
   (plugins built on fakegato-history or homebridge-lib), read over HAP
 - **Security**: window, door, glass break, leak, motion, presence, smoke and CO sensors; open windows and alarms
   first, a leak, glass break, smoke or CO alarm wakes the panel and shows a message

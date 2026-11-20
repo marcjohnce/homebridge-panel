@@ -7,9 +7,9 @@ import time
 
 import pytest
 
-from app.backends.eve_sim import THERMO, WEATHER, EveHistorySim
+from app.backends.eve_sim import ENERGY, THERMO, WEATHER, EveHistorySim
 from app.backends.hap import HapBackend
-from app.eve_history import (EPOCH_2001, DeviceHistory, HistoryError, bucket, parse_entries, parse_status,
+from app.eve_history import (EPOCH_2001, DeviceHistory, HistoryError, bucket, energy_kwh, parse_entries, parse_status,
                              read_entries, request)
 
 
@@ -80,6 +80,26 @@ def test_unknown_layout_is_ignored():
     assert entries[0].temperature is None
     with pytest.raises(HistoryError):
         parse_status(b64(b"\x00\x01"))
+
+
+def test_fakegato_energy_entries_carry_the_power():
+    # fakegato-history "energy": fingerprint 01 02 07 0F, but five two-byte values (bitmap 0x1F),
+    # the third is the power in 1/10 W; temperature and humidity are always 0 and left out
+    fp = [(0x01, 2), (0x02, 2), (0x07, 2), (0x0F, 3)]
+    rec = bytes.fromhex("14") + struct.pack("<II", 2, 600) + b"\x1f" + struct.pack("<hHHHH", 0, 0, 12345, 0, 0)
+    e = parse_entries(b64(rec), fp, 0)[0][0]
+    assert e.value("power") == 1234.5 and e.temperature is None and e.value("humidity") is None
+    now = int(time.time())
+    sim = EveHistorySim(ENERGY, [(now - (6 - i) * 600, [w]) for i, w in enumerate([25, 25, 15000, 15000, 25, 25])])
+    series = asyncio.run(DeviceHistory().update("plug", REFS, *sim_io(sim)))
+    assert set(series) == {"power"} and [v for _, v in series["power"]] == [2.5, 2.5, 1500.0, 1500.0, 2.5, 2.5]
+
+
+def test_energy_from_power():
+    # 1000 W for one hour = 1 kWh; a gap of more than an hour counts as nothing
+    pts = [(0, 1000.0), (1800, 1000.0), (3600, 1000.0), (3600 + 7200, 1000.0)]
+    assert energy_kwh(pts, 0, 3600) == 1.0
+    assert energy_kwh(pts, 0, 20000) == 1.0
 
 
 def test_read_all_entries_of_a_wrapped_ring():

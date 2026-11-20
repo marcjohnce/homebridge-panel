@@ -15,7 +15,9 @@ Eve app uses it to show charts. The protocol (reverse engineered, see those libr
   order of the fingerprint. Bitmap 0x81 is a reference time record (reference time at offset 10).
 
 Used are the temperature (tag 0x01, signed, 1/100 °C), the relative humidity (tag 0x02,
-1/100 %) and the air pressure (tag 0x03, 1/10 hPa).
+1/100 %), the air pressure (tag 0x03, 1/10 hPa) and the power draw of plugs (tag 0x07,
+1/10 W). fakegato-history writes its energy entries with five two-byte values (bitmap 0x1F)
+although its fingerprint lists four (01 02 07 0F); the power is the third of them.
 """
 from __future__ import annotations
 
@@ -35,12 +37,15 @@ EPOCH_2001 = 978307200          # 2001-01-01 00:00:00 UTC in Unix time
 TAG_TEMPERATURE = 0x01
 TAG_HUMIDITY = 0x02
 TAG_PRESSURE = 0x03
+TAG_POWER = 0x07
+FAKEGATO_ENERGY = [(0x01, 2), (0x02, 2), (0x07, 2), (0x0F, 3)]
 # quantity -> (tag, struct format, divisor, plausible range); values outside the range are
 # left out, e.g. the 0 hPa that fakegato-history records for a weather device without a barometer
 QUANTITIES = {
     "temperature": (TAG_TEMPERATURE, "<h", 100, (-60.0, 100.0)),
     "humidity": (TAG_HUMIDITY, "<H", 100, (0.0, 100.0)),
     "pressure": (TAG_PRESSURE, "<H", 10, (300.0, 1200.0)),
+    "power": (TAG_POWER, "<H", 10, (0.0, 6553.5)),
 }
 REF_TIME = 0x81
 MAX_READS = 1000                # 11 entries per read: enough for the usual 4032 entries
@@ -126,7 +131,10 @@ def parse_entries(value: Any, fingerprint: list[tuple[int, int]], ref_time: int)
             out.append(Entry(number, EPOCH_2001 + ref_time))      # no values; counts for the sequence
             continue
         if bitmap >> len(fingerprint):                 # bits the fingerprint does not describe
-            out.append(Entry(number, EPOCH_2001 + ref_time + offset))
+            values = {}
+            if fingerprint == FAKEGATO_ENERGY and bitmap == 0x1F and len(rec) >= 16:
+                values = {TAG_POWER: rec[14:16]}       # only the power: the other values are always 0
+            out.append(Entry(number, EPOCH_2001 + ref_time + offset, values))
             continue
         values: dict[int, bytes] = {}
         p = 10
@@ -240,6 +248,14 @@ class DeviceHistory:
         self.data[dev_id] = {"ref": status.ref_time, "last": last, "series": series}
         self._save()
         return series
+
+
+def energy_kwh(points: list[tuple[float, float]], since: float, until: float, gap: float = 3600) -> float:
+    """Energy in kWh from power values (W) between `since` and `until`: the area under the line.
+    Longer gaps without values (plug or history off) count as nothing."""
+    sel = [p for p in points if since <= p[0] <= until]
+    wh = sum((a[1] + b[1]) / 2 * (b[0] - a[0]) / 3600 for a, b in zip(sel, sel[1:]) if b[0] - a[0] <= gap)
+    return wh / 1000
 
 
 def bucket(points: list[tuple[float, float]], since: float, until: float, n: int = 240) -> list[tuple[float, float]]:

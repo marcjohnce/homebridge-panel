@@ -2,8 +2,8 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Shapes
 
-// History of a device (Eve history): temperature, humidity or air pressure over 24 hours,
-// 7 or 30 days as a line. Touch the chart to read a value.
+// History of a device (Eve history): temperature, humidity, air pressure or the power draw of a
+// plug over 24 hours, 7 or 30 days as a line. Touch the chart to read a value.
 ColumnLayout {
     id: root
 
@@ -20,11 +20,23 @@ ColumnLayout {
     readonly property var scale: ({
         temperature: { unit: "°C", decimals: 1, step: 1, span: 2, pad: 0.3 },
         humidity: { unit: "%", decimals: 0, step: 10, span: 20, pad: 1 },
-        pressure: { unit: "hPa", decimals: 0, step: 1, span: 6, pad: 0.5 }
+        pressure: { unit: "hPa", decimals: 0, step: 1, span: 6, pad: 0.5 },
+        // power from 0 W up to a round value above the highest
+        power: { unit: "W", decimals: series && series.max < 10 ? 1 : 0, step: 1, span: 10, pad: 0, zero: true }
     })[shown]
-    readonly property real lo: points.length ? Math.floor((series.min - scale.pad) / scale.step) * scale.step : 0
-    readonly property real hi: points.length
-        ? Math.max(Math.ceil((series.max + scale.pad) / scale.step) * scale.step, lo + scale.span) : 1
+    // a round number at or above v: 1, 2, 2.5 or 5 times a power of ten
+    function roundUp(v) {
+        const mag = Math.pow(10, Math.floor(Math.log10(Math.max(v, 1e-9))));
+        for (const m of [1, 2, 2.5, 5, 10])
+            if (m * mag >= v)
+                return m * mag;
+        return 10 * mag;
+    }
+    readonly property real lo: !points.length || scale.zero ? 0
+        : Math.floor((series.min - scale.pad) / scale.step) * scale.step
+    readonly property real hi: !points.length ? 1
+        : scale.zero ? roundUp(Math.max(series.max * 1.05, scale.span))
+        : Math.max(Math.ceil((series.max + scale.pad) / scale.step) * scale.step, lo + scale.span)
     property int probe: -1               // index of the touched point
     readonly property var probed: probe >= 0 && probe < points.length ? points[probe] : null
 
@@ -106,7 +118,8 @@ ColumnLayout {
                     required property string modelData
                     objectName: "historyKind:" + modelData
                     text: modelData === "temperature" ? qsTr("Temperature")
-                        : modelData === "humidity" ? qsTr("Humidity") : qsTr("Air pressure")
+                        : modelData === "humidity" ? qsTr("Humidity")
+                        : modelData === "power" ? qsTr("Power") : qsTr("Air pressure")
                     selected: root.shown === modelData
                     onClicked: root.kind = modelData
                 }
@@ -139,8 +152,12 @@ ColumnLayout {
         objectName: "historyRange"
         Layout.topMargin: -Theme.s(4)
         visible: root.points.length > 0
-        text: !root.series ? "" : qsTr("Lowest %1").arg(root.text(root.series.min))
-              + "    " + qsTr("Highest %1").arg(root.text(root.series.max))
+        // power: highest draw and the consumption in the period; otherwise lowest and highest
+        text: !root.series ? ""
+            : root.shown === "power"
+              ? qsTr("Highest %1").arg(root.text(root.series.max)) + "    "
+                + qsTr("Consumption %1").arg(Theme.num(root.series.energy || 0, (root.series.energy || 0) < 10 ? 2 : 1) + " kWh")
+              : qsTr("Lowest %1").arg(root.text(root.series.min)) + "    " + qsTr("Highest %1").arg(root.text(root.series.max))
         color: Theme.muted
         font.pixelSize: Theme.s(16)
     }

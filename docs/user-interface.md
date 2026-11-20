@@ -320,7 +320,8 @@ Many Homebridge plugins keep a history of their readings for the Eve app (plugin
 *fakegato-history* or *homebridge-lib*, e.g. weather stations, room sensors and radiator
 thermostats). For these devices the detail view has a second page, *History*, with a chart of
 the temperature, humidity or air pressure over the last 24 hours, 7 or 30 days (as far back as
-the device keeps it, usually about four weeks of 10-minute values).
+the device keeps it, usually about four weeks of 10-minute values). Plugs that measure power
+like an Eve Energy (e.g. fakegato-history's *energy* type) have it too, with the power draw.
 
 ![History](images/history.png)
 
@@ -330,6 +331,22 @@ the device keeps it, usually about four weeks of 10-minute values).
 | 2 | 24 hours, 7 days, 30 days | Period of the chart |
 | 3 | Lowest, highest | Lowest and highest value in this period |
 | 4 | Touch the chart | Shows the time and value at that point; disappears after a few seconds |
+
+### Plugs that measure power
+
+Plugs with the Eve characteristics for power (*Consumption*, W) and energy (*Total
+Consumption*, kWh) show the power on their tile while they are on (*On, 45 W*; a washing machine
+*Running, 384 W*). Their detail view (long press or the arrow on the tile) shows the power now and
+the total consumption, and with an Eve history the *History* page charts the power draw.
+
+![Plug: power now and total consumption](images/plug-power.png)
+
+![Power history](images/history-power.png)
+
+| # | Element | What it does |
+|---|---|---|
+| 1 | Highest, consumption | Highest power draw in the period (measured, not averaged) and the energy used in it, in kWh – the area under the line; gaps of more than an hour without values count as nothing |
+| 2 | Chart | Power from 0 W; over 7 and 30 days the line shows averages, so short peaks look lower than *Highest* |
 
 The panel reads the history directly from Homebridge (HAP connection; the Homebridge UI
 connection does not give access to it). The first time a chart is opened it reads everything the
@@ -342,6 +359,7 @@ device keeps, which can take a few seconds; after that only new values. The valu
 | Humidity | Humidity Sensor | |
 | Light level | Light Sensor | |
 | Air pressure | Eve Air Pressure Sensor or Eve Weather (custom Eve types) | HomeKit has no standard air pressure type; plugins such as Eve-compatible weather plugins expose it this way. Apple's Home app does not show it, the panel does |
+| Power, total consumption | Outlet or Switch with the Eve characteristics *Consumption* (W) and *Total Consumption* (kWh) | Custom Eve types, as Eve Energy and Eve-compatible plugins expose them; Apple's Home app does not show them |
 
 Readings update with every poll (5 seconds by default). Sensors are read-only; tapping a
 sensor tile never switches anything.

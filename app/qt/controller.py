@@ -27,7 +27,7 @@ from ..backends.mqtt import MqttBackend, test_connection as test_mqtt
 from ..rooms import BUILTIN_DEFAULT, RoomLayout
 from ..scheduler import Scheduler
 from ..updater import UpdateError, Updater
-from ..eve_history import DeviceHistory, bucket
+from ..eve_history import DeviceHistory, bucket, energy_kwh
 from ..backup import BackupError, Backups
 from ..display_power import DisplayPower
 from ..settings import ACTIONS, SettingsStore, apply_to_config, validate
@@ -1291,16 +1291,20 @@ class Controller(QObject):
                 now = time.time()
                 dev = mgr.devices.get(dev_id)
                 state = dev.state if dev else {}
-                shown = {"temperature": "current_temp", "humidity": "humidity", "pressure": "pressure"}
+                shown = {"temperature": "current_temp", "humidity": "humidity", "pressure": "pressure",
+                         "power": "power"}
                 result = {**empty, "error": "", "since": (now - days * 86400) * 1000, "until": now * 1000}
                 for kind, points in f.result().items():
                     if shown[kind] not in state:
                         continue
                     pts = bucket(points, now - days * 86400, now)
-                    vals = [v for _, v in pts]
+                    # lowest and highest of the measured values (the chart's points are averages)
+                    vals = [v for t, v in points if now - days * 86400 <= t <= now]
                     result["kinds"].append(kind)
                     result["series"][kind] = {"points": [{"t": t * 1000, "v": v} for t, v in pts],
                                               "min": min(vals) if vals else 0, "max": max(vals) if vals else 0}
+                    if kind == "power":     # consumption in the period, from the unaveraged values
+                        result["series"][kind]["energy"] = energy_kwh(points, now - days * 86400, now)
             _emit_safely(self.historyLoaded, dev_id, days, result)
         fut.add_done_callback(done)
 

@@ -101,6 +101,15 @@ async def run(cfg: AppConfig) -> int:
             hum, pres = series.get("humidity", []), series.get("pressure", [])
             check(len(hum) == count and hum[-1][1] == 80, f"{name} humidity: {len(hum)} values, last {hum[-1:]}")
             check(len(pres) == count and pres[-1][1] == 1013, f"{name} pressure: {len(pres)} values, last {pres[-1:]}")
+    # plug that measures power, with a fakegato "energy" history (five values per entry)
+    if "History Plug" in devs:
+        plug = devs["History Plug"]
+        check(plug.state.get("power") == 123.4 and plug.state.get("energy") == 42.5, "plug: watts and kWh")
+        check(plug.meta.get("history") is True, "History Plug has an Eve history")
+        series = await m.device_history(plug.id)
+        power = series.get("power", [])
+        check(len(power) == 144 and {v for _, v in power} == {1500.0, 2.5}, f"power history: {len(power)} values")
+        check(set(series) == {"power"}, f"only the power from energy entries: {sorted(series)}")
     await m.stop()
     print("\nFAILED:\n  " + "\n  ".join(fails) if fails else "\nall checks passed")
     return 1 if fails else 0

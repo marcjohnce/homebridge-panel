@@ -6,12 +6,15 @@ import math
 import struct
 import time
 
-from ..eve_history import EPOCH_2001, REF_TIME
+from ..eve_history import EPOCH_2001, FAKEGATO_ENERGY, REF_TIME
 
 # fingerprints as fakegato-history sends them: weather (temperature, humidity, pressure) and
 # thermostat (temperature, target temperature, valve position, two unused one-byte values)
 WEATHER = [(0x01, 2), (0x02, 2), (0x03, 2)]
 THERMO = [(0x01, 2), (0x11, 2), (0x10, 1), (0x12, 1), (0x1D, 1)]
+# energy (plug): fingerprint of four values, but entries hold five two-byte values (bitmap 0x1F)
+# of which only the third, the power in 1/10 W, is used – as fakegato-history writes them
+ENERGY = FAKEGATO_ENERGY
 
 
 class EveHistorySim:
@@ -58,9 +61,12 @@ class EveHistorySim:
                 out += struct.pack("<BIIB", 21, 1, 1, REF_TIME) + struct.pack("<I", self.ref) + bytes(7)
             else:
                 _, t, values = self.entries[self.current - 2]
-                bitmap = (1 << len(values)) - 1
-                data = b"".join(struct.pack(("<h" if tag == 0x01 else "<H") if length == 2 else "<b", v)
-                                for (tag, length), v in zip(self.fingerprint, values))
+                if self.fingerprint == ENERGY:
+                    bitmap, data = 0x1F, struct.pack("<hHHHH", 0, 0, values[0], 0, 0)
+                else:
+                    bitmap = (1 << len(values)) - 1
+                    data = b"".join(struct.pack(("<h" if tag == 0x01 else "<H") if length == 2 else "<b", v)
+                                    for (tag, length), v in zip(self.fingerprint, values))
                 out += struct.pack("<BIIB", 10 + len(data), self.current, int(t) - EPOCH_2001 - self.ref, bitmap) + data
             self.current += 1
         return base64.b64encode(out).decode()
@@ -82,3 +88,20 @@ def demo_pressure(t: float) -> float:
     """Air pressure in hPa drifting slowly over the days, like weather fronts passing."""
     days = t / 86400
     return round(1013 + 9 * math.sin(days / 2.3) + 4 * math.sin(days / 0.9), 1)
+
+
+def demo_power(now: float, days: int = 30, step: int = 600) -> list[tuple[float, float]]:
+    """A washing machine: a two-hour wash every other evening (heating, washing, spinning),
+    about 1 W on standby in between. (Unix time, W) every 10 minutes."""
+    out = []
+    t = now - days * 86400
+    while t <= now:
+        day, minute = divmod(int(t) // 60, 1440)
+        m = minute - 17 * 60                 # washes start at 17:00 UTC
+        if day % 2 == 0 and 0 <= m < 120:
+            watts = 2050.0 if m < 20 else 180.0 + 60 * math.sin(m / 7) if m < 90 else 520.0 if m < 110 else 45.0
+        else:
+            watts = 1.2
+        out.append((t, round(watts, 1)))
+        t += step
+    return out

@@ -535,4 +535,9 @@ PT: dict[str, str] = {
     'Name of the guest Wi-Fi': 'Nome do Wi-Fi de convidados',
     'Point the phone camera at the code and tap the notification.': 'Aponte a câmara do telemóvel para o código e toque na notificação.',
     'Show in favorites': 'Mostrar nos favoritos',
+    'Consumption %1': 'Consumo %1',
+    'On, {power}': 'Ligado, {power}',
+    'Running, {power}': 'Em funcionamento, {power}',
+    'Power now': 'Potência atual',
+    'Total consumption': 'Consumo total',
 }
