@@ -220,7 +220,7 @@ column to the catalog.
 | `hap` | additional bridges (child bridges); the main bridge comes from the settings |
 | `homebridge_ui` | alternatively access via the Homebridge web UI (username/password) |
 | `demo` | simulated devices |
-| `devices` | per device (ID or name): `room`, `name`, `icon`, `order`, `hidden`, `outdoor` (sensors), `security` (`window`, `door`, `contact`, `glassbreak`, `motion`, `presence` for contact/motion/occupancy sensors), `appliance` (`switch`, `plug`, `coffee`, `washer`, `dishwasher`, `fan` for switches/plugs), `lamp` (`bulb`, `ceiling`, `pendant`, `chandelier`, `spot`, `wall`, `table`, `desk`, `floorlamp`, `globe`, `tube`, `strip` for lights), `valve` (`generic`, `irrigation`, `shower`, `faucet`), `area` (`light`, `climate`, `security`); values set on the panel take precedence |
+| `devices` | per device (ID or name): `room`, `name`, `icon`, `order`, `hidden`, `outdoor` (sensors), `security` (`window`, `door`, `contact`, `glassbreak`, `motion`, `presence` for contact/motion/occupancy sensors), `appliance` (`switch`, `plug`, `coffee`, `washer`, `dishwasher`, `fan` for switches/plugs), `lamp` (`bulb`, `ceiling`, `pendant`, `chandelier`, `spot`, `downlight`, `wall`, `table`, `desk`, `floorlamp`, `globe`, `tube`, `strip` for lights), `valve` (`generic`, `irrigation`, `shower`, `faucet`), `area` (`light`, `climate`, `security`); values set on the panel take precedence |
 | `blacklist` | list of texts: devices whose original name contains one of them are ignored completely (not shown anywhere, also not in the settings); case doesn't matter |
 
 **Icons** (`icon:`): `light`, `ceiling`, `strip`, `plug`, `switch`, `thermostat`, `radiator`,

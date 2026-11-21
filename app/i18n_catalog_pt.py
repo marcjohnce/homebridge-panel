@@ -591,4 +591,5 @@ PT: dict[str, str] = {
     'Runs this scene without waking the panel': 'Executa esta cena sem acordar o painel',
     'Runs this scene without waking the panel – instead of “%1”': 'Executa esta cena sem acordar o painel – em vez de «%1»',
     'Scene “%1”': 'Cena «%1»',
+    'Downlight': 'Downlight embutido',
 }

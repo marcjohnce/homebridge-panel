@@ -440,6 +440,7 @@ _ROWS: list[tuple[str, str, str, str, str]] = [
     ('Runs this scene without waking the panel', 'Führt diese Szene aus, ohne das Panel aufzuwecken', 'Lance cette scène sans réveiller le panneau', 'Avvia questa scena senza riattivare il pannello', 'Ejecuta esta escena sin despertar el panel'),
     ('Runs this scene without waking the panel – instead of “%1”', 'Führt diese Szene aus, ohne das Panel aufzuwecken – statt „%1“', 'Lance cette scène sans réveiller le panneau – au lieu de « %1 »', 'Avvia questa scena senza riattivare il pannello – al posto di «%1»', 'Ejecuta esta escena sin despertar el panel – en lugar de «%1»'),
     ('Scene “%1”', 'Szene „%1“', 'Scène « %1 »', 'Scena «%1»', 'Escena «%1»'),
+    ('Downlight', 'Einbauleuchte', 'Spot encastré', 'Faretto a incasso', 'Downlight empotrado'),
     ("%1, lights on", "%1, Licht an", "%1, lumière allumée", "%1, luci accese", "%1, luces encendidas"),
     ("Language", "Sprache", "Langue", "Lingua", "Idioma"),
     ("System", "System", "Système", "Sistema", "Sistema"),

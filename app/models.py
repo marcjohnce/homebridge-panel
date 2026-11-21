@@ -67,8 +67,9 @@ QUIET_KINDS = {"presence"}
 APPLIANCE_KINDS = ("switch", "plug", "coffee", "washer", "dishwasher", "fan")
 APPLIANCE_ICONS = {k: k for k in APPLIANCE_KINDS}
 # Lamp kinds of lights; only the icon changes (lamp: in config.yaml)
-LAMP_KINDS = ("bulb", "ceiling", "pendant", "chandelier", "spot", "wall", "table", "desk", "floorlamp", "globe", "tube", "strip")
-LAMP_ICONS = {"bulb": "light", "ceiling": "ceiling", "spot": "spot", "wall": "wall", "table": "table",
+LAMP_KINDS = ("bulb", "ceiling", "pendant", "chandelier", "spot", "downlight", "wall", "table", "desk", "floorlamp", "globe",
+              "tube", "strip")
+LAMP_ICONS = {"bulb": "light", "ceiling": "ceiling", "spot": "spot", "downlight": "downlight", "wall": "wall", "table": "table",
               "desk": "desk", "floorlamp": "floorlamp", "globe": "globe", "tube": "tube", "pendant": "pendant", "strip": "strip",
               "chandelier": "chandelier"}
 # Lamp kind guessed from the name of a new light (in the languages of the panel); the first
@@ -80,7 +81,9 @@ LAMP_WORDS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("chandelier", ("kronleuchter", "lüster", "luester", "chandelier", "lustre", "lampadario", "araña", "candelabro")),
     ("pendant", ("pendel", "hängelampe", "hängeleuchte", "haengelampe", "pendant", "suspension", "sospensione",
                  "colgante", "pendente")),
-    ("spot", ("spot", "strahler", "downlight", "einbauleuchte", "faretto", "foco")),
+    # recessed before spot: "Einbaustrahler" is a downlight, "Strahler" a spot
+    ("downlight", ("downlight", "einbau", "encastré", "encastre", "incasso", "empotrad", "embutid", "encastrad")),
+    ("spot", ("spot", "strahler", "faretto", "foco")),
     ("desk", ("schreibtisch", "desk", "bureau", "scrivania", "escritorio", "secretária", "secretaria")),
     ("floorlamp", ("stehlampe", "stehleuchte", "floor lamp", "floorlamp", "lampadaire", "piantana", "de pie", "de pé")),
     ("table", ("tischlampe", "tischleuchte", "nachttisch", "table", "chevet", "tavolo", "comodino", "mesa")),

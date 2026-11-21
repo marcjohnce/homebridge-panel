@@ -576,7 +576,7 @@ class RoomsBridge(QObject):
                    "smoke": "Smoke detector", "co": "CO detector",
                    "switch": "Switch", "plug": "Plug", "coffee": "Coffee machine",
                    "washer": "Washing machine", "dishwasher": "Dishwasher", "fan": "Fan",
-                   "bulb": "Bulb", "ceiling": "Ceiling lamp", "spot": "Spotlight", "wall": "Wall lamp",
+                   "bulb": "Bulb", "ceiling": "Ceiling lamp", "spot": "Spotlight", "downlight": "Downlight", "wall": "Wall lamp",
                    "table": "Table lamp", "desk": "Desk lamp", "floorlamp": "Floor lamp", "globe": "Globe lamp", "tube": "Fluorescent tube", "pendant": "Pendant light", "chandelier": "Chandelier",
                    "strip": "LED strip",
                    "generic": "Valve", "irrigation": "Irrigation", "shower": "Shower head", "faucet": "Faucet"}

@@ -85,8 +85,8 @@ class DeviceOverride(BaseModel):
     # "tv" is still accepted from older configurations and treated as a plain switch
     appliance: Literal["switch", "plug", "tv", "coffee", "washer", "dishwasher", "fan"] | None = Field(
         None, description="What a switch or plug powers (icon, washer/dishwasher state, fan under Climate)")
-    lamp: Literal["bulb", "ceiling", "pendant", "chandelier", "spot", "wall", "table", "desk", "floorlamp", "globe",
-                  "tube", "strip"] | None = Field(
+    lamp: Literal["bulb", "ceiling", "pendant", "chandelier", "spot", "downlight", "wall", "table", "desk", "floorlamp",
+                  "globe", "tube", "strip"] | None = Field(
         None, description="Kind of lamp of a light (icon)")
     area: Literal["light", "climate", "security"] | None = Field(
         None, description="Menu area to show the device in, instead of the one of its type")
