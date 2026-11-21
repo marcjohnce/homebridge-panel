@@ -306,6 +306,7 @@ Thermostats with an Eve history (e.g. radiator thermostats of Eve-compatible plu
 | 2 | Color wheel | Angle sets the hue, distance from the center sets the saturation; the ring shows the current color |
 | 3 | Power | Switches the device on or off; gold when on |
 | 4 | White tone | From cool (left) to warm (right), shown in kelvin |
+| 5 | Shades of white | Tap to set one directly: cool white 7000 K, daylight white 5500 K, white 4000 K, soft white 2700 K, warm white 2200 K. The one the light shows now has a gold ring; shades the light cannot reach are greyed out |
 
 Only the controls the device supports are shown.
 

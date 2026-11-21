@@ -453,12 +453,13 @@ def detail_views(p: Panel, out: Path, suffix: str, size: str) -> None:
     ], f"Color light – {size}"), out, f"light{suffix}")
 
     kitchen = p.device_id("Kitchen Light")
-    p.ctl.setAttrs(kitchen, {"on": True, "brightness": 80, "color_temp": 330})
+    p.ctl.setAttrs(kitchen, {"on": True, "brightness": 80, "color_temp": 370})     # 2700 K, "Soft white"
     wait(800)
     p.win.setProperty("openDevice", kitchen)
     save(annotate(p.grab(), [
         (1, [p.rect("brightnessBar")], "Brightness", "left"),
-        (4, [p.rect("colorTemp")], "White tone", "right"),
+        (4, [p.rect("colorTemp").adjusted(0, 0, 0, -p.rect("whitePresets").height())], "White tone", "right"),
+        (5, [p.rect("whitePresets")], "Shades of white to pick", "right"),
         (3, [p.rect("powerButton")], "Power", "bottom"),
     ], f"White light – {size}"), out, f"light-white-tone{suffix}")
 
