@@ -43,7 +43,8 @@ log = logging.getLogger(__name__)
 ALL_ROOMS = ""
 FAVORITES = "favorites"
 SCENES = "scenes"           # menu entry "Scenes": room tabs as under "Lights"
-WIFI_TILE = "wifi:guest"            # tile of the panel itself: shows the guest Wi-Fi as a QR code            # first menu entry: favorite devices of every room
+WIFI_TILE = "wifi:guest"            # tile of the panel itself: shows the guest Wi-Fi as a QR code
+SCENE_TILE = "scene:"               # + scene id: a scene of the panel among the favorites
 NIGHT_FROM, NIGHT_TO = 19, 7
 
 
@@ -620,8 +621,10 @@ class RoomsBridge(QObject):
         """Favorites in their order, listed like the devices above."""
         ids = [d["id"] for d in self._ctl._model.favorites()]
         devs = {d["id"]: d for d in self.devices}
-        # tiles of the panel itself (the Wi-Fi code): listed to be moved, set up elsewhere
-        devs.update({d["id"]: {"id": d["id"], "name": d["name"], "icon": d["icon"], "room": tr("Wi-Fi for guests"),
+        # tiles of the panel itself (the Wi-Fi code, scenes): listed to be moved, set up elsewhere
+        devs.update({d["id"]: {"id": d["id"], "name": d["name"], "icon": d["icon"],
+                               "room": tr("Scene in {room}").format(room=d["room"]) if d["type"] == "scene"
+                               else tr("Wi-Fi for guests"),
                                "reachable": True, "hidden": False, "panelTile": True}
                      for d in self._ctl._model.tiles()})
         return [devs[i] for i in ids if i in devs]
@@ -931,6 +934,7 @@ class Controller(QObject):
         self._room = ALL_ROOMS
         self._room_auto = True        # follow the first room until one is chosen
         self._sync_wifi_tile()
+        self._sync_scene_tiles()
         self._category = self._start_category()
         self._model._category = self._category
         self._alarms: set[str] = set()
@@ -1423,6 +1427,9 @@ class Controller(QObject):
         if d["type"] == "wifi":                     # the Wi-Fi tile: show the code
             self.wifiRequested.emit()
             return
+        if d["type"] == "scene":                    # a scene among the favorites: run it
+            self.runScene(dev_id[len(SCENE_TILE):])
+            return
         if d.get("meta", {}).get("group"):          # a group: all lights on, or all off if any is on
             self.setAttrs(dev_id, {"on": not d["state"].get("on")})
             return
@@ -1479,6 +1486,27 @@ class Controller(QObject):
                                 "reachable": True, "order": 100, "meta": {}, "panelTile": True})
         else:
             self._model.remove(WIFI_TILE)
+        self._room_editor.notify()          # the favorites list in the settings
+
+    def _sync_scene_tiles(self) -> None:
+        """Scenes marked as favorite are tiles in the favorites (kept locally, like every
+        favorite); favorites of scenes that are gone (deleted, other scenes loaded) are dropped."""
+        layout = self._model.layout
+        scenes = {SCENE_TILE + x["id"]: x for x in self.store.scenes}
+        stale = [f for f in layout.favorites if f.startswith(SCENE_TILE) and f not in scenes]
+        for f in stale:
+            layout.set_favorite(f, False)
+        if stale:
+            self.store.rooms = layout.to_dict()
+            self.store.save()
+        for d in self._model.tiles():
+            if d["type"] == "scene" and d["id"] not in layout.favorites:
+                self._model.remove(d["id"])
+        for tid, sc in scenes.items():
+            if tid in layout.favorites:
+                self._model.upsert({"id": tid, "name": sc["name"], "type": "scene", "backend": "panel",
+                                    "room": sc["room"], "icon": "spark", "state": {}, "capabilities": [],
+                                    "reachable": True, "order": 100, "meta": {}, "panelTile": True})
         self._room_editor.notify()          # the favorites list in the settings
 
     @Slot(result="QVariantList")
@@ -1606,11 +1634,12 @@ class Controller(QObject):
         sc = next((x for x in self.store.scenes if x["id"] == scene_id), None)
         if sc is None:
             room = self._room
-            return {"id": "", "name": "", "room": room,
+            return {"id": "", "name": "", "room": room, "favorite": False,
                     "devices": [self._scene_row(d, None, True) for d in self._scene_devices(room)]}
         rows = [self._scene_row(d, sc["devices"].get(d["id"]), d["id"] in sc["devices"])
                 for d in self._scene_devices(sc["room"])]
-        return {"id": sc["id"], "name": sc["name"], "room": sc["room"], "devices": rows}
+        return {"id": sc["id"], "name": sc["name"], "room": sc["room"], "devices": rows,
+                "favorite": SCENE_TILE + sc["id"] in self._model.layout.favorites}
 
     @Slot(str, result="QVariantMap")
     def sceneCapture(self, dev_id: str) -> dict[str, Any]:
@@ -1621,9 +1650,10 @@ class Controller(QObject):
         row = self._scene_row(d, None, True)
         return {"attrs": row["attrs"], "stateText": row["stateText"]}
 
-    @Slot(str, str, str, "QVariantMap", result=str)
-    def saveScene(self, scene_id: str, name: str, room: str, devices: dict[str, Any]) -> str:
-        """Saves a scene (new with id ""); devices: {device id: commands}. Returns an error text."""
+    @Slot(str, str, str, "QVariantMap", bool, result=str)
+    def saveScene(self, scene_id: str, name: str, room: str, devices: dict[str, Any], favorite: bool = False) -> str:
+        """Saves a scene (new with id ""); devices: {device id: commands}; favorite: shown under
+        Favorites. Returns an error text."""
         name = " ".join(name.split())[:panel_scenes.MAX_SCENE_NAME]
         if not name:
             return tr("Please enter a name.")
@@ -1635,10 +1665,15 @@ class Controller(QObject):
         if old:     # devices Homebridge does not report right now stay in the scene
             stored = {**{k: v for k, v in old["devices"].items() if self._model.get(k) is None}, **stored}
             old.update(name=name, devices=stored)
+            sid = old["id"]
         else:
-            self.store.scenes.append({"id": panel_scenes.new_id({x["id"] for x in self.store.scenes}),
-                                      "name": name, "room": room, "devices": stored})
+            sid = panel_scenes.new_id({x["id"] for x in self.store.scenes})
+            self.store.scenes.append({"id": sid, "name": name, "room": room, "devices": stored})
+        self._model.layout.set_favorite(SCENE_TILE + sid, favorite)
+        self.store.rooms = self._model.layout.to_dict()
         self.store.save()
+        self._sync_scene_tiles()
+        self._model._relayout()
         self.scenesChanged.emit()
         return ""
 
@@ -1646,6 +1681,8 @@ class Controller(QObject):
     def deleteScene(self, scene_id: str) -> None:
         self.store.scenes = [x for x in self.store.scenes if x["id"] != scene_id]
         self.store.save()
+        self._sync_scene_tiles()
+        self._model._relayout()
         self.scenesChanged.emit()
 
     def rooms_renamed(self, old: str, new: str) -> None:
@@ -1656,6 +1693,7 @@ class Controller(QObject):
                 sc["room"], changed = new, True
         if changed:
             self.store.save()
+            self._sync_scene_tiles()
             self.scenesChanged.emit()
 
     @Slot(str, result="QVariantMap")
@@ -1697,6 +1735,7 @@ class Controller(QObject):
         self.languageChanged.emit()
         self._model.reassign()          # the default room name is translated
         self._sync_wifi_tile()          # its name too
+        self._sync_scene_tiles()
         self._refresh_rooms()
         self._settings.sectionsChanged.emit()
         self.statusChanged.emit()

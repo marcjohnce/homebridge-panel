@@ -60,7 +60,7 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 - **Rooms** managed on the panel: add, rename, reorder and delete rooms, sort and move devices,
   change display names; optionally hide the "General" room
 - **Scenes** per room, made on the panel from how the lights, switches, plugs and blinds are now;
-  devices can be left out; tap runs a scene, hold edits it
+  devices can be left out; tap runs a scene, hold edits it; scenes can be added to the favorites
 - **Schedules** in `config.yaml` run scenes from there (e.g. weekdays 06:30 "Comfort", daily 22:30 "Eco")
 - **Languages**: English, German, French, Italian, Spanish, Portuguese – selectable in the settings
 - **Light / dark / dark blue / automatic** appearance and a **screen saver** with a large clock

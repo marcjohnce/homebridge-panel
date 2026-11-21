@@ -14,6 +14,7 @@ Rectangle {
     signal closed
 
     property string draftName: draft.name
+    property bool draftFavorite: !!draft.favorite
     property var rows: draft.devices
     property string adjusting           // device changed in its detail view
     property string error
@@ -59,7 +60,7 @@ Rectangle {
                 if (r.included)
                     devices[r.id] = r.attrs;
             }
-            const err = panel.saveScene(draft.id, draftName, draft.room, devices);
+            const err = panel.saveScene(draft.id, draftName, draft.room, devices, draftFavorite);
             if (err !== "")
                 error = err;
             else
@@ -308,6 +309,14 @@ Rectangle {
                     }
                 }
 
+                ToggleRow {
+                    width: parent.width
+                    label: qsTr("Favorite")
+                    help: qsTr("Shown under Favorites, the start page of the panel")
+                    checked: root.draftFavorite
+                    toggleName: "sceneFavorite"
+                    onToggled: root.draftFavorite = !root.draftFavorite
+                }
                 Text {
                     width: parent.width
                     visible: root.error !== ""

@@ -97,7 +97,7 @@ yet). *Climate* and *All* have no dots.
 ### Favorites
 
 *Favorites* collects the devices you use most on one page – lights, heating, the door lock, whatever
-you like, from every room. It has no room tabs; each tile shows its room above the name. Mark a
+you like, from every room – and scenes marked as favorite. It has no room tabs; each tile shows its room above the name. Mark a
 device with *Favorite* in Settings → Rooms and devices → Devices; light groups, switch groups
 and virtual devices have the same switch in their dialogs. The favorites are listed there at
 the top, where the arrows set their order.
@@ -137,6 +137,13 @@ should not touch, and save.
 | 4 | Device | Opens its detail view to change it; back in the editor the scene takes its new state |
 | 5 | Use current state | Takes over how all devices are now (when editing a scene) |
 | 6 | Save | Saves the scene; *Delete* removes it after a confirmation |
+| 7 | Favorite | Shows the scene under *Favorites* as well |
+
+A scene marked as favorite is a tile under *Favorites* like the devices; tap it to run the scene.
+Its place among the favorites is set in Settings → Rooms and devices, as for every favorite. Like
+all favorites, this mark stays on the panel and is not shared with other panels.
+
+![Scene among the favorites](images/scene-favorite.png)
 
 Devices hidden in the settings and light groups are not listed (the lights of a group are). If a
 device cannot be reached when the scene runs, a message names it; the others are switched anyway.

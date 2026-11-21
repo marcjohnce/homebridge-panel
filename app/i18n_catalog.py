@@ -428,6 +428,8 @@ _ROWS: list[tuple[str, str, str, str, str]] = [
     ('Scenes', 'Szenen', 'Scènes', 'Scene', 'Escenas'),
     ('This scene changes no device.', 'Diese Szene ändert kein Gerät.', 'Cette scène ne change aucun appareil.', 'Questa scena non cambia nessun dispositivo.', 'Esta escena no cambia ningún dispositivo.'),
     ('Use current state', 'Aktuellen Zustand übernehmen', "Reprendre l'état actuel", 'Usa lo stato attuale', 'Usar el estado actual'),
+    ('Scene', 'Szene', 'Scène', 'Scena', 'Escena'),
+    ('Scene in {room}', 'Szene in {room}', 'Scène dans {room}', 'Scena in {room}', 'Escena en {room}'),
     ("%1, lights on", "%1, Licht an", "%1, lumière allumée", "%1, luci accese", "%1, luces encendidas"),
     ("Language", "Sprache", "Langue", "Lingua", "Idioma"),
     ("System", "System", "Système", "Sistema", "Sistema"),
