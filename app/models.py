@@ -71,6 +71,34 @@ LAMP_KINDS = ("bulb", "ceiling", "pendant", "chandelier", "spot", "wall", "table
 LAMP_ICONS = {"bulb": "light", "ceiling": "ceiling", "spot": "spot", "wall": "wall", "table": "table",
               "desk": "desk", "floorlamp": "floorlamp", "globe": "globe", "tube": "tube", "pendant": "pendant", "strip": "strip",
               "chandelier": "chandelier"}
+# Lamp kind guessed from the name of a new light (in the languages of the panel); the first
+# kind with a matching word wins, so the more specific ones come first ("Deckenspot" is a spot,
+# "Schreibtischlampe" a desk lamp, not a table lamp). Words are matched in the lower case name.
+LAMP_WORDS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("strip", ("strip", "streifen", "led-band", "ledband", "lichtband", "ruban", "striscia", "tira led", "fita led")),
+    ("tube", ("röhre", "roehre", "leuchtstoff", "tube", "neon", "tubo")),
+    ("chandelier", ("kronleuchter", "lüster", "luester", "chandelier", "lustre", "lampadario", "araña", "candelabro")),
+    ("pendant", ("pendel", "hängelampe", "hängeleuchte", "haengelampe", "pendant", "suspension", "sospensione",
+                 "colgante", "pendente")),
+    ("spot", ("spot", "strahler", "downlight", "einbauleuchte", "faretto", "foco")),
+    ("desk", ("schreibtisch", "desk", "bureau", "scrivania", "escritorio", "secretária", "secretaria")),
+    ("floorlamp", ("stehlampe", "stehleuchte", "floor lamp", "floorlamp", "lampadaire", "piantana", "de pie", "de pé")),
+    ("table", ("tischlampe", "tischleuchte", "nachttisch", "table", "chevet", "tavolo", "comodino", "mesa")),
+    ("wall", ("wand", "wall", "mural", "applique", "parete", "pared", "parede", "aplique")),
+    ("globe", ("kugel", "globe", "globo", "sphère", "boule", "esfera")),
+    ("ceiling", ("decke", "ceiling", "plafond", "plafonnier", "soffitto", "plafoniera", "techo", "plafón", "teto")),
+)
+
+
+def guess_lamp(name: str) -> str | None:
+    """Lamp kind from the name of a light ("Wandleuchte Flur" → "wall"), None if nothing fits."""
+    low = name.casefold()
+    for kind, words in LAMP_WORDS:
+        if any(w in low for w in words):
+            return kind
+    return None
+
+
 # Kinds of valves (HomeKit ValveType); generic valves (e.g. water shut-off) go under "Security"
 VALVE_KINDS = ("generic", "irrigation", "shower", "faucet")
 VALVE_ICONS = {"generic": "valve", "irrigation": "sprinkler", "shower": "shower", "faucet": "faucet"}

@@ -32,7 +32,7 @@ from ..backup import BackupError, Backups
 from .. import share
 from ..display_power import DisplayPower
 from ..settings import ACTIONS, SettingsStore, apply_to_config, validate
-from ..models import AREAS, KIND_ICONS, KIND_KEYS, QUIET_KINDS
+from ..models import AREAS, KIND_ICONS, KIND_KEYS, QUIET_KINDS, guess_lamp
 from ..wifi import Wifi, qr_image
 from . import format as fmt
 from .format import (air_warning, alert_level, battery_low, battery_text, category, fmt_temp, has_detail,
@@ -1232,6 +1232,7 @@ class Controller(QObject):
     def _on_message(self, msg: dict[str, Any]) -> None:
         kind = msg.get("type")
         if kind == "snapshot":
+            self._note_new(msg.get("devices", []))
             self._model.set_all([self._stamp(d) for d in msg.get("devices", [])])
             self.refresh_groups()
             self._backends = msg.get("backends", {})
@@ -1241,6 +1242,7 @@ class Controller(QObject):
             self.climateChanged.emit()
             self.statusChanged.emit()
         elif kind == "device":
+            self._note_new([msg["device"]])
             d = self._stamp(msg["device"])
             structural = self._model.upsert(d)
             if d["type"] == "alarm" and self._update_armed():
@@ -1269,6 +1271,30 @@ class Controller(QObject):
             self.statusChanged.emit()
         elif kind == "scene" and msg.get("errors"):
             self.toast.emit(tr("Scene only partly applied. Not reached: {names}").format(names=", ".join(msg["errors"])))
+
+    def _note_new(self, devices: list[dict[str, Any]]) -> None:
+        """Notes devices met for the first time. A new light whose kind is set neither in
+        config.yaml nor on the panel gets a lamp kind guessed from its original name ("Wand…" →
+        wall lamp), stored as if chosen on the panel. At the first start with this version the
+        devices there count as known: nothing changes for them."""
+        if not devices:                 # the empty snapshot before the backends answered
+            return
+        layout = self._model.layout
+        if layout.seen is None:
+            layout.seen = {d["id"] for d in devices}
+        else:
+            new = [d for d in devices if d["id"] not in layout.seen]
+            if not new:
+                return
+            for d in new:
+                layout.seen.add(d["id"])
+                if d.get("type") == "light" and d.get("meta", {}).get("lamp") == "bulb" and d["id"] not in layout.kinds:
+                    kind = guess_lamp(d.get("name", ""))
+                    if kind:
+                        layout.kinds[d["id"]] = kind
+                        log.info("New light %s: lamp kind %s from its name", d.get("name"), kind)
+        self.store.rooms = layout.to_dict()
+        self.store.save()
 
     def _stamp(self, d: dict[str, Any]) -> dict[str, Any]:
         """Remembers since when a window or door is open (shown as "Open for 25 min")."""

@@ -449,6 +449,12 @@ The *Devices* tab lists the favorites first, then all devices grouped by room. T
 | 4 | Room | The current room is highlighted. *New room …* creates a room with the keyboard. Further down: *Show under* moves the device to another menu entry (*Automatic*: by device type), and *Hide on the home screen* (see below). Temperature sensors also have *Outdoor sensor*: it then counts for the outdoor temperature in the sidebar instead of indoors (same as `outdoor: true` in `config.yaml`) |
 | 5 | Save | Saves name, favorite, kind, room and *Hide on the home screen* together; *Cancel* discards the changes |
 
+**Lamp kind of new lights:** when a new light appears, the panel guesses its kind from the
+original name – *Wandleuchte* or *Wall lamp* becomes a wall lamp, *Decke* / *Ceiling* a ceiling
+lamp, *Spot*, *Pendel*, *Stehlampe*, *Schreibtisch*, *Streifen* and so on, in the panel's
+languages. It is set as if chosen here, so it can be changed like any other kind. Lights that are
+already there, and lights whose kind is set with `lamp:` in `config.yaml`, are not touched.
+
 *Hide on the home screen* removes a device from the tiles – also
 under *All* and in the default room – and from the menu status, alarms and temperatures. It stays
 listed here, marked *Hidden*, so it can be shown again. (`hidden: true` in `config.yaml` removes a

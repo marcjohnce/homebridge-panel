@@ -59,6 +59,10 @@ class RoomLayout:
         # outdoor sensor or not, where it differs from config.yaml
         self.outdoor: dict[str, bool] = ({str(k): bool(v) for k, v in outdoor.items() if isinstance(v, bool)}
                                          if isinstance(outdoor, dict) else {})
+        seen = data.get("seen")
+        # devices the panel has met (new ones get a lamp kind guessed from their name);
+        # None: not noted yet – the devices of the first start count as known
+        self.seen: set[str] | None = {str(i) for i in seen} if isinstance(seen, list) else None
         self._default = default_room
 
     @staticmethod
@@ -72,7 +76,7 @@ class RoomLayout:
                 "quiet": dict(self.quiet),
                 "outdoor": dict(self.outdoor), "areas": dict(self.areas),
                 "device_order": {r: list(ids) for r, ids in self.device_order.items()},
-                "favorites": list(self.favorites)}
+                "favorites": list(self.favorites), **({"seen": sorted(self.seen)} if self.seen is not None else {})}
 
     @property
     def default_room(self) -> str:
