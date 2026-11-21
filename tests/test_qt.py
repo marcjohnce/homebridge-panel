@@ -1427,6 +1427,71 @@ def test_touch_that_wakes_the_display_switches_nothing(qapp, tmp_path):
     pump_until(lambda: False, timeout=0.3)
 
 
+def test_arming_away_warns_about_open_windows(qapp, tmp_path):
+    from PySide6.QtCore import QObject, QPointF, Qt
+    from PySide6.QtQml import QQmlApplicationEngine
+    from PySide6.QtQuick import QQuickWindow
+    from PySide6.QtTest import QTest
+    from shiboken6 import Shiboken
+    from app.qt.main import QML_DIR
+
+    ctl = make_controller(tmp_path)
+    engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty("panel", ctl)
+    engine.rootContext().setContextProperty("initialWidth", 1024)
+    engine.rootContext().setContextProperty("initialHeight", 600)
+    engine.load(QML_DIR / "Main.qml")
+    win = Shiboken.wrapInstance(Shiboken.getCppPointer(engine.rootObjects()[0])[0], QQuickWindow)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 29)
+    assert [o["id"] for o in ctl.openBeforeArming()] == ["demo:bedroom-window"]       # a window is open
+    assert ctl.openBeforeArming()[0]["state"] == "Open"
+
+    def find(name, item=None):
+        root = item or win.contentItem()
+        while item is None and root.parentItem() is not None:      # popups live in the overlay
+            root = root.parentItem()
+        for child in root.childItems():
+            if child.objectName() == name and child.isVisible():
+                return child
+            if (hit := find(name, child)) is not None:
+                return hit
+        return None
+
+    def tap(name):
+        assert pump_until(lambda: find(name) is not None), name
+        it = find(name)
+        p = it.mapToScene(QPointF(it.width() / 2, it.height() / 2)).toPoint()
+        QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, p)
+
+    warning = lambda: win.findChild(QObject, "openWarning")      # noqa: E731
+    mode = lambda: ctl.device("demo:alarm")["state"]["target"]     # noqa: E731
+    win.setProperty("openDevice", "demo:alarm")
+    tap("alarmMode:away")
+    assert pump_until(lambda: warning().property("opened"))        # warned, not armed
+    assert find("open:demo:bedroom-window") is not None and mode() == "off"
+    tap("openWarningCancel")
+    assert pump_until(lambda: not warning().property("visible"))
+    pump_until(lambda: False, timeout=0.3)
+    assert mode() == "off"
+    tap("alarmMode:away")
+    assert pump_until(lambda: warning().property("opened"))
+    tap("armAnyway")                                                # armed anyway
+    assert pump_until(lambda: mode() == "away")
+
+    tap("alarmMode:night")                                          # other modes: no warning
+    assert pump_until(lambda: mode() == "night") and not warning().property("visible")
+    # nothing open (the window set to "No alerts"): "Away" arms at once
+    assert ctl.roomEditor.saveDevice("demo:bedroom-window", {"quiet": True}) == ""
+    assert ctl.openBeforeArming() == []
+    tap("alarmMode:away")
+    assert pump_until(lambda: mode() == "away") and not warning().property("visible")
+    ctl.shutdown()
+    win.close()
+    engine.deleteLater()
+    pump_until(lambda: False, timeout=0.3)
+
+
 def test_wifi_tile_in_the_favorites(qapp, tmp_path):
     ctl = make_controller(tmp_path)
     ctl.start()

@@ -614,6 +614,20 @@ def main() -> int:
     p = Panel(DETAIL_SIZE)
     p.store.update({"alarm_pin": "1234"})
     gid = p.device_id("Alarm System")
+    # arming "Away" with a window still open: the warning first
+    p.win.setProperty("openDevice", gid)
+    wait(400)
+    away = p.rect("alarmMode:away")
+    p.click(away.center().x(), away.center().y())
+    wait(500)
+    save(annotate(p.grab(), [
+        (1, [p.rect("open:" + p.device_id("Bedroom Window"))], "Still open: room, name, state", "left"),
+        (2, [p.rect("openWarningCancel")], "Cancel", "bottom"),
+        (3, [p.rect("armAnyway")], "Arm anyway", "bottom"),
+    ], "Arming “Away” with a window open"), out, "alarm-open-warning")
+    p.key(Qt.Key.Key_Escape)
+    wait(300)
+    p.win.setProperty("openDevice", "")
     p.ctl.setAttrs(gid, {"mode": "away"})
     wait(5000)          # the demo alarm system follows its target with the next poll
     p.win.setProperty("openDevice", gid)

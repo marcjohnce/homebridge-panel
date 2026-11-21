@@ -138,7 +138,10 @@ An **alarm system** (HomeKit *Security System*, e.g. from an alarm plugin) alway
 under *Security*. Its tile shows the state – *Armed – Away*, *Disarmed* or *Alarm triggered!* –
 and is highlighted while armed. A tap opens the modes **Home**, **Away**, **Night** and
 **Disarmed** (only those the plugin offers); a tap on a mode switches to it. If a *PIN to
-disarm* is set under *Settings → Security*, disarming asks for it. A triggered alarm turns the tile red,
+disarm* is set under *Settings → Security*, disarming asks for it. Arming **Away** while windows,
+doors or contacts are open, a motorized window or a garage door is open or a lock is unlocked shows
+what is still open first: *Cancel*, or *Arm anyway*. (Devices hidden or set to *No alerts* do not
+count; the other modes arm without asking.) A triggered alarm turns the tile red,
 wakes the panel and shows a message like a leak. **Motion sensors** only count as alerts (and
 get the red dot before the room) while the alarm system is armed.
 
@@ -172,6 +175,8 @@ armed). The kind can be switched between presence and motion in the device edito
 ![Alarm system](images/alarm-system.png)
 
 ![PIN to disarm](images/alarm-pin.png)
+
+![Arming “Away” with a window open](images/alarm-open-warning.png)
 
 HomeKit has no glass break type: plugins expose such detectors as contact or motion sensors.
 Choose the kind of a contact or motion sensor in [Settings → Rooms and devices](#rooms-and-devices)

@@ -540,4 +540,8 @@ PT: dict[str, str] = {
     'Running, {power}': 'Em funcionamento, {power}',
     'Power now': 'Potência atual',
     'Total consumption': 'Consumo total',
+    '%1 still open': '%1 ainda abertos',
+    'Arm anyway': 'Armar mesmo assim',
+    'Close them before you leave, or arm the alarm system anyway.': 'Feche-os antes de sair ou arme o alarme mesmo assim.',
+    'Still open': 'Ainda aberto',
 }
