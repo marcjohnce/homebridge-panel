@@ -598,4 +598,6 @@ PT: dict[str, str] = {
     'Soft white': 'Branco suave',
     'Warm white': 'Branco quente',
     '%1, %2 K': '%1, %2 K',
+    'Energy': 'Energia',
+    'No devices that measure their power here.': 'Não há dispositivos que meçam o consumo aqui.',
 }

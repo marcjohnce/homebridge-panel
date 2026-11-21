@@ -30,7 +30,7 @@ ColumnLayout {
         objectName: "clock"
         text: Qt.formatTime(root.now, "hh:mm")
         color: Theme.ink
-        font.pixelSize: root.compact ? 60 : Theme.s(84)
+        font.pixelSize: root.compact ? 52 : Theme.s(72)
         font.weight: Font.ExtraLight
         lineHeight: 0.95
     }
@@ -65,14 +65,18 @@ ColumnLayout {
                     name: parent.modelData.icon
                     color: Theme.gold
                 }
-                Column {
+                // value and label on one line: room for the menu below
+                Row {
+                    spacing: 8
                     Text {
+                        id: tempValue
                         text: qsTr("%1 °C").arg(parent.parent.modelData.temp)
                         color: Theme.ink
                         font.pixelSize: root.compact ? 22 : Theme.s(28)
                         font.weight: Font.Light
                     }
                     Text {
+                        anchors.baseline: tempValue.baseline
                         text: parent.parent.modelData.label
                         color: Theme.muted
                         font.pixelSize: Theme.s(14)

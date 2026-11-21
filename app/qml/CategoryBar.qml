@@ -6,13 +6,13 @@ Row {
     id: root
 
     readonly property var labels: ({ favorites: qsTr("Favorites"), light: qsTr("Lights"), scenes: qsTr("Scenes"),
-                                     climate: qsTr("Climate"), security: qsTr("Security") })
+                                     climate: qsTr("Climate"), energy: qsTr("Energy"), security: qsTr("Security") })
 
     objectName: "categoryMenu"
     spacing: 8
 
     Repeater {
-        model: Categories.keys
+        model: Categories.shown(panel.hasEnergy)
         Rectangle {
             id: button
             required property string modelData

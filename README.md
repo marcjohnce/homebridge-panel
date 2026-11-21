@@ -40,7 +40,7 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 - **Security**: window, door, glass break, leak, motion, presence, smoke and CO sensors; open windows and alarms
   first, a leak, glass break, smoke or CO alarm wakes the panel and shows a message
 - **Favorites** as the start page: devices from every room on one page, in your own order
-- **Menu** Favorites, Lights, Scenes, Climate, Security; room tabs per menu entry with "All" last; a dot
+- **Menu** Favorites, Lights, Scenes, Climate, Energy (devices that measure their power, total power in the menu), Security; room tabs per menu entry with "All" last; a dot
   marks rooms with lights on (Lights) or an open window or alarm (Security)
 - **Gestures**: swipe left/right to change rooms or, in the detail view, devices; swipe in from the left
   edge to go back; two fingers down switch the lights of the room off (with Undo); a double tap on the

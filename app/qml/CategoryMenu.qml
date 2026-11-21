@@ -8,15 +8,15 @@ ColumnLayout {
 
     property bool compact: false
     property real maxEntryHeight: Infinity      // set by the sidebar: the whole menu must fit
-    readonly property int count: Categories.keys.length
+    readonly property int count: Categories.shown(panel.hasEnergy).length
     readonly property var labels: ({ favorites: qsTr("Favorites"), light: qsTr("Lights"), scenes: qsTr("Scenes"),
-                                     climate: qsTr("Climate"), security: qsTr("Security") })
+                                     climate: qsTr("Climate"), energy: qsTr("Energy"), security: qsTr("Security") })
 
     objectName: "categoryMenu"
     spacing: compact ? 0 : 6
 
     Repeater {
-        model: Categories.keys
+        model: Categories.shown(panel.hasEnergy)
         Rectangle {
             id: entry
             required property string modelData

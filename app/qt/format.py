@@ -40,6 +40,16 @@ def category(d: dict[str, Any]) -> str:
     return CATEGORY_OF_TYPE.get(d["type"], "light")
 
 
+def has_power(d: dict[str, Any]) -> bool:
+    """Measures its power (Eve plugs and the like): shown under "Energy"."""
+    return d.get("state", {}).get("power") is not None
+
+
+def in_area(d: dict[str, Any], area: str) -> bool:
+    """Shown under a menu entry: its menu area, or "energy" for every device that measures power."""
+    return has_power(d) if area == "energy" else category(d) == area
+
+
 def battery_low(d: dict[str, Any]) -> bool:
     """Battery almost empty: below 10 % or the device itself reports a low battery."""
     s = d.get("state", {})
