@@ -7,7 +7,7 @@ ColumnLayout {
     readonly property var rows: [
         { label: qsTr("Connection"), value: panel.statusDetail !== "" ? panel.statusDetail : panel.statusText },
         { label: qsTr("Devices"), value: String(panel.deviceCount) },
-        { label: qsTr("Rooms, scenes, schedules"), value: panel.configPath !== "" ? panel.configPath : qsTr("no config.yaml found") },
+        { label: qsTr("Rooms and devices"), value: panel.configPath !== "" ? panel.configPath : qsTr("no config.yaml found") },
         { label: qsTr("Settings file"), value: panel.settings.path },
         { label: qsTr("Version"), value: panel.version }
     ]

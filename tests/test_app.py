@@ -10,7 +10,6 @@ from app.backends import HapBackend, HomebridgeUiBackend, create_backends
 from app.config import AppConfig, HapBackendConfig, HomebridgeUiBackendConfig
 from app.hap_types import command_to_writes, short_uuid, snapshot_to_state
 from app.manager import DeviceManager, DeviceNotFound
-from app.scheduler import Scheduler
 
 U = lambda s: f"{int(s, 16):08X}-0000-1000-8000-0026BB765291"  # noqa: E731
 
@@ -163,10 +162,6 @@ def demo_cfg(**kw):
     return AppConfig.model_validate({
         "demo": {"enabled": True},
         "devices": {"Coffee Maker": {"room": "Kitchen", "icon": "coffee"}, "Fan": {"hidden": True}},
-        "scenes": [{"id": "off", "name": "All off", "actions": [
-            {"device": "Living Room Ceiling Light", "set": {"on": False}},
-            {"device": "TV Plug", "set": {"on": False}},
-            {"device": "does-not-exist", "set": {"on": False}}]}],
         **kw,
     })
 
@@ -186,7 +181,8 @@ def test_manager_with_demo_backend():
             await m.command("Coffee Maker", {"brightness": 3})
         with pytest.raises(DeviceNotFound):
             await m.command("unbekannt", {"on": True})
-        res = await m.run_scene("off")
+        res = await m.run_actions("off", [(m.resolve("Living Room Ceiling Light"), {"on": False}),
+                                          (m.resolve("TV Plug"), {"on": False}), ("does-not-exist", {"on": False})])
         assert list(res["errors"]) == ["does-not-exist"]
         assert m.devices[m.resolve("Living Room Ceiling Light")].state["on"] is False
         assert not q.empty()
@@ -212,17 +208,6 @@ def test_blacklist_ignores_devices_by_part_of_the_original_name():
             await m.command("Bathroom Heating", {"mode": "heat"})
         await m.stop()
     asyncio.run(run())
-
-
-def test_scheduler_due():
-    cfg = AppConfig.model_validate({"schedules": [
-        {"time": "06:30", "days": ["Mo", "Di"], "scene": "a"},  # "Di" = German alias for "tu"
-        {"time": "06:30", "scene": "b", "enabled": True}]})
-    s = Scheduler(cfg, DeviceManager(cfg, []))
-    monday = datetime(2026, 11, 16, 6, 30)
-    assert s.due(monday) == ["a", "b"]
-    assert s.due(monday) == []                    # not twice
-    assert s.due(datetime(2026, 11, 18, 6, 30)) == ["b"]  # Wednesday
 
 
 # ---------- sensors ----------
@@ -715,3 +700,14 @@ def test_air_quality_sensor_merged_and_texts():
     assert state_text(d) == "21.5 °C, Air inferior, 820 ppm"
     assert air_warning(d)
     assert not air_warning({**d, "state": {**st, "air_quality": 2}})
+
+
+def test_old_schedules_and_scenes_are_ignored(tmp_path, caplog):
+    """Schedules and scenes left config.yaml: an old file with them still loads."""
+    from app.config import load_config
+    f = tmp_path / "config.yaml"
+    f.write_text('schedules:\n  - { time: "06:30", scene: comfort }\n'
+                 'scenes:\n  - { id: off, name: Off, actions: [{ device: x, set: { on: false } }] }\n', encoding="utf-8")
+    cfg = load_config(f)
+    assert not hasattr(cfg, "schedules") and not hasattr(cfg, "scenes")
+    assert "schedules are no longer" in caplog.text and "scenes are no longer" in caplog.text

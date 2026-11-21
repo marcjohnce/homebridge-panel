@@ -16,7 +16,7 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 │   home screen · detail views · settings       │                        │
 │                                               │                        │
 │  Controller (app/qt)  ──── background thread (asyncio) ────┐           │
-│                             DeviceManager · Scheduler      │           │
+│                             DeviceManager                  │           │
 │                             backends: HAP · Homebridge UI · demo       │
 └────────────────────────────────────────────────────────────┼───────────┘
                                                              ▼
@@ -61,7 +61,6 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
   change display names; optionally hide the "General" room
 - **Scenes** per room, made on the panel from how the lights, switches, plugs and blinds are now;
   devices can be left out; tap runs a scene, hold edits it; scenes can be added to the favorites
-- **Schedules** in `config.yaml` run scenes from there (e.g. weekdays 06:30 "Comfort", daily 22:30 "Eco")
 - **Languages**: English, German, French, Italian, Spanish, Portuguese – selectable in the settings
 - **Light / dark / dark blue / automatic** appearance and a **screen saver** with a large clock
 - **Settings page** for appearance, screen saver and the Homebridge connection (address, port, PIN)
@@ -209,7 +208,7 @@ Spanish; Portuguese in `app/i18n_catalog_pt.py`). A `QTranslator` feeds the same
 (`{name}`, `%1`). To add a language, add it to `LANGUAGES` and `FORMATS` in `app/i18n.py` and a
 column to the catalog.
 
-## Rooms, scenes, schedules (`config.yaml`)
+## Rooms and devices (`config.yaml`)
 
 | Section | Purpose |
 |---|---|
@@ -220,14 +219,9 @@ column to the catalog.
 | `demo` | simulated devices |
 | `devices` | per device (ID or name): `room`, `name`, `icon`, `order`, `hidden`, `outdoor` (sensors), `security` (`window`, `door`, `contact`, `glassbreak`, `motion`, `presence` for contact/motion/occupancy sensors), `appliance` (`switch`, `plug`, `coffee`, `washer`, `dishwasher`, `fan` for switches/plugs), `lamp` (`bulb`, `ceiling`, `pendant`, `chandelier`, `spot`, `wall`, `table`, `desk`, `floorlamp`, `globe`, `tube`, `strip` for lights), `valve` (`generic`, `irrigation`, `shower`, `faucet`), `area` (`light`, `climate`, `security`); values set on the panel take precedence |
 | `blacklist` | list of texts: devices whose original name contains one of them are ignored completely (not shown anywhere, also not in the settings); case doesn't matter |
-| `scenes` | scenes with actions `{device: …, set: {…}}`, run by schedules (scenes made on the panel are kept in its settings) |
-| `schedules` | run a scene at a time on weekdays (`mo tu we th fr sa su`) |
-
-**Scene attributes**: `on`, `brightness` (0–100), `hue` (0–360), `saturation` (0–100),
-`color_temp` (mired 140–500), `speed` (0–100), `target_temp` (°C), `mode` (`off|heat|cool|auto`).
 
 **Icons** (`icon:`): `light`, `ceiling`, `strip`, `plug`, `switch`, `thermostat`, `radiator`,
-`floor`, `fan`, `coffee`, `tv`, `weather`, `drop`, `sun`; for scenes `moon`, `sun`, `film`, `leaf`, `home`, `power`.
+`floor`, `fan`, `coffee`, `tv`, `weather`, `drop`, `sun`.
 
 See [docs/user-interface.md](docs/user-interface.md) for how each screen works.
 
@@ -243,7 +237,6 @@ app/
   i18n_catalog.py      translations (German, French, Italian, Spanish; Portuguese in i18n_catalog_pt.py)
   config.py            config.yaml (Pydantic)
   manager.py           device management: polling, commands, scenes
-  scheduler.py         schedules
   hap_types.py         HAP types ⇄ device state/commands
   backends/            HAP, Homebridge UI, demo
   qt/
@@ -280,7 +273,6 @@ python tools/doc_screenshots.py         # update the documentation screenshots
 - Changes made elsewhere (e.g. in the Home app) appear within 5 seconds; your own commands immediately.
 - On the Pi, Qt draws lines and arcs with its GPU curve renderer. On very old models without
   OpenGL ES 3, set `QT_QUICK_BACKEND=software`.
-- Schedules also accept the German weekday abbreviations (`di mi do so`) for older configurations.
 - **A device does not show up?** `python tools/list_services.py` lists every accessory and HomeKit
   service of the configured bridges and whether the panel supports it. A plugin running as a
   **child bridge** has its own port and PIN and is not on the main bridge: add it under `hap:` in

@@ -9,8 +9,6 @@ backup and of the settings shared over MQTT):
                 "devices": {"hap:12.10": {"on": true, "brightness": 70, "color_temp": 370},
                             "hap:14.10": {"on": false},
                             "hap:20.9": {"position": 60}}}]
-
-Scenes in config.yaml (run by schedules) are separate and stay as they are.
 """
 from __future__ import annotations
 

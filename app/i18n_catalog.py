@@ -481,8 +481,6 @@ _ROWS: list[tuple[str, str, str, str, str]] = [
      "Connessione non riuscita: {error}", "Error de conexión: {error}"),
     ("Info", "Info", "Infos", "Info", "Información"),
     ("Connection", "Verbindung", "Connexion", "Connessione", "Conexión"),
-    ("Rooms, scenes, schedules", "Räume, Szenen, Zeitpläne", "Pièces, scènes, programmes", "Stanze, scene, programmi",
-     "Habitaciones, escenas, horarios"),
     ("no config.yaml found", "keine config.yaml gefunden", "aucun config.yaml trouvé", "nessun config.yaml trovato",
      "no se encontró config.yaml"),
     ("Settings file", "Einstellungsdatei", "Fichier de réglages", "File delle impostazioni", "Archivo de ajustes"),

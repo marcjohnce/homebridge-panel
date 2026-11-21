@@ -1,6 +1,7 @@
 """Configuration (YAML) validated with Pydantic."""
 from __future__ import annotations
 
+import logging
 import os
 import re
 from pathlib import Path
@@ -9,9 +10,7 @@ from typing import Any, Literal
 import yaml
 from pydantic import BaseModel, Field, field_validator
 
-WEEKDAYS = ["mo", "tu", "we", "th", "fr", "sa", "su"]
-# German abbreviations are accepted as aliases
-WEEKDAY_ALIASES = {"di": "tu", "mi": "we", "do": "th", "so": "su"}
+log = logging.getLogger(__name__)
 
 
 class ServerConfig(BaseModel):
@@ -93,51 +92,6 @@ class DeviceOverride(BaseModel):
         None, description="Menu area to show the device in, instead of the one of its type")
 
 
-class SceneAction(BaseModel):
-    device: str = Field(..., description="Device ID or device name")
-    set: dict[str, Any]
-
-    @field_validator("set", mode="before")
-    @classmethod
-    def _fix_yaml_on(cls, v: Any) -> Any:
-        # YAML 1.1 reads the key `on:` as boolean True -> map it back to "on"
-        if isinstance(v, dict):
-            return {("on" if k is True else "off" if k is False else k): val for k, val in v.items()}
-        return v
-
-
-class Scene(BaseModel):
-    id: str
-    name: str
-    icon: str = "power"
-    room: str | None = Field(None, description="Room the scene is offered in; none = whole house")
-    actions: list[SceneAction] = []
-
-
-class Schedule(BaseModel):
-    time: str
-    scene: str
-    days: list[str] = Field(default_factory=lambda: list(WEEKDAYS))
-    enabled: bool = True
-
-    @field_validator("time")
-    @classmethod
-    def _check_time(cls, v: str) -> str:
-        if not re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", v):
-            raise ValueError("Time must be given as HH:MM")
-        return v
-
-    @field_validator("days")
-    @classmethod
-    def _check_days(cls, v: list[str]) -> list[str]:
-        v = [d.lower()[:2] for d in v]
-        v = [WEEKDAY_ALIASES.get(d, d) for d in v]
-        bad = [d for d in v if d not in WEEKDAYS]
-        if bad:
-            raise ValueError(f"Unknown weekdays: {bad} (allowed: {WEEKDAYS})")
-        return v
-
-
 class AppConfig(BaseModel):
     server: ServerConfig = ServerConfig()
     panel: PanelConfig = PanelConfig()
@@ -150,8 +104,6 @@ class AppConfig(BaseModel):
     blacklist: list[str] = Field(
         [], description="Devices whose original name contains one of these texts are ignored completely "
                         "(case doesn't matter)")
-    scenes: list[Scene] = []
-    schedules: list[Schedule] = []
 
     @field_validator("blacklist", mode="before")
     @classmethod
@@ -189,7 +141,7 @@ def config_path(path: str | os.PathLike | None = None) -> Path:
 
 
 def load_config(path: str | os.PathLike | None = None, required: bool = True) -> AppConfig:
-    """Loads config.yaml (rooms, scenes, schedules). Without a file: empty config unless required."""
+    """Loads config.yaml (connection extras, devices). Without a file: empty config unless required."""
     path = config_path(path)
     if not path.exists():
         if not required:
@@ -198,4 +150,7 @@ def load_config(path: str | os.PathLike | None = None, required: bool = True) ->
             f"Configuration '{path}' not found – copy config.example.yaml to config.yaml"
         )
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    for old in ("scenes", "schedules"):     # scenes are made on the panel now
+        if isinstance(data, dict) and data.pop(old, None):
+            log.warning("%s: %s are no longer supported here and are ignored", path, old)
     return AppConfig.model_validate(_expand_env(data))
