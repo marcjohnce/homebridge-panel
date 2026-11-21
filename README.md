@@ -59,15 +59,16 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
   switches to the next one
 - **Rooms** managed on the panel: add, rename, reorder and delete rooms, sort and move devices,
   change display names; optionally hide the "General" room
-- **Scenes and schedules** in `config.yaml` (e.g. weekdays 06:30 "Comfort", daily 22:30 "Eco");
-  the panel has no scenes view for now
+- **Scenes** per room, made on the panel from how the lights, switches, plugs and blinds are now;
+  devices can be left out; tap runs a scene, hold edits it
+- **Schedules** in `config.yaml` run scenes from there (e.g. weekdays 06:30 "Comfort", daily 22:30 "Eco")
 - **Languages**: English, German, French, Italian, Spanish, Portuguese – selectable in the settings
 - **Light / dark / dark blue / automatic** appearance and a **screen saver** with a large clock
 - **Settings page** for appearance, screen saver and the Homebridge connection (address, port, PIN)
   with keypad, connection test and apply without restart; **restart** the app or the Raspberry Pi
 - **Wi-Fi for guests**: a tile in the favorites shows the guest Wi-Fi as a QR code for the phone camera
-- **Backups** of the panel settings (rooms, names, favorites, groups, connection), restored with one tap
-- **Several panels**: share rooms, names, groups and virtual devices over the MQTT broker – saved and loaded by hand, favorites and PINs stay on each panel
+- **Backups** of the panel settings (rooms, names, favorites, groups, scenes, connection), restored with one tap
+- **Several panels**: share rooms, names, groups, virtual devices and scenes over the MQTT broker – saved and loaded by hand, favorites and PINs stay on each panel
 - **Updates** from the settings: new stable releases are found automatically and installed with one tap
 - Optimized for **1280×800** and **720×720**; also works on 800×480, 1024×600, 1280×720 and portrait displays
 
@@ -219,7 +220,7 @@ column to the catalog.
 | `demo` | simulated devices |
 | `devices` | per device (ID or name): `room`, `name`, `icon`, `order`, `hidden`, `outdoor` (sensors), `security` (`window`, `door`, `contact`, `glassbreak`, `motion`, `presence` for contact/motion/occupancy sensors), `appliance` (`switch`, `plug`, `coffee`, `washer`, `dishwasher`, `fan` for switches/plugs), `lamp` (`bulb`, `ceiling`, `pendant`, `chandelier`, `spot`, `wall`, `table`, `desk`, `floorlamp`, `globe`, `tube`, `strip` for lights), `valve` (`generic`, `irrigation`, `shower`, `faucet`), `area` (`light`, `climate`, `security`); values set on the panel take precedence |
 | `blacklist` | list of texts: devices whose original name contains one of them are ignored completely (not shown anywhere, also not in the settings); case doesn't matter |
-| `scenes` | scenes with actions `{device: …, set: {…}}`, run by schedules; `room` is kept for a later scenes view |
+| `scenes` | scenes with actions `{device: …, set: {…}}`, run by schedules (scenes made on the panel are kept in its settings) |
 | `schedules` | run a scene at a time on weekdays (`mo tu we th fr sa su`) |
 
 **Scene attributes**: `on`, `brightness` (0–100), `hue` (0–360), `saturation` (0–100),
@@ -237,6 +238,7 @@ app/
   __main__.py          entry point: python -m app
   settings.py          settings schema, validation, storage, effect on the configuration
   rooms.py             rooms edited on the panel: order and device assignment
+  scenes.py            scenes made on the panel: capturing device states
   i18n.py              language selection, number and date formats
   i18n_catalog.py      translations (German, French, Italian, Spanish; Portuguese in i18n_catalog_pt.py)
   config.py            config.yaml (Pydantic)

@@ -221,18 +221,25 @@ class DeviceManager:
                 raise BackendError(str(e)) from e
 
     async def run_scene(self, scene_id: str) -> dict[str, Any]:
+        """A scene of config.yaml (also run by schedules)."""
         scene = next((s for s in self.cfg.scenes if s.id == scene_id), None)
         if scene is None:
             raise KeyError(scene_id)
+        return await self.run_actions(scene_id, [(a.device, a.set) for a in scene.actions])
+
+    async def run_actions(self, scene_id: str, actions: list[tuple[str, dict[str, Any]]]) -> dict[str, Any]:
+        """Sends the commands of a scene at once; tells the listeners which devices failed
+        ({"type": "scene", "errors": {device: error}})."""
         errors: dict[str, str] = {}
 
-        async def run(action):
+        async def run(ref: str, attrs: dict[str, Any]) -> None:
             try:
-                await self.command(action.device, action.set)
+                await self.command(ref, attrs)
             except Exception as e:
-                errors[action.device] = str(e) or type(e).__name__
+                name = self.devices[ref].name if ref in self.devices else ref
+                errors[name] = str(e) or type(e).__name__
 
-        await asyncio.gather(*(run(a) for a in scene.actions))
+        await asyncio.gather(*(run(ref, attrs) for ref, attrs in actions))
         if errors:
             log.warning("Scene %s: errors %s", scene_id, errors)
         await self._broadcast({"type": "scene", "id": scene_id, "errors": errors})

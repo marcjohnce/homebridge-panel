@@ -30,6 +30,7 @@ from ..updater import UpdateError, Updater
 from ..eve_history import DeviceHistory, bucket, energy_kwh
 from ..backup import BackupError, Backups
 from .. import share
+from .. import scenes as panel_scenes
 from ..display_power import DisplayPower
 from ..settings import ACTIONS, SettingsStore, apply_to_config, validate
 from ..models import AREAS, KIND_ICONS, KIND_KEYS, QUIET_KINDS, guess_lamp
@@ -41,6 +42,7 @@ from .format import (air_warning, alert_level, battery_low, battery_text, catego
 log = logging.getLogger(__name__)
 ALL_ROOMS = ""
 FAVORITES = "favorites"
+SCENES = "scenes"           # menu entry "Scenes": room tabs as under "Lights"
 WIFI_TILE = "wifi:guest"            # tile of the panel itself: shows the guest Wi-Fi as a QR code            # first menu entry: favorite devices of every room
 NIGHT_FROM, NIGHT_TO = 19, 7
 
@@ -333,6 +335,8 @@ class SettingsBridge(QObject):
             parts.append(plural(summary["groups"], tr("1 group"), tr("{n} groups")))
         if summary["virtual"]:
             parts.append(plural(summary["virtual"], tr("1 virtual device"), tr("{n} virtual devices")))
+        if summary.get("scenes"):
+            parts.append(plural(summary["scenes"], tr("1 scene"), tr("{n} scenes")))
         return ", ".join(parts)
 
     # ---------- sharing with other panels over MQTT (also on the backups page) ----------
@@ -826,8 +830,9 @@ class RoomsBridge(QObject):
 
     @Slot(str, str, result=str)
     def renameRoom(self, old: str, new: str) -> str:
-        _, err = self._layout.rename(old, new, self._ctl._model.device_rooms())
+        new, err = self._layout.rename(old, new, self._ctl._model.device_rooms())
         if not err:
+            self._ctl.rooms_renamed(old, new)
             self._commit()
         return err or ""
 
@@ -836,6 +841,7 @@ class RoomsBridge(QObject):
         m = self._ctl._model
         err = self._layout.delete(name, m.device_rooms(), m.base_rooms())
         if not err:
+            self._ctl.rooms_renamed(name, self._layout.default_room)
             self._commit()
         return err or ""
 
@@ -927,8 +933,6 @@ class Controller(QObject):
         self._sync_wifi_tile()
         self._category = self._start_category()
         self._model._category = self._category
-        self._scenes = [{**s.model_dump(include={"id", "name", "icon", "room"}), "count": len(s.actions)}
-                        for s in base_cfg.scenes]
         self._alarms: set[str] = set()
         self._since: dict[str, float] = {}           # security sensor -> time it was triggered
         self._since_timer = QTimer(self, interval=30_000, timeout=self._model.refresh_texts)
@@ -1323,7 +1327,7 @@ class Controller(QObject):
     def _tab_rooms(self) -> list[str]:
         if self._category == FAVORITES:     # favorites are listed without room tabs
             return []
-        rooms = self._model.rooms(self._category)
+        rooms = self._model.rooms("light" if self._category == SCENES else self._category)
         if not self.store.get("show_general"):
             rooms = [r for r in rooms if r != self._model.layout.default_room]
         return rooms
@@ -1570,7 +1574,89 @@ class Controller(QObject):
 
     @Slot(str)
     def runScene(self, scene_id: str) -> None:
-        self._command(lambda m: m.run_scene(scene_id))
+        """Runs a scene of the panel (or one of config.yaml)."""
+        sc = next((x for x in self.store.scenes if x["id"] == scene_id), None)
+        if sc is None:
+            self._command(lambda m: m.run_scene(scene_id))
+            return
+        actions = [(ref, dict(attrs)) for ref, attrs in sc["devices"].items()]
+        if not actions:
+            self.toast.emit(tr("This scene changes no device."))
+            return
+        self._command(lambda m: m.run_actions(scene_id, actions))
+
+    # ---------- scenes of the panel ----------
+    def _scene_devices(self, room: str) -> list[dict[str, Any]]:
+        """Lights, switches, plugs and blinds of a room that a scene can set (also those in a
+        light group; not hidden ones), in the order of the room."""
+        return self._model.ordered([d for d in self._model.all() if d["room"] == room
+                                    and panel_scenes.in_scenes(d) and not d.get("hidden")])
+
+    def _scene_row(self, d: dict[str, Any], attrs: dict[str, Any] | None, included: bool) -> dict[str, Any]:
+        attrs = attrs if attrs is not None else panel_scenes.capture(d)
+        return {"id": d["id"], "name": short_name(d["name"], d["room"]), "icon": d["icon"],
+                "included": included, "attrs": attrs,
+                "stateText": state_text(panel_scenes.as_state(d, attrs))}
+
+    @Slot(str, result="QVariantMap")
+    def sceneDraft(self, scene_id: str) -> dict[str, Any]:
+        """What the scene editor shows: {id, name, room, devices: [{id, name, icon, included,
+        attrs, stateText}]}. A new scene ("" in the current room) holds every device of the room
+        as it is now; a saved one its stored states, the room's other devices left out."""
+        sc = next((x for x in self.store.scenes if x["id"] == scene_id), None)
+        if sc is None:
+            room = self._room
+            return {"id": "", "name": "", "room": room,
+                    "devices": [self._scene_row(d, None, True) for d in self._scene_devices(room)]}
+        rows = [self._scene_row(d, sc["devices"].get(d["id"]), d["id"] in sc["devices"])
+                for d in self._scene_devices(sc["room"])]
+        return {"id": sc["id"], "name": sc["name"], "room": sc["room"], "devices": rows}
+
+    @Slot(str, result="QVariantMap")
+    def sceneCapture(self, dev_id: str) -> dict[str, Any]:
+        """The current state of a device for a scene: {attrs, stateText} ({} if it is gone)."""
+        d = self._model.get(dev_id)
+        if not d:
+            return {}
+        row = self._scene_row(d, None, True)
+        return {"attrs": row["attrs"], "stateText": row["stateText"]}
+
+    @Slot(str, str, str, "QVariantMap", result=str)
+    def saveScene(self, scene_id: str, name: str, room: str, devices: dict[str, Any]) -> str:
+        """Saves a scene (new with id ""); devices: {device id: commands}. Returns an error text."""
+        name = " ".join(name.split())[:panel_scenes.MAX_SCENE_NAME]
+        if not name:
+            return tr("Please enter a name.")
+        if any(x["name"].casefold() == name.casefold() and x["room"] == room and x["id"] != scene_id
+               for x in self.store.scenes):
+            return tr("A scene named \"{name}\" already exists in this room.").format(name=name)
+        old = next((x for x in self.store.scenes if x["id"] == scene_id), None)
+        stored = {str(k): dict(v) for k, v in devices.items() if isinstance(v, dict)}
+        if old:     # devices Homebridge does not report right now stay in the scene
+            stored = {**{k: v for k, v in old["devices"].items() if self._model.get(k) is None}, **stored}
+            old.update(name=name, devices=stored)
+        else:
+            self.store.scenes.append({"id": panel_scenes.new_id({x["id"] for x in self.store.scenes}),
+                                      "name": name, "room": room, "devices": stored})
+        self.store.save()
+        self.scenesChanged.emit()
+        return ""
+
+    @Slot(str)
+    def deleteScene(self, scene_id: str) -> None:
+        self.store.scenes = [x for x in self.store.scenes if x["id"] != scene_id]
+        self.store.save()
+        self.scenesChanged.emit()
+
+    def rooms_renamed(self, old: str, new: str) -> None:
+        """Scenes follow their room when it is renamed or deleted (to the default room)."""
+        changed = False
+        for sc in self.store.scenes:
+            if sc["room"] == old:
+                sc["room"], changed = new, True
+        if changed:
+            self.store.save()
+            self.scenesChanged.emit()
 
     @Slot(str, result="QVariantMap")
     def device(self, dev_id: str) -> dict[str, Any]:
@@ -1655,7 +1741,14 @@ class Controller(QObject):
 
     @Property("QVariantList", notify=scenesChanged)
     def scenes(self) -> list[dict[str, Any]]:
-        return self._scenes
+        """Scenes of the panel in the selected room (under "All" every one), by name:
+        [{id, name, room, count}] – count = devices the scene sets."""
+        out = [{"id": x["id"], "name": x["name"], "room": x["room"], "count": len(x["devices"])}
+               for x in self.store.scenes if self._room in (ALL_ROOMS, x["room"])]
+        collator = QCollator(QLocale(i18n.locale_name()))
+        collator.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        collator.setNumericMode(True)
+        return sorted(out, key=lambda x: collator.sortKey(x["name"]))
 
     @Property(str, notify=categoryChanged)
     def category(self) -> str:

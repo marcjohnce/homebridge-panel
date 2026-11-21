@@ -59,7 +59,7 @@ Rectangle {
                 key: "shareLoad:",
                 label: qsTr("Load from MQTT"),
                 button: qsTr("Load"),
-                confirm: qsTr("Load the settings %1 saved on %2 (%3)? Rooms, names, groups and virtual devices are replaced; favorites, display settings and PINs stay. A backup is made first, then the app restarts.")
+                confirm: qsTr("Load the settings %1 saved on %2 (%3)? Rooms, names, groups, virtual devices and scenes are replaced; favorites, display settings and PINs stay. A backup is made first, then the app restarts.")
                          .arg(info.panel).arg(root.created(info.saved)).arg(info.text)
             });
         });
@@ -108,7 +108,7 @@ Rectangle {
                     Layout.fillWidth: true
                     Layout.topMargin: Theme.s(10)
                     leftPadding: 4
-                    text: qsTr("A backup holds rooms, device names, favorites, groups, virtual devices and all settings of this page. Restoring one replaces the current settings and restarts the app.")
+                    text: qsTr("A backup holds rooms, device names, favorites, groups, virtual devices, scenes and all settings of this page. Restoring one replaces the current settings and restarts the app.")
                     color: Theme.muted
                     font.pixelSize: Theme.s(15)
                     wrapMode: Text.WordWrap
@@ -249,7 +249,7 @@ Rectangle {
                     visible: panel.settings.sharingAvailable
                     Layout.fillWidth: true
                     leftPadding: 4
-                    text: qsTr("Saves rooms, names, kinds, groups and virtual devices on the MQTT broker, where other panels can load them. Favorites, display settings and PINs stay on each panel.")
+                    text: qsTr("Saves rooms, names, kinds, groups, virtual devices and scenes on the MQTT broker, where other panels can load them. Favorites, display settings and PINs stay on each panel.")
                     color: Theme.muted
                     font.pixelSize: Theme.s(15)
                     wrapMode: Text.WordWrap

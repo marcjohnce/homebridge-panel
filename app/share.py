@@ -9,7 +9,7 @@ is overwritten unnoticed.
      "version": "0.0.4", "settings": {… the shared part of settings.json …}}
 
 Shared: rooms and their order, display names, kinds, menu areas, hidden devices, "No alerts",
-light and switch groups, virtual devices and the Homebridge address. Each panel keeps its own
+light and switch groups, virtual devices, scenes and the Homebridge address. Each panel keeps its own
 favorites, display settings, MQTT connection and – as anyone with access to the broker could
 read them – the PINs and passwords.
 """
@@ -25,7 +25,7 @@ from .config import MqttConfig
 TOPIC = "smarthome-panel/shared"
 FORMAT = 1
 SHARED_VALUES = ("show_general", "wifi_ssid", "hap_enabled", "hap_host", "hap_port")
-SHARED_LISTS = ("virtual", "groups", "switch_groups")
+SHARED_LISTS = ("virtual", "groups", "switch_groups", "scenes")
 LOCAL_ROOM_KEYS = ("favorites",)
 
 

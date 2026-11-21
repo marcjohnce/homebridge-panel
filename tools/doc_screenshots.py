@@ -241,7 +241,7 @@ def home_callouts(p: Panel, top_layout: bool) -> list[tuple]:
     if not top_layout:
         out.append((2, [p.rect("climate")], "Indoor and outdoor temperature"))
     out += [
-        (3, [p.rect("categoryMenu")], "Menu: favorites, lights, climate, security", *(["top"] if top_layout else ["left"])),
+        (3, [p.rect("categoryMenu")], "Menu: favorites, lights, scenes, climate, security", *(["top"] if top_layout else ["left"])),
         (4, [status], "Connection status"),
         (5, [p.rect("settingsButton")], "Settings"),
         (6, [p.rect("roomTabs")], "Rooms; “All” comes last", *([] if top_layout else ["top"])),
@@ -287,6 +287,42 @@ def menu_views(p: Panel, out: Path, size: str, suffix: str = "") -> None:
         (1, [p.rect(f"tile:{leak}")], "Alarm: leak or glass break"),
     ], f"Alarm – {size}"), out, f"home-alarm{suffix}")
     p.ctl._on_message({"type": "device", "device": {**d, "state": {"triggered": False}}})
+    p.ctl.selectCategory("light")
+    p.ctl.selectRoom("")
+
+
+def scene_views(p: Panel, out: Path) -> None:
+    """Menu "Scenes" and the scene editor."""
+    p.win.setProperty("openDevice", "")
+    p.win.findChild(QObject, "toast").setProperty("shown", False)    # alarm message of the views above
+    p.ctl.selectCategory("scenes")
+    room = "Living Room" if "Living Room" in p.ctl.rooms else p.ctl.rooms[0]
+    p.ctl.selectRoom(room)
+    rows = p.ctl.sceneDraft("")["devices"]
+    p.ctl.saveScene("", "Movie night", room, {r["id"]: {"on": False} for r in rows[:2]})
+    p.ctl.saveScene("", "Reading", room, {r["id"]: r["attrs"] for r in rows})
+    p.ctl.saveScene("", "Good morning", room, {r["id"]: r["attrs"] for r in rows[1:]})
+    reading = next(x["id"] for x in p.ctl.scenes if x["name"] == "Reading")
+    save(annotate(p.grab(), [
+        (1, [p.rect("category:scenes")], "Scenes", "left"),
+        (2, [p.rect(f"scene:{reading}")], "Scene: tap to run, hold to edit"),
+        (3, [p.rect("newScene")], "New scene from the current state"),
+    ], "Scenes – 1280 × 800"), out, "scenes")
+    draft = p.ctl.sceneDraft(next(x["id"] for x in p.ctl.scenes if x["name"] == "Movie night"))
+    p.win.setProperty("sceneDraft", draft)
+    wait(400)
+    first, left_out = draft["devices"][0]["id"], draft["devices"][2]["id"]
+    save(annotate(p.grab(), [
+        (1, [p.rect("sceneName")], "Name", "left"),
+        (2, [p.rect(f"sceneCheck:{first}")], "Checked: the scene sets this state", "left"),
+        (3, [p.rect(f"sceneAdjust:{left_out}")], "Unchecked: not changed", "right"),
+        (4, [p.rect(f"sceneAdjust:{first}")], "Tap to change the state in the detail view", "right"),
+        (5, [p.rect("sceneCapture")], "Take over how the devices are now", "bottom"),
+        (6, [p.rect("sceneSave")], "Save", "bottom"),
+    ], "Scene editor"), out, "scene-editor")
+    p.win.setProperty("sceneDraft", None)
+    for sc in list(p.ctl.store.scenes):
+        p.ctl.deleteScene(sc["id"])
     p.ctl.selectCategory("light")
     p.ctl.selectRoom("")
 
@@ -406,6 +442,7 @@ def main() -> int:
     p = Panel(DETAIL_SIZE)
     detail_views(p, out, "", "1280 × 800")
     menu_views(p, out, "1280 × 800")
+    scene_views(p, out)
 
     # Settings, keypad and screen saver at the primary size
 
