@@ -162,10 +162,6 @@ def demo_cfg(**kw):
     return AppConfig.model_validate({
         "demo": {"enabled": True},
         "devices": {"Coffee Maker": {"room": "Kitchen", "icon": "coffee"}, "Fan": {"hidden": True}},
-        "scenes": [{"id": "off", "name": "All off", "actions": [
-            {"device": "Living Room Ceiling Light", "set": {"on": False}},
-            {"device": "TV Plug", "set": {"on": False}},
-            {"device": "does-not-exist", "set": {"on": False}}]}],
         **kw,
     })
 
@@ -185,7 +181,8 @@ def test_manager_with_demo_backend():
             await m.command("Coffee Maker", {"brightness": 3})
         with pytest.raises(DeviceNotFound):
             await m.command("unbekannt", {"on": True})
-        res = await m.run_scene("off")
+        res = await m.run_actions("off", [(m.resolve("Living Room Ceiling Light"), {"on": False}),
+                                          (m.resolve("TV Plug"), {"on": False}), ("does-not-exist", {"on": False})])
         assert list(res["errors"]) == ["does-not-exist"]
         assert m.devices[m.resolve("Living Room Ceiling Light")].state["on"] is False
         assert not q.empty()
@@ -705,11 +702,12 @@ def test_air_quality_sensor_merged_and_texts():
     assert not air_warning({**d, "state": {**st, "air_quality": 2}})
 
 
-def test_old_schedules_are_ignored(tmp_path, caplog):
-    """Schedules were removed: an old config.yaml with them still loads."""
+def test_old_schedules_and_scenes_are_ignored(tmp_path, caplog):
+    """Schedules and scenes left config.yaml: an old file with them still loads."""
     from app.config import load_config
     f = tmp_path / "config.yaml"
-    f.write_text('schedules:\n  - { time: "06:30", scene: comfort }\nscenes: []\n', encoding="utf-8")
+    f.write_text('schedules:\n  - { time: "06:30", scene: comfort }\n'
+                 'scenes:\n  - { id: off, name: Off, actions: [{ device: x, set: { on: false } }] }\n', encoding="utf-8")
     cfg = load_config(f)
-    assert not hasattr(cfg, "schedules")
-    assert "no longer supported" in caplog.text
+    assert not hasattr(cfg, "schedules") and not hasattr(cfg, "scenes")
+    assert "schedules are no longer" in caplog.text and "scenes are no longer" in caplog.text

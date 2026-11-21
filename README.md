@@ -208,7 +208,7 @@ Spanish; Portuguese in `app/i18n_catalog_pt.py`). A `QTranslator` feeds the same
 (`{name}`, `%1`). To add a language, add it to `LANGUAGES` and `FORMATS` in `app/i18n.py` and a
 column to the catalog.
 
-## Rooms, devices, scenes (`config.yaml`)
+## Rooms and devices (`config.yaml`)
 
 | Section | Purpose |
 |---|---|
@@ -219,13 +219,9 @@ column to the catalog.
 | `demo` | simulated devices |
 | `devices` | per device (ID or name): `room`, `name`, `icon`, `order`, `hidden`, `outdoor` (sensors), `security` (`window`, `door`, `contact`, `glassbreak`, `motion`, `presence` for contact/motion/occupancy sensors), `appliance` (`switch`, `plug`, `coffee`, `washer`, `dishwasher`, `fan` for switches/plugs), `lamp` (`bulb`, `ceiling`, `pendant`, `chandelier`, `spot`, `wall`, `table`, `desk`, `floorlamp`, `globe`, `tube`, `strip` for lights), `valve` (`generic`, `irrigation`, `shower`, `faucet`), `area` (`light`, `climate`, `security`); values set on the panel take precedence |
 | `blacklist` | list of texts: devices whose original name contains one of them are ignored completely (not shown anywhere, also not in the settings); case doesn't matter |
-| `scenes` | scenes with actions `{device: …, set: {…}}` (scenes made on the panel are kept in its settings) |
-
-**Scene attributes**: `on`, `brightness` (0–100), `hue` (0–360), `saturation` (0–100),
-`color_temp` (mired 140–500), `speed` (0–100), `target_temp` (°C), `mode` (`off|heat|cool|auto`).
 
 **Icons** (`icon:`): `light`, `ceiling`, `strip`, `plug`, `switch`, `thermostat`, `radiator`,
-`floor`, `fan`, `coffee`, `tv`, `weather`, `drop`, `sun`; for scenes `moon`, `sun`, `film`, `leaf`, `home`, `power`.
+`floor`, `fan`, `coffee`, `tv`, `weather`, `drop`, `sun`.
 
 See [docs/user-interface.md](docs/user-interface.md) for how each screen works.
 

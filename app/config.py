@@ -92,27 +92,6 @@ class DeviceOverride(BaseModel):
         None, description="Menu area to show the device in, instead of the one of its type")
 
 
-class SceneAction(BaseModel):
-    device: str = Field(..., description="Device ID or device name")
-    set: dict[str, Any]
-
-    @field_validator("set", mode="before")
-    @classmethod
-    def _fix_yaml_on(cls, v: Any) -> Any:
-        # YAML 1.1 reads the key `on:` as boolean True -> map it back to "on"
-        if isinstance(v, dict):
-            return {("on" if k is True else "off" if k is False else k): val for k, val in v.items()}
-        return v
-
-
-class Scene(BaseModel):
-    id: str
-    name: str
-    icon: str = "power"
-    room: str | None = Field(None, description="Room the scene is offered in; none = whole house")
-    actions: list[SceneAction] = []
-
-
 class AppConfig(BaseModel):
     server: ServerConfig = ServerConfig()
     panel: PanelConfig = PanelConfig()
@@ -125,7 +104,6 @@ class AppConfig(BaseModel):
     blacklist: list[str] = Field(
         [], description="Devices whose original name contains one of these texts are ignored completely "
                         "(case doesn't matter)")
-    scenes: list[Scene] = []
 
     @field_validator("blacklist", mode="before")
     @classmethod
@@ -163,7 +141,7 @@ def config_path(path: str | os.PathLike | None = None) -> Path:
 
 
 def load_config(path: str | os.PathLike | None = None, required: bool = True) -> AppConfig:
-    """Loads config.yaml (rooms, scenes). Without a file: empty config unless required."""
+    """Loads config.yaml (connection extras, devices). Without a file: empty config unless required."""
     path = config_path(path)
     if not path.exists():
         if not required:
@@ -172,6 +150,7 @@ def load_config(path: str | os.PathLike | None = None, required: bool = True) ->
             f"Configuration '{path}' not found – copy config.example.yaml to config.yaml"
         )
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    if isinstance(data, dict) and data.pop("schedules", None):
-        log.warning("%s: schedules are no longer supported and are ignored", path)
+    for old in ("scenes", "schedules"):     # scenes are made on the panel now
+        if isinstance(data, dict) and data.pop(old, None):
+            log.warning("%s: %s are no longer supported here and are ignored", path, old)
     return AppConfig.model_validate(_expand_env(data))

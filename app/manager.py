@@ -220,13 +220,6 @@ class DeviceManager:
             except HistoryError as e:
                 raise BackendError(str(e)) from e
 
-    async def run_scene(self, scene_id: str) -> dict[str, Any]:
-        """A scene of config.yaml."""
-        scene = next((s for s in self.cfg.scenes if s.id == scene_id), None)
-        if scene is None:
-            raise KeyError(scene_id)
-        return await self.run_actions(scene_id, [(a.device, a.set) for a in scene.actions])
-
     async def run_actions(self, scene_id: str, actions: list[tuple[str, dict[str, Any]]]) -> dict[str, Any]:
         """Sends the commands of a scene at once; tells the listeners which devices failed
         ({"type": "scene", "errors": {device: error}})."""
@@ -266,6 +259,5 @@ class DeviceManager:
             "type": "snapshot",
             "title": self.cfg.panel.title,
             "devices": [d.to_dict() for d in self.devices.values()],
-            "scenes": [s.model_dump(include={"id", "name", "icon", "room"}) for s in self.cfg.scenes],
             "backends": self.status,
         }

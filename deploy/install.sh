@@ -57,7 +57,7 @@ sudo apt-get install -y -qq wlopm 2>/dev/null || true
 
 if [ ! -f "$DIR/config.yaml" ]; then
   cp "$DIR/config.example.yaml" "$DIR/config.yaml"
-  echo "==> Created config.yaml (rooms, devices, scenes). Enter the connection in the app under Settings."
+  echo "==> Created config.yaml (rooms and devices). Enter the connection in the app under Settings."
 fi
 chmod +x "$DIR/deploy/start.sh"
 

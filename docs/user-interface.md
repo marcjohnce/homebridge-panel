@@ -148,7 +148,6 @@ all favorites, this mark stays on the panel and is not shared with other panels.
 Devices hidden in the settings and light groups are not listed (the lights of a group are). If a
 device cannot be reached when the scene runs, a message names it; the others are switched anyway.
 Scenes are part of every [backup](#backups) and of the settings [shared with other panels](#sharing-the-settings-with-other-panels).
-Scenes in `config.yaml` are separate and are not shown here.
 
 ![Climate](images/home-climate.png)
 
@@ -332,9 +331,6 @@ or press and hold for the detail view.
 While a blind moves, the panel polls it every second so the position follows smoothly,
 then returns to the normal interval. If a blind reports an obstruction, the tile and the
 detail view show *Obstructed*.
-
-In scenes: `position` (0–100), `tilt` (−90…90), `stop: true`; `on: true` opens fully and
-`on: false` closes.
 
 ## Sensors
 
@@ -547,7 +543,7 @@ entry (e.g. *Climate* for fan levels).
 ![Switch group dialog](images/switch-group-editor.png)
 
 Names, kinds and rooms set here take precedence over `name:`, `security:` and `room:` in
-`config.yaml`. Scenes keep working with the original names. Setting a value back to the one from
+`config.yaml`. Setting a value back to the one from
 `config.yaml` or Homebridge removes the override again.
 
 ### Batteries

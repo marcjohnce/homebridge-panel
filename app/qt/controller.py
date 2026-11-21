@@ -1597,10 +1597,9 @@ class Controller(QObject):
 
     @Slot(str)
     def runScene(self, scene_id: str) -> None:
-        """Runs a scene of the panel (or one of config.yaml)."""
+        """Runs a scene of the panel."""
         sc = next((x for x in self.store.scenes if x["id"] == scene_id), None)
         if sc is None:
-            self._command(lambda m: m.run_scene(scene_id))
             return
         actions = [(ref, dict(attrs)) for ref, attrs in sc["devices"].items()]
         if not actions:
