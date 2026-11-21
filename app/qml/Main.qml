@@ -7,6 +7,18 @@ ApplicationWindow {
     property string openDevice: ""
     property bool settingsOpen: false
     property bool idle: false
+    property bool displayOff: false    // switched off some time after the screen saver started
+    // After waking up every touch is swallowed for a moment: the display needs a while to light
+    // up, and a second tap in the dark (or a bouncing finger) must not switch a tile blindly.
+    property bool shielded: false
+
+    // the first touch on the screen saver: wake up, keep touches away from the tiles for now
+    function wake() {
+        shielded = true;
+        shieldTimer.interval = displayOff ? 2500 : 400;    // a display that was off: until it is on (see below)
+        shieldTimer.restart();
+        idle = false;
+    }
 
     width: initialWidth
     height: initialHeight
@@ -83,7 +95,7 @@ ApplicationWindow {
         anchors.fill: parent
         active: window.idle
         sourceComponent: IdleScreen {
-            onWoken: window.idle = false
+            onWoken: window.wake()
         }
     }
 
@@ -133,14 +145,42 @@ ApplicationWindow {
         objectName: "displayOffTimer"
         interval: Math.max(1, panel.displayOffSeconds) * 1000
         running: window.idle && panel.displayOffSeconds > 0
-        onTriggered: panel.setDisplayPower(false)
+        onTriggered: {
+            window.displayOff = true;
+            panel.setDisplayPower(false);
+        }
     }
     onIdleChanged: if (!idle) panel.setDisplayPower(true)
+
+    Timer {
+        id: shieldTimer
+        onTriggered: window.shielded = false
+    }
+    // swallows every touch while shielded; touching again keeps it up a little longer
+    MouseArea {
+        objectName: "wakeShield"
+        anchors.fill: parent
+        z: 1000
+        enabled: window.shielded
+        visible: window.shielded
+        onPressed: shieldTimer.restart()
+        onReleased: shieldTimer.restart()
+    }
 
     Connections {
         target: panel
         function onUserActivity() {
             idleTimer.restart();
+        }
+        // the display is lit again: touches reach the tiles one second later
+        function onDisplayPowered(on) {
+            if (!on)
+                return;
+            window.displayOff = false;      // also after an alarm switched it on
+            if (window.shielded) {
+                shieldTimer.interval = 1000;
+                shieldTimer.restart();
+            }
         }
         function onToast(message) {
             toast.show(message);

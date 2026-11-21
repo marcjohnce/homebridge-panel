@@ -805,6 +805,7 @@ class Controller(QObject):
     toast = Signal(str)
     deviceUpdated = Signal(str)
     userActivity = Signal()
+    displayPowered = Signal(bool)     # the display was switched (the worker is done): on / off
     roomsChanged = Signal()
     currentRoomChanged = Signal()
     categoryChanged = Signal()
@@ -1660,9 +1661,10 @@ class Controller(QObject):
             return
         self._display_on = on
         try:
-            self._display_worker.submit(self._display.set, on)
+            fut = self._display_worker.submit(self._display.set, on)
         except RuntimeError:                  # shut down meanwhile
-            pass
+            return
+        fut.add_done_callback(lambda f: _emit_safely(self.displayPowered, on))
 
     @Property(bool, notify=upsideDownChanged)
     def upsideDown(self) -> bool:

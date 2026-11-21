@@ -615,6 +615,9 @@ underneath.
 *Display off after* switches the display off completely some time after the screen saver
 started (5, 15 or 30 minutes or 1 hour). A touch switches it on again – like waking the screen
 saver it does not trigger anything – and so does an alarm (leak, glass break, smoke, CO).
+The display takes a moment to light up, so after a touch wakes it the panel ignores further
+touches until it is lit and one more second has passed: a second tap in the dark does not switch
+a tile it cannot show yet.
 The panel turns off the backlight where the display has one (DSI displays such as the Raspberry
 Pi Touch Display or Waveshare DSI LCDs; `deploy/install.sh` allows this for the panel user –
 run it again after updating, then reboot), otherwise it switches the screen off through the
