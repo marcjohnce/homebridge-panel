@@ -14,7 +14,7 @@ FONT_DIR = ROOT / "assets" / "fonts"
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     p = argparse.ArgumentParser(prog="smarthome-panel", description="Smart Home Panel (Qt)")
-    p.add_argument("--config", help="Path to config.yaml (rooms, scenes, schedules)")
+    p.add_argument("--config", help="Path to config.yaml (rooms, devices, scenes)")
     p.add_argument("--settings", help="Path to settings.json (default: ~/.config/smarthome-panel/)")
     p.add_argument("--fullscreen", action="store_true", help="Start in full screen (wall panel)")
     p.add_argument("--hide-cursor", action="store_true", help="Hide the mouse pointer (touch screen)")

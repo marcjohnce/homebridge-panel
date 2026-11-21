@@ -25,7 +25,6 @@ from ..config import AppConfig, HapBackendConfig, MqttConfig, VirtualDevice
 from ..manager import DeviceManager, DeviceNotFound
 from ..backends.mqtt import MqttBackend, test_connection as test_mqtt
 from ..rooms import BUILTIN_DEFAULT, RoomLayout
-from ..scheduler import Scheduler
 from ..updater import UpdateError, Updater
 from ..eve_history import DeviceHistory, bucket, energy_kwh
 from ..backup import BackupError, Backups
@@ -947,7 +946,6 @@ class Controller(QObject):
         self._theme = self._compute_theme()
         fmt.set_alarm_armed(False)          # module state: a new controller starts disarmed
         self._mgr: DeviceManager | None = None
-        self._sched: Scheduler | None = None
         self._pump: asyncio.Task | None = None
         self._message.connect(self._on_message)
         self._theme_timer = QTimer(self, interval=30_000, timeout=self._update_theme)
@@ -1147,11 +1145,9 @@ class Controller(QObject):
     async def _stop_manager(self) -> None:
         if self._pump:
             self._pump.cancel()
-        if self._sched:
-            self._sched.stop()
         if self._mgr:
             await self._mgr.stop()
-        self._mgr = self._sched = self._pump = None
+        self._mgr = self._pump = None
 
     async def _restart(self, cfg: AppConfig) -> None:
         await self._stop_manager()
@@ -1161,10 +1157,9 @@ class Controller(QObject):
             self.toast.emit(str(e))
             return
         queue = mgr.subscribe()
-        self._mgr, self._sched = mgr, Scheduler(cfg, mgr)
+        self._mgr = mgr
         self._message.emit({"type": "snapshot", "devices": [], "backends": mgr.status})
         await mgr.start()
-        self._sched.start()
         self._message.emit(mgr.snapshot_message())
         self._pump = asyncio.create_task(self._pump_loop(queue))
 

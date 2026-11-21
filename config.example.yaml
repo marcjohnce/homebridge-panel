@@ -4,7 +4,7 @@
 
 # The Homebridge connection (address, port, PIN), appearance and screen saver are set
 # in the app under "Settings" (~/.config/smarthome-panel/settings.json).
-# This file contains rooms, icons, scenes and schedules.
+# This file contains rooms, icons and scenes.
 
 server:
   poll_interval: 5       # seconds between two device polls
@@ -121,10 +121,3 @@ scenes:
     actions:
       - { device: Living Room Heating, set: { mode: heat, target_temp: 18 } }
       - { device: Bathroom Heating,    set: { mode: heat, target_temp: 18 } }
-
-# --- Schedules: run a scene at a time of day on selected weekdays ------------------
-# Weekdays: mo tu we th fr sa su (default: every day)
-schedules:
-  - { time: "06:30", days: [mo, tu, we, th, fr], scene: heating-comfort }
-  - { time: "08:00", days: [sa, su],             scene: heating-comfort }
-  - { time: "22:30",                             scene: heating-eco }

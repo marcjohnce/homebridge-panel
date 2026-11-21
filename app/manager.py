@@ -221,7 +221,7 @@ class DeviceManager:
                 raise BackendError(str(e)) from e
 
     async def run_scene(self, scene_id: str) -> dict[str, Any]:
-        """A scene of config.yaml (also run by schedules)."""
+        """A scene of config.yaml."""
         scene = next((s for s in self.cfg.scenes if s.id == scene_id), None)
         if scene is None:
             raise KeyError(scene_id)

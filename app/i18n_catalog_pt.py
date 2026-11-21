@@ -232,7 +232,7 @@ PT: dict[str, str] = {
     "Connection failed: {error}": "A ligação falhou: {error}",
     "Info": "Informação",
     "Connection": "Ligação",
-    "Rooms, scenes, schedules": "Divisões, cenários, horários",
+    "Rooms, devices, scenes": "Divisões, dispositivos, cenas",
     "no config.yaml found": "config.yaml não encontrado",
     "Settings file": "Ficheiro de definições",
     "Version": "Versão",

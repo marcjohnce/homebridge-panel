@@ -148,7 +148,7 @@ all favorites, this mark stays on the panel and is not shared with other panels.
 Devices hidden in the settings and light groups are not listed (the lights of a group are). If a
 device cannot be reached when the scene runs, a message names it; the others are switched anyway.
 Scenes are part of every [backup](#backups) and of the settings [shared with other panels](#sharing-the-settings-with-other-panels).
-Scenes in `config.yaml`, which schedules run, are separate and are not shown here.
+Scenes in `config.yaml` are separate and are not shown here.
 
 ![Climate](images/home-climate.png)
 
@@ -660,7 +660,7 @@ tap *Create backup*.
 
 The backups are kept on the Pi in `~/.config/smarthome-panel/backups/` (one JSON file each), next
 to the settings. To move the settings to another panel, copy a backup file into the same folder
-there and restore it. `config.yaml` (scenes, schedules) and the history of the readings are not
+there and restore it. `config.yaml` and the history of the readings are not
 part of a backup.
 
 ### Sharing the settings with other panels

@@ -10,7 +10,7 @@ backup and of the settings shared over MQTT):
                             "hap:14.10": {"on": false},
                             "hap:20.9": {"position": 60}}}]
 
-Scenes in config.yaml (run by schedules) are separate and stay as they are.
+Scenes in config.yaml are separate and stay as they are.
 """
 from __future__ import annotations
 
