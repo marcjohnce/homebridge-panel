@@ -87,7 +87,7 @@ Rectangle {
     }
     function openDevice(d) {
         if (d.panelTile)
-            return;                 // the Wi-Fi tile: set up under Settings → Wi-Fi for guests
+            return;                 // Wi-Fi tile, scenes: set up under Wi-Fi for guests and Scenes
         if (d.virtual)
             virtualEditor.edit(d);
         else if (d.group)

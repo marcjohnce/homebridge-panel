@@ -308,7 +308,15 @@ def scene_views(p: Panel, out: Path) -> None:
         (2, [p.rect(f"scene:{reading}")], "Scene: tap to run, hold to edit"),
         (3, [p.rect("newScene")], "New scene from the current state"),
     ], "Scenes – 1280 × 800"), out, "scenes")
-    draft = p.ctl.sceneDraft(next(x["id"] for x in p.ctl.scenes if x["name"] == "Movie night"))
+    movie = next(x["id"] for x in p.ctl.scenes if x["name"] == "Movie night")
+    p.ctl.saveScene(movie, "Movie night", room, p.ctl.store.scenes[0]["devices"], True)
+    p.ctl.selectCategory("favorites")
+    save(annotate(p.grab(), [
+        (1, [p.rect(f"tile:scene:{movie}")], "Scene as a favorite: tap to run"),
+    ], "Scene among the favorites"), out, "scene-favorite")
+    p.ctl.selectCategory("scenes")
+    p.ctl.selectRoom(room)
+    draft = p.ctl.sceneDraft(movie)
     p.win.setProperty("sceneDraft", draft)
     wait(400)
     first, left_out = draft["devices"][0]["id"], draft["devices"][2]["id"]
@@ -319,6 +327,7 @@ def scene_views(p: Panel, out: Path) -> None:
         (4, [p.rect(f"sceneAdjust:{first}")], "Tap to change the state in the detail view", "right"),
         (5, [p.rect("sceneCapture")], "Take over how the devices are now", "bottom"),
         (6, [p.rect("sceneSave")], "Save", "bottom"),
+        (7, [p.rect("sceneFavorite")], "Also show it under Favorites", "right"),
     ], "Scene editor"), out, "scene-editor")
     p.win.setProperty("sceneDraft", None)
     for sc in list(p.ctl.store.scenes):

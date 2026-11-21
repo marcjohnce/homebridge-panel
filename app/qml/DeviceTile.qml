@@ -11,6 +11,8 @@ Rectangle {
     required property string type
     required property string icon
     required property bool isOn
+    property bool flashing: false        // a scene tile right after it was run
+    readonly property bool lit: isOn || flashing
     required property bool reachable
     required property bool heating
     required property string stateText
@@ -32,8 +34,8 @@ Rectangle {
     readonly property bool sensor: type === "sensor"
     readonly property bool security: type === "security"
     readonly property bool alarm: alertLevel === 2
-    readonly property color ink: isOn ? Theme.goldInk : alarm ? Theme.alarmInk : Theme.ink
-    readonly property color sub: isOn ? Theme.goldInk : alarm ? Theme.alarmInk : Theme.muted
+    readonly property color ink: lit ? Theme.goldInk : alarm ? Theme.alarmInk : Theme.ink
+    readonly property color sub: lit ? Theme.goldInk : alarm ? Theme.alarmInk : Theme.muted
 
     objectName: "tile:" + deviceId
     readonly property int lastRowStart: Math.floor((count - 1) / columns) * columns
@@ -43,14 +45,14 @@ Rectangle {
     topRightRadius: index === Math.min(columns, count) - 1 ? cornerRadius : 0
     bottomLeftRadius: index === lastRowStart ? cornerRadius : 0
     bottomRightRadius: (index === count - 1 || (index === lastRowStart - 1 && count % columns !== 0)) ? cornerRadius : 0
-    color: isOn ? Theme.gold : alarm ? Theme.alarm : (mouse.pressed ? Theme.tilePress : Theme.tile)
+    color: lit ? Theme.gold : alarm ? Theme.alarm : (mouse.pressed ? Theme.tilePress : Theme.tile)
     opacity: reachable ? 1 : 0.45
 
     activeFocusOnTab: true
     Accessible.role: Accessible.Button
     Accessible.name: batteryLow ? qsTr("%1: %2, battery almost empty").arg(shortName).arg(stateText)
                                 : qsTr("%1: %2").arg(shortName).arg(stateText)
-    Accessible.checkable: !thermostat && !sensor && !security
+    Accessible.checkable: !thermostat && !sensor && !security && type !== "scene"
     Accessible.checked: isOn
     Keys.onSpacePressed: activate()
     Keys.onReturnPressed: activate()
@@ -58,12 +60,24 @@ Rectangle {
     Behavior on color { ColorAnimation { duration: 200 } }
 
     function activate() {
+        if (type === "scene") {         // a scene among the favorites: run it
+            panel.toggle(deviceId);
+            flashing = true;
+            flash.restart();
+            return;
+        }
         if (security || type === "value")
             return;                  // read-only
         if (thermostat || sensor || type === "alarm")     // alarm system: choose the mode in the detail view
             root.openDetail(deviceId);
         else
             panel.toggle(deviceId);
+    }
+
+    Timer {
+        id: flash
+        interval: 900
+        onTriggered: root.flashing = false
     }
 
     MouseArea {
@@ -123,7 +137,7 @@ Rectangle {
             elide: Text.ElideRight
             font.pixelSize: Theme.s(13)
             color: root.sub
-            opacity: root.isOn || root.alarm ? 0.72 : 1
+            opacity: root.lit || root.alarm ? 0.72 : 1
         }
         Text {
             width: parent.width
@@ -141,8 +155,8 @@ Rectangle {
             elide: Text.ElideRight
             font.pixelSize: Theme.s(14)
             font.weight: root.alertLevel > 0 ? Font.Medium : Font.Normal
-            color: root.alertLevel === 1 || root.warning ? Theme.err : root.heating && !root.isOn ? Theme.heat2 : root.sub
-            opacity: root.isOn ? 0.72 : 1
+            color: root.alertLevel === 1 || root.warning ? Theme.err : root.heating && !root.lit ? Theme.heat2 : root.sub
+            opacity: root.lit ? 0.72 : 1
         }
     }
 
@@ -158,7 +172,7 @@ Rectangle {
         height: Theme.s(26)
         lineWidth: 1.5
         name: "battery"
-        color: root.isOn || root.alarm ? root.ink : Theme.err
+        color: root.lit || root.alarm ? root.ink : Theme.err
     }
 
     Item {
@@ -177,7 +191,7 @@ Rectangle {
             width: Theme.s(20)
             height: Theme.s(20)
             name: "chevron"
-            color: root.isOn ? Theme.goldInk : Theme.muted
+            color: root.lit ? Theme.goldInk : Theme.muted
         }
         MouseArea {
             anchors.fill: parent
@@ -190,7 +204,7 @@ Rectangle {
         anchors.margins: 3
         radius: 10
         color: "transparent"
-        border.color: root.isOn ? Theme.goldInk : Theme.gold
+        border.color: root.lit ? Theme.goldInk : Theme.gold
         border.width: 2
         visible: root.activeFocus
     }

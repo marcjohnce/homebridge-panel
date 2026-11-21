@@ -1850,3 +1850,40 @@ def test_scene_editor_qml(qapp, tmp_path):
     win.close()
     engine.deleteLater()
     pump_until(lambda: False, timeout=0.3)
+
+
+def test_scene_as_favorite(qapp, tmp_path):
+    """A scene marked as favorite is a tile under Favorites (with its room); tapping it runs the
+    scene. The mark is a local favorite; it goes with the scene."""
+    ctl = make_controller(tmp_path)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 29)
+    ctl.selectCategory("scenes")
+    ctl.selectRoom("Kitchen")
+    coffee = ctl.sceneDraft("")["devices"][0]["id"]
+    assert ctl.saveScene("", "Coffee", "Kitchen", {coffee: {"on": True}}, True) == ""
+    sid = ctl.store.scenes[0]["id"]
+    tile = "scene:" + sid
+    assert ctl.sceneDraft(sid)["favorite"] is True
+    assert tile in ctl.store.rooms["favorites"]
+    ctl.selectCategory("favorites")
+    model = ctl.devices
+    assert tile in model._rows
+    row = model._rows.index(tile)
+    roles = {v: k for k, v in model._ids.items()}
+    assert model.data(model.index(row), roles["shortName"]) == "Coffee"
+    assert model.data(model.index(row), roles["stateText"]) == "Scene"
+    assert [f["room"] for f in ctl.roomEditor.favorites if f["id"] == tile] == ["Scene in Kitchen"]
+    assert coffee not in [d["id"] for d in ctl.devices.all() if d.get("panelTile")]
+
+    ctl.toggle(tile)                                    # tap: run the scene
+    assert pump_until(lambda: ctl.devices.get(coffee)["state"].get("on") is True)
+
+    assert ctl.saveScene(sid, "Coffee time", "Kitchen", {coffee: {"on": True}}, True) == ""
+    assert ctl.devices.get(tile)["name"] == "Coffee time"
+    assert ctl.saveScene(sid, "Coffee time", "Kitchen", {coffee: {"on": True}}, False) == ""
+    assert tile not in model._rows and tile not in ctl.store.rooms["favorites"]
+    assert ctl.saveScene(sid, "Coffee time", "Kitchen", {coffee: {"on": True}}, True) == ""
+    ctl.deleteScene(sid)                                # deleted: no longer a favorite
+    assert ctl.devices.get(tile) is None and tile not in ctl.store.rooms["favorites"]
+    ctl.shutdown()

@@ -580,4 +580,6 @@ PT: dict[str, str] = {
     'Scenes': 'Cenas',
     'This scene changes no device.': 'Esta cena não altera nenhum dispositivo.',
     'Use current state': 'Usar o estado atual',
+    'Scene': 'Cena',
+    'Scene in {room}': 'Cena em {room}',
 }
