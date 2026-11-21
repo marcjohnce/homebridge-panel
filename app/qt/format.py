@@ -313,15 +313,26 @@ def state_text(d: dict[str, Any]) -> str:
     if s.get("speed") is not None:
         return tr("Speed {pct}").format(pct=pct(s["speed"]))
     if d.get("meta", {}).get("appliance") in ("washer", "dishwasher") and "in_use" in s:   # plug measures power
+        if s.get("in_use") and s.get("power") is not None:
+            return tr("Running, {power}").format(power=power_text(s["power"]))
         return tr("Running") if s.get("in_use") else tr("Ready")
+    if s.get("power") is not None:          # plug that measures: "On, 45 W"
+        return tr("On, {power}").format(power=power_text(s["power"]))
     if d["type"] == "plug" and s.get("in_use"):
         return tr("On, in use")
     return tr("On")
 
 
+def power_text(watts: float) -> str:
+    """"4.5 W", "45 W", "1,250 W"."""
+    return f"{fmt_number(float(watts), 1 if watts < 10 else 0)} W"
+
+
 def has_detail(d: dict[str, Any]) -> bool:
     caps = d.get("capabilities", [])
     if d.get("meta", {}).get("choice") or d["type"] == "alarm":
+        return True
+    if d.get("meta", {}).get("history"):        # e.g. a plug with its power history
         return True
     if d["type"] == "valve":
         return "duration" in caps

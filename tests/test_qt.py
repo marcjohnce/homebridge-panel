@@ -744,7 +744,7 @@ def test_appliance_kind_and_menu_area(qapp, tmp_path):
     assert washer["kind"] == "plug" and [k["value"] for k in washer["kinds"]][:2] == ["switch", "plug"]
     assert ed.saveDevice(washer["id"], {"kind": "washer"}) == ""
     d = ctl.device(washer["id"])
-    assert d["icon"] == "washer" and d["stateText"] == "Running"
+    assert d["icon"] == "washer" and d["stateText"] == "Running, 384 W"      # its plug measures power
 
     ctl.selectCategory("climate")
     ctl.selectRoom("")                     # all rooms
@@ -1088,7 +1088,7 @@ def test_device_history(qapp, tmp_path):
     ctl.start()
     assert pump_until(lambda: len(ctl.devices.all()) == 29)
     with_history = sorted(d["name"] for d in ctl.devices.all() if d["meta"].get("history"))
-    assert with_history == ["Living Room Climate", "Living Room Heating", "Weather Station"]
+    assert with_history == ["Living Room Climate", "Living Room Heating", "Washing Machine", "Weather Station"]
     got = []
     ctl.historyLoaded.connect(lambda dev_id, days, result: got.append((dev_id, days, result)))
     ctl.loadHistory("demo:weather-station", 1)
@@ -1112,6 +1112,15 @@ def test_device_history(qapp, tmp_path):
     assert kinds == {"demo:living-climate": ["temperature", "humidity"], "demo:heating-living": ["temperature"],
                      "demo:coffee": []}
     assert got[4][2]["series"] == {} and got[4][2]["error"] == ""
+    # a plug that measures power: its power history and the consumption in the period
+    washer = ctl.device("demo:washer")
+    assert washer["stateText"] == "On, 384 W" and washer["meta"]["history"]       # a plain plug here
+    assert ctl.devices.role_value(ctl._model.get("demo:washer"), "hasDetail")       # detail view with History
+    ctl.loadHistory("demo:washer", 7)
+    assert pump_until(lambda: len(got) == 6)
+    power = got[5][2]
+    assert power["kinds"] == ["power"] and power["series"]["power"]["max"] == 2050.0
+    assert 2 < power["series"]["power"]["energy"] < 5                  # kWh in a week of washes
     ctl.shutdown()
 
 

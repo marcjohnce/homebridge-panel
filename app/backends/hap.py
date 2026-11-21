@@ -108,9 +108,10 @@ class HapBackend(Backend):
             attach_battery(devices, battery)
             if len(history) == 3:
                 # the history belongs to the accessory's temperature device, else to the one
-                # with humidity or air pressure
+                # with humidity or air pressure, else to a plug that measures power
                 owners = [s for s in devices if "CurrentTemperature" in s.chars] or \
-                    [s for s in devices if "CurrentRelativeHumidity" in s.chars or "AirPressure" in s.chars]
+                    [s for s in devices if "CurrentRelativeHumidity" in s.chars or "AirPressure" in s.chars] or \
+                    [s for s in devices if "EvePower" in s.chars]
                 for snap in owners:
                     snap.history = history
             result += devices

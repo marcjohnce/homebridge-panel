@@ -18,6 +18,8 @@ HAP_BASE_SUFFIX = "-0000-1000-8000-0026BB765291"
 EVE_WEATHER_SERVICE = "E863F001-079E-48FF-8F27-9C2605A29F52"
 EVE_AIR_PRESSURE_SERVICE = "E863F00A-079E-48FF-8F27-9C2605A29F52"
 EVE_AIR_PRESSURE = "E863F10F-079E-48FF-8F27-9C2605A29F52"      # hPa
+EVE_POWER = "E863F10D-079E-48FF-8F27-9C2605A29F52"             # current power draw in W (Eve Energy)
+EVE_ENERGY = "E863F10C-079E-48FF-8F27-9C2605A29F52"            # total consumption in kWh
 # Eve history (fakegato-history, homebridge-lib): see app/eve_history.py
 EVE_HISTORY_SERVICE = "E863F007-079E-48FF-8F27-9C2605A29F52"
 EVE_HISTORY_CHARS = {"E863F116-079E-48FF-8F27-9C2605A29F52": "status",
@@ -143,6 +145,8 @@ CHAR_TYPES: dict[str, str] = {
     "68": "BatteryLevel",
     "79": "StatusLowBattery",
     EVE_AIR_PRESSURE: "AirPressure",
+    EVE_POWER: "EvePower",
+    EVE_ENERGY: "EveEnergy",
 }
 SENSOR_CHARS = {"CurrentTemperature", "CurrentRelativeHumidity", "CurrentAmbientLightLevel", "AirPressure",
                 "AirQuality", "PM2_5Density", "PM10Density", "VOCDensity", "CarbonDioxideDetected", "CarbonDioxideLevel"}
@@ -544,12 +548,16 @@ def snapshot_to_state(s: ServiceSnapshot) -> tuple[DeviceType, dict[str, Any], l
             caps.append("speed")
         if "OutletInUse" in c:
             state["in_use"] = bool(s.get("OutletInUse", False))
+        if "EvePower" in c:                 # plugs that measure: watts now, kWh in total
+            state["power"] = _num(s.get("EvePower", 0))
+        if "EveEnergy" in c:
+            state["energy"] = _num(s.get("EveEnergy", 0))
 
     if "CurrentTemperature" in c:
         state["current_temp"] = _num(s.get("CurrentTemperature"))
         caps.append("current_temp")
 
-    if s.history and any(k in state for k in ("current_temp", "humidity", "pressure")):
+    if s.history and any(k in state for k in ("current_temp", "humidity", "pressure", "power")):
         meta["history"] = True              # charts from the Eve history
 
     level = _num(s.get("BatteryLevel"))
