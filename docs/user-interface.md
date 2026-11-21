@@ -526,13 +526,13 @@ The *Devices* tab lists the favorites first, then all devices grouped by room. T
 |---|---|---|
 | 1 | Display name | Opens the keyboard. Below it the name from Homebridge; *Original name* restores it (an empty name does the same) |
 | 2 | Favorite | Shows the device under [Favorites](#favorites), the start page; new favorites are added at the end |
-| 3 | Kind | Contact and motion sensors: window, door, contact, glass break or motion. Lights: bulb, ceiling lamp, pendant light, chandelier, spotlight, wall lamp, table lamp, desk lamp, floor lamp, globe lamp, fluorescent tube or LED strip (icon only). Switches and plugs: switch, plug, coffee machine, washing machine, dishwasher or fan – sets the icon; *Fan* shows the device under *Climate*; washing machine and dishwasher show *Running* while their plug measures power, otherwise *Ready* |
+| 3 | Kind | Contact and motion sensors: window, door, contact, glass break or motion. Lights: bulb, ceiling lamp, pendant light, chandelier, spotlight, downlight (recessed), wall lamp, table lamp, desk lamp, floor lamp, globe lamp, fluorescent tube or LED strip (icon only). Switches and plugs: switch, plug, coffee machine, washing machine, dishwasher or fan – sets the icon; *Fan* shows the device under *Climate*; washing machine and dishwasher show *Running* while their plug measures power, otherwise *Ready* |
 | 4 | Room | The current room is highlighted. *New room …* creates a room with the keyboard. Further down: *Show under* moves the device to another menu entry (*Automatic*: by device type), and *Hide on the home screen* (see below). Temperature sensors also have *Outdoor sensor*: it then counts for the outdoor temperature in the sidebar instead of indoors (same as `outdoor: true` in `config.yaml`) |
 | 5 | Save | Saves name, favorite, kind, room and *Hide on the home screen* together; *Cancel* discards the changes |
 
 **Lamp kind of new lights:** when a new light appears, the panel guesses its kind from the
 original name – *Wandleuchte* or *Wall lamp* becomes a wall lamp, *Decke* / *Ceiling* a ceiling
-lamp, *Spot*, *Pendel*, *Stehlampe*, *Schreibtisch*, *Streifen* and so on, in the panel's
+lamp, *Spot*, *Downlight* / *Einbau…*, *Pendel*, *Stehlampe*, *Schreibtisch*, *Streifen* and so on, in the panel's
 languages. It is set as if chosen here, so it can be changed like any other kind. Lights that are
 already there, and lights whose kind is set with `lamp:` in `config.yaml`, are not touched.
 

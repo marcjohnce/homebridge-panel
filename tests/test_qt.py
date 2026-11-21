@@ -787,7 +787,7 @@ def test_lamp_kind_changes_icon(qapp, tmp_path):
     assert pump_until(lambda: len(ctl.devices.all()) == 29)
     ed = ctl.roomEditor
     lamp = next(d for d in ed.devices if d["name"] == "Kitchen Light")
-    assert lamp["kind"] == "bulb" and [k["value"] for k in lamp["kinds"]] == ["bulb", "ceiling", "pendant", "chandelier", "spot", "wall", "table", "desk", "floorlamp", "globe", "tube", "strip"]
+    assert lamp["kind"] == "bulb" and [k["value"] for k in lamp["kinds"]] == ["bulb", "ceiling", "pendant", "chandelier", "spot", "downlight", "wall", "table", "desk", "floorlamp", "globe", "tube", "strip"]
     assert lamp["icon"] == "light"
     assert ed.saveDevice(lamp["id"], {"kind": "wall"}) == ""
     assert ctl.device(lamp["id"])["icon"] == "wall" and ctl.device(lamp["id"])["meta"]["lamp"] == "wall"
@@ -1502,7 +1502,9 @@ def test_arming_away_warns_about_open_windows(qapp, tmp_path):
 def test_new_lights_get_a_lamp_kind_from_their_name(qapp, tmp_path):
     from app.models import guess_lamp
     assert [guess_lamp(n) for n in ("Wandleuchte Flur", "Deckenspot Bad", "Schreibtischlampe", "Tischlampe",
-                                    "Lámpara de techo", "Licht Flur")] == ["wall", "spot", "desk", "table", "ceiling", None]
+                                    "Lámpara de techo", "Licht Flur", "Downlight Küche", "Einbaustrahler Bad",
+                                    "Strahler Garten", "Faretto a incasso")] == \
+        ["wall", "spot", "desk", "table", "ceiling", None, "downlight", "downlight", "spot", "downlight"]
     ctl = make_controller(tmp_path)
     ctl.start()
     assert pump_until(lambda: len(ctl.devices.all()) == 29)
