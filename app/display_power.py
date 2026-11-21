@@ -3,8 +3,10 @@
 Tried in this order, the first one that works is used:
 
 1. Backlight in /sys/class/backlight (DSI displays such as the Raspberry Pi Touch Display or
-   Waveshare DSI LCDs): bl_power = 4 (off) / 0 (on), otherwise brightness 0 and back. The panel
-   keeps running, so the touchscreen still reports the touch that switches it on again.
+   Waveshare DSI LCDs): brightness 0 and back to where it was. The panel stays powered, so the
+   touchscreen still reports the touch that switches it on again. bl_power = 4 ("power down")
+   is only used where the brightness cannot be written: on Waveshare DSI displays it also cuts
+   the touch controller, and the display could only be woken by an alarm.
    Writing needs permission: deploy/install.sh adds a udev rule for the group "video".
 2. Wayland (labwc, wayfire): `wlopm --off '*'` / `wlopm --on '*'`.
 3. X11: `xset dpms force off` / `xset dpms force on`.
@@ -50,18 +52,31 @@ class DisplayPower:
     def _set_backlight(self, on: bool) -> bool:
         done = False
         for bl in self._backlights():
-            try:
-                (bl / "bl_power").write_text("0" if on else "4")
+            if on:
+                # also undo a power down (bl_power 4) left by an earlier version of the panel
+                try:
+                    if (bl / "bl_power").read_text().strip() != "0":
+                        (bl / "bl_power").write_text("0")
+                        done = True
+                except OSError:
+                    pass
+            try:                                       # brightness 0 and back: the touch keeps working
+                if on:
+                    saved = self._brightness.pop(bl, None) or (bl / "brightness").read_text().strip()
+                    if saved == "0":                   # dark and nothing remembered: full brightness
+                        saved = (bl / "max_brightness").read_text().strip()
+                    (bl / "brightness").write_text(saved)
+                else:
+                    current = (bl / "brightness").read_text().strip()
+                    if current != "0":
+                        self._brightness[bl] = current
+                    (bl / "brightness").write_text("0")
                 done = True
                 continue
-            except OSError:
-                pass
-            try:                                       # drivers without bl_power: brightness 0 and back
-                if on:
-                    (bl / "brightness").write_text(self._brightness.pop(bl, (bl / "max_brightness").read_text()))
-                else:
-                    self._brightness[bl] = (bl / "brightness").read_text().strip()
-                    (bl / "brightness").write_text("0")
+            except OSError as e:
+                log.debug("Backlight %s: brightness not writable: %s", bl, e)
+            try:                                       # brightness read only: power the backlight down
+                (bl / "bl_power").write_text("0" if on else "4")
                 done = True
             except OSError as e:
                 log.debug("Backlight %s not writable: %s", bl, e)

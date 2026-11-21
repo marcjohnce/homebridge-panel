@@ -12,19 +12,35 @@ def backlight(tmp_path, name="10-0045", bl_power=True, brightness="200"):
     return d
 
 
-def test_backlight_bl_power(tmp_path):
+def test_backlight_brightness_keeps_the_touch_powered(tmp_path):
+    # brightness 0 and back – not bl_power 4, which also cuts the touch of Waveshare DSI displays
+    bl = backlight(tmp_path, brightness="180")
+    dp = DisplayPower(tmp_path, env={}, run=lambda cmd: 1)
+    assert dp.set(False) and dp.method == "backlight"
+    assert (bl / "brightness").read_text() == "0" and (bl / "bl_power").read_text() == "0"
+    assert dp.set(False) and dp.set(True) and (bl / "brightness").read_text() == "180" and dp.is_on
+
+
+def test_power_down_left_by_an_older_version_is_undone(tmp_path):
+    bl = backlight(tmp_path, brightness="200")
+    (bl / "bl_power").write_text("4")                # switched off by the previous version
+    dp = DisplayPower(tmp_path, env={}, run=lambda cmd: 1)
+    assert dp.set(True) and (bl / "bl_power").read_text() == "0" and (bl / "brightness").read_text() == "200"
+
+
+def test_dark_at_start_comes_back_at_full_brightness(tmp_path):
+    bl = backlight(tmp_path, brightness="0")         # e.g. the app stopped while it was off
+    dp = DisplayPower(tmp_path, env={}, run=lambda cmd: 1)
+    assert dp.set(False) and dp.set(True) and (bl / "brightness").read_text() == "255"
+
+
+def test_read_only_brightness_uses_bl_power(tmp_path):
     bl = backlight(tmp_path)
+    (bl / "brightness").unlink()
+    (bl / "brightness").mkdir()                      # exists, but not writable as a file
     dp = DisplayPower(tmp_path, env={}, run=lambda cmd: 1)
-    assert dp.set(False) and dp.method == "backlight" and (bl / "bl_power").read_text() == "4"
-    assert dp.set(True) and (bl / "bl_power").read_text() == "0" and dp.is_on
-
-
-def test_backlight_without_bl_power_keeps_the_brightness(tmp_path):
-    bl = backlight(tmp_path, bl_power=False, brightness="123")
-    (bl / "bl_power").mkdir()                      # not writable as a file
-    dp = DisplayPower(tmp_path, env={}, run=lambda cmd: 1)
-    assert dp.set(False) and (bl / "brightness").read_text() == "0"
-    assert dp.set(True) and (bl / "brightness").read_text() == "123"
+    assert dp.set(False) and (bl / "bl_power").read_text() == "4"
+    assert dp.set(True) and (bl / "bl_power").read_text() == "0"
 
 
 def test_wayland_and_x11(tmp_path):

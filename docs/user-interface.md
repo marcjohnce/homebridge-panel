@@ -651,7 +651,9 @@ a tile it cannot show yet.
 The panel turns off the backlight where the display has one (DSI displays such as the Raspberry
 Pi Touch Display or Waveshare DSI LCDs; `deploy/install.sh` allows this for the panel user –
 run it again after updating, then reboot), otherwise it switches the screen off through the
-desktop (`wlopm` on Wayland, `xset` on X11).
+desktop (`wlopm` on Wayland, `xset` on X11). It sets the brightness to 0 rather than powering
+the backlight down (`bl_power`): on Waveshare DSI displays powering down also switches off the
+touch controller, and only an alarm could wake the display again.
 
 ![Screen saver](images/screensaver.png)
 
