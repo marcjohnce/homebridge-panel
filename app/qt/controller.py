@@ -1390,6 +1390,19 @@ class Controller(QObject):
             self._model.remove(WIFI_TILE)
         self._room_editor.notify()          # the favorites list in the settings
 
+    @Slot(result="QVariantList")
+    def openBeforeArming(self) -> list[dict[str, Any]]:
+        """What is still open before leaving: windows, doors and contacts, motorized windows and
+        doors, garage doors, unlocked locks – the open ones shown on the home screen (not those
+        hidden or set to "No alerts"). Each with name, room and state, by room and name."""
+        def is_open(d: dict[str, Any]) -> bool:
+            if alert_level(d) != 1:
+                return False
+            return d["type"] != "security" or d.get("meta", {}).get("security") not in ("motion", "presence")
+        devs = [d for d in self._model.shown() if is_open(d)]
+        return [{"id": d["id"], "name": short_name(d["name"], d["room"]), "room": d["room"],
+                 "state": state_text(d)} for d in self._model.ordered(devs)]
+
     @Slot(str, str, result=str)
     def disarm(self, dev_id: str, pin: str) -> str:
         """Disarms an alarm system; with a PIN set in the settings only with that PIN."""

@@ -3,7 +3,7 @@ import QtQuick.Controls.Basic
 import QtQuick.Layouts
 
 // Alarm system: current state on top, one large field per mode; disarming asks for the PIN
-// if one is set in the settings
+// if one is set in the settings, arming "Away" with windows or doors still open asks first
 ColumnLayout {
     id: root
 
@@ -22,6 +22,8 @@ ColumnLayout {
             pinPrompt.ask();
         else if (mode === "off")
             panel.disarm(dev.id, "");
+        else if (mode === "away" && openWarning.ask())
+            return;                 // something is still open: the warning arms or not
         else
             panel.setAttrs(dev.id, { mode: mode });
     }
@@ -118,6 +120,120 @@ ColumnLayout {
 
     Item {
         Layout.fillHeight: true
+    }
+
+    // Before arming "Away": lists what is still open; arm anyway or cancel
+    Popup {
+        id: openWarning
+        objectName: "openWarning"
+        property var items: []
+
+        // true: something is open and the warning is shown
+        function ask() {
+            items = panel.openBeforeArming();
+            if (items.length === 0)
+                return false;
+            open();
+            return true;
+        }
+
+        parent: Overlay.overlay
+        anchors.centerIn: Overlay.overlay
+        width: Math.min(Theme.s(460), parent ? parent.width - 40 : Theme.s(460))
+        padding: Theme.s(24)
+        modal: true
+        focus: true
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+        Overlay.modal: Rectangle {
+            color: Qt.rgba(0, 0, 0, 0.35)
+        }
+        background: Rectangle {
+            radius: 18
+            color: Theme.tile
+        }
+
+        contentItem: ColumnLayout {
+            spacing: Theme.s(14)
+            RowLayout {
+                spacing: Theme.s(12)
+                LineIcon {
+                    Layout.preferredWidth: Theme.s(30)
+                    Layout.preferredHeight: Theme.s(30)
+                    name: "window"
+                    color: Theme.err
+                }
+                Text {
+                    Layout.fillWidth: true
+                    text: openWarning.items.length === 1 ? qsTr("Still open")
+                        : qsTr("%1 still open").arg(openWarning.items.length)
+                    color: Theme.ink
+                    font.pixelSize: Theme.s(20)
+                    font.weight: Font.Medium
+                    wrapMode: Text.WordWrap
+                }
+            }
+            Text {
+                Layout.fillWidth: true
+                text: qsTr("Close them before you leave, or arm the alarm system anyway.")
+                color: Theme.muted
+                font.pixelSize: Theme.s(15)
+                wrapMode: Text.WordWrap
+            }
+            // the open ones: name, room and state; scrolls if there are many
+            Flickable {
+                Layout.fillWidth: true
+                Layout.preferredHeight: Math.min(openList.implicitHeight, Theme.s(260))
+                contentHeight: openList.implicitHeight
+                boundsBehavior: Flickable.StopAtBounds
+                clip: true
+                Column {
+                    id: openList
+                    width: parent.width
+                    Repeater {
+                        model: openWarning.items
+                        RowLayout {
+                            required property var modelData
+                            objectName: "open:" + modelData.id
+                            width: openList.width
+                            height: Theme.s(44)
+                            spacing: Theme.s(12)
+                            Text {
+                                Layout.fillWidth: true
+                                text: modelData.room !== "" ? qsTr("%1, %2").arg(modelData.room).arg(modelData.name) : modelData.name
+                                color: Theme.ink
+                                font.pixelSize: Theme.s(16)
+                                elide: Text.ElideRight
+                            }
+                            Text {
+                                text: modelData.state
+                                color: Theme.err
+                                font.pixelSize: Theme.s(15)
+                            }
+                        }
+                    }
+                }
+            }
+            RowLayout {
+                Layout.alignment: Qt.AlignRight
+                Layout.topMargin: Theme.s(6)
+                spacing: Theme.s(10)
+                PillButton {
+                    objectName: "openWarningCancel"
+                    text: qsTr("Cancel")
+                    onClicked: openWarning.close()
+                }
+                PillButton {
+                    objectName: "armAnyway"
+                    primary: true
+                    text: qsTr("Arm anyway")
+                    onClicked: {
+                        openWarning.close();
+                        panel.setAttrs(root.dev.id, { mode: "away" });
+                    }
+                }
+            }
+        }
     }
 
     // PIN entry for disarming
