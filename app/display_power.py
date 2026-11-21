@@ -3,8 +3,10 @@
 Tried in this order, the first one that works is used:
 
 1. Backlight in /sys/class/backlight (DSI displays such as the Raspberry Pi Touch Display or
-   Waveshare DSI LCDs): brightness 0 and back to where it was. The panel stays powered, so the
-   touchscreen still reports the touch that switches it on again. bl_power = 4 ("power down")
+   Waveshare DSI LCDs): brightness 0 and back to full brightness (max_brightness). The panel
+   stays powered, so the touchscreen still reports the touch that switches it on again. (Reading
+   the brightness back is not reliable on every driver: restoring what was read made the display
+   darker with every wake-up.) bl_power = 4 ("power down")
    is only used where the brightness cannot be written: on Waveshare DSI displays it also cuts
    the touch controller, and the display could only be woken by an alarm.
    Writing needs permission: deploy/install.sh adds a udev rule for the group "video".
@@ -33,7 +35,6 @@ class DisplayPower:
         self.run = run or self._run
         self.which = which
         self.is_on = True
-        self._brightness: dict[Path, str] = {}       # brightness before switching off (fallback)
         self.method = ""                              # how it was switched last time (for the log)
 
     @staticmethod
@@ -61,16 +62,8 @@ class DisplayPower:
                 except OSError:
                     pass
             try:                                       # brightness 0 and back: the touch keeps working
-                if on:
-                    saved = self._brightness.pop(bl, None) or (bl / "brightness").read_text().strip()
-                    if saved == "0":                   # dark and nothing remembered: full brightness
-                        saved = (bl / "max_brightness").read_text().strip()
-                    (bl / "brightness").write_text(saved)
-                else:
-                    current = (bl / "brightness").read_text().strip()
-                    if current != "0":
-                        self._brightness[bl] = current
-                    (bl / "brightness").write_text("0")
+                value = (bl / "max_brightness").read_text().strip() if on else "0"
+                (bl / "brightness").write_text(value)
                 done = True
                 continue
             except OSError as e:
