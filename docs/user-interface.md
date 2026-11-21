@@ -85,6 +85,7 @@ Tiles leave out the room from the device name when the room is shown anyway
 |---|---|
 | Favorites | the devices marked as favorite, from every room, in their own order |
 | Lights | lights, switches, plugs and blinds |
+| Scenes | the scenes of a room, see [Scenes](#scenes) |
 | Climate | heating, temperature, humidity, air pressure and light sensors, fans, air purifiers, humidifiers |
 | Security | alarm system, door locks, garage doors, motorized windows and doors, window, door, glass break, leak, motion, presence, smoke and CO sensors – alarms and open windows first |
 
@@ -107,6 +108,40 @@ the top, where the arrows set their order.
 |---|---|---|
 | 1 | Favorites | First menu entry and start page of the panel |
 | 2 | Favorite | A tile like everywhere else, with its room above the name |
+
+### Scenes
+
+A scene puts several lights, switches, plugs and blinds of a room into a state you saved, e.g.
+*Movie night*: ceiling light off, TV light at 20 %, blinds closed. *Scenes* has the same room
+tabs as *Lights*; under *All* every scene is listed with its room.
+
+![Scenes](images/scenes.png)
+
+| # | Element | What it does |
+|---|---|---|
+| 1 | Scenes | Menu entry |
+| 2 | Scene | Tap to run it (the tile lights up briefly); hold to edit it |
+| 3 | New scene | Opens the editor with every light, switch, plug and blind of the room as they are now |
+
+**Making a scene:** set the devices the way you want them under *Lights* (or later in the editor),
+choose the room under *Scenes* and tap *New scene*. Enter a name, leave out the devices the scene
+should not touch, and save.
+
+![Scene editor](images/scene-editor.png)
+
+| # | Element | What it does |
+|---|---|---|
+| 1 | Name | Opens the keyboard; a name is used only once per room |
+| 2 | Checked | The scene sets the device to the state shown: on with brightness and colour or white tone, off, blind position and tilt |
+| 3 | Unchecked | The scene leaves the device as it is (*Not changed*) – unlike a checked device that is off, which the scene switches off |
+| 4 | Device | Opens its detail view to change it; back in the editor the scene takes its new state |
+| 5 | Use current state | Takes over how all devices are now (when editing a scene) |
+| 6 | Save | Saves the scene; *Delete* removes it after a confirmation |
+
+Devices hidden in the settings and light groups are not listed (the lights of a group are). If a
+device cannot be reached when the scene runs, a message names it; the others are switched anyway.
+Scenes are part of every [backup](#backups) and of the settings [shared with other panels](#sharing-the-settings-with-other-panels).
+Scenes in `config.yaml`, which schedules run, are separate and are not shown here.
 
 ![Climate](images/home-climate.png)
 
@@ -602,7 +637,7 @@ reboot, also without a desktop session. If it is missing, the panel shows
 ### Backups
 
 *Settings → System → Backups* saves everything set up on the panel: rooms and their order,
-device names and kinds, favorites, light and switch groups, virtual devices, the display
+device names and kinds, favorites, light and switch groups, virtual devices, scenes, the display
 settings, the Homebridge and MQTT connection and the alarm PIN. A backup is only made when you
 tap *Create backup*.
 
@@ -611,7 +646,7 @@ tap *Create backup*.
 | # | Element | What it does |
 |---|---|---|
 | 1 | Create backup | Saves the current settings as a new backup |
-| 2 | Backup | When it was made and what it holds (rooms, favorites, groups, virtual devices) |
+| 2 | Backup | When it was made and what it holds (rooms, favorites, groups, virtual devices, scenes) |
 | 3 | Restore | After a confirmation the current settings are replaced by the backup and the app restarts |
 | 4 | Delete | Removes the backup (after a confirmation) |
 | 5 | Save to MQTT, Load from MQTT | Share the settings with other panels (only with MQTT set up), see below |
@@ -636,7 +671,7 @@ by hand, nothing happens in the background:
 |---|---|
 | Rooms and their order, display names, kinds, menu areas, order of the devices | Favorites |
 | Hidden devices, *No alerts*, outdoor sensors | Display: appearance, language, screen saver, display off, upside down |
-| Light and switch groups, virtual devices | MQTT connection, panel name |
+| Light and switch groups, virtual devices, scenes | MQTT connection, panel name |
 | Homebridge address and port, *Show the "General" room*, guest Wi-Fi name | PIN to disarm, Homebridge PIN, Wi-Fi and MQTT passwords |
 
 PINs and passwords are left out on purpose: anyone with access to the broker could read them.

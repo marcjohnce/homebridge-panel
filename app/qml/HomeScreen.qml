@@ -8,6 +8,7 @@ Item {
 
     signal openDetail(string id)
     signal openSettings
+    signal editScene(string id)         // "" = new scene in the selected room
 
     readonly property bool topLayout: width / height < 1.4
     readonly property bool compact: height < 520
@@ -32,6 +33,7 @@ Item {
                 Layout.rightMargin: root.compact ? 14 : Theme.s(22)
                 Layout.topMargin: root.compact ? 18 : Theme.s(28)
                 Layout.bottomMargin: 14
+                fitHeight: root.height - Layout.topMargin - Layout.bottomMargin
                 compact: root.compact
                 onOpenSettings: root.openSettings()
             }
@@ -50,9 +52,16 @@ Item {
                     Layout.preferredHeight: Theme.s(44)
                 }
                 TileGrid {
+                    visible: panel.category !== "scenes"
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     onOpenDetail: id => root.openDetail(id)
+                }
+                SceneGrid {
+                    visible: panel.category === "scenes"
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    onEditScene: id => root.editScene(id)
                 }
             }
         }
@@ -80,11 +89,20 @@ Item {
                 Layout.rightMargin: 24
             }
             TileGrid {
+                visible: panel.category !== "scenes"
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 Layout.leftMargin: 24
                 Layout.rightMargin: 24
                 onOpenDetail: id => root.openDetail(id)
+            }
+            SceneGrid {
+                visible: panel.category === "scenes"
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.leftMargin: 24
+                Layout.rightMargin: 24
+                onEditScene: id => root.editScene(id)
             }
         }
     }

@@ -1711,3 +1711,142 @@ def test_backup_and_restore_in_the_settings(qapp, tmp_path):
     assert restored.get("theme") != "dark"
     s.deleteBackup(b["name"])
     assert s.backups == []
+
+
+def test_panel_scenes_capture_save_run(qapp, tmp_path):
+    """Scenes of the panel: made from the current state, saved in settings.json (backups, MQTT
+    share), devices left out stay as they are; they follow their room when it is renamed."""
+    from app import share
+    from app.backup import Backups
+    ctl = make_controller(tmp_path)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 29)
+    ctl.selectCategory("scenes")
+    assert ctl.rooms == ["General", "Kitchen"]          # room tabs as under "Lights"
+    room = "General"
+    ctl.selectRoom(room)
+    draft = ctl.sceneDraft("")
+    assert draft["room"] == room and draft["id"] == ""
+    rows = draft["devices"]
+    assert len(rows) >= 2 and all(r["included"] for r in rows)
+    types = {ctl.devices.get(r["id"])["type"] for r in rows}
+    assert types <= {"light", "switch", "plug", "blind"}
+    first, second = rows[0], rows[1]
+
+    assert ctl.saveScene("", "  ", room, {}) != ""             # a name is needed
+    devices = {first["id"]: {"on": False}}                      # the second one is left out
+    assert ctl.saveScene("", "Movie", room, devices) == ""
+    assert ctl.saveScene("", "movie", room, devices) != ""      # same name in the room
+    [sc] = ctl.scenes
+    assert sc["name"] == "Movie" and sc["count"] == 1
+    saved = json.loads((tmp_path / "settings.json").read_text())
+    assert saved["scenes"][0]["devices"] == devices
+    assert share.shared_part(saved)["scenes"] == saved["scenes"]
+    assert Backups.summary(saved)["scenes"] == 1
+
+    before = ctl.devices.get(second["id"])["state"]
+    ctl.setAttrs(first["id"], {"on": True})
+    assert pump_until(lambda: ctl.devices.get(first["id"])["state"].get("on") is True)
+    ctl.runScene(sc["id"])
+    assert pump_until(lambda: ctl.devices.get(first["id"])["state"].get("on") is False)
+    assert ctl.devices.get(second["id"])["state"] == before
+
+    edit = ctl.sceneDraft(sc["id"])
+    assert [r["included"] for r in edit["devices"][:2]] == [True, False]
+    assert edit["devices"][0]["attrs"] == {"on": False}
+    assert ctl.sceneCapture(first["id"])["attrs"] == {"on": False}
+
+    assert ctl.saveScene("", "Breakfast", "Kitchen", {}) == ""
+    ctl.selectRoom("")                                          # "All": every scene, by name
+    assert [x["name"] for x in ctl.scenes] == ["Breakfast", "Movie"]
+    assert ctl.roomEditor.renameRoom("Kitchen", "Cookery") == ""
+    assert [x["room"] for x in ctl.store.scenes] == ["General", "Cookery"]
+    ctl.deleteScene(sc["id"])
+    assert [x["name"] for x in ctl.scenes] == ["Breakfast"]
+    ctl.shutdown()
+
+
+def test_scene_editor_qml(qapp, tmp_path):
+    """Menu "Scenes": "New scene" opens the editor with the room's devices as they are now;
+    unchecked devices are left out, a device changed in its detail view is taken over;
+    a long press opens a saved scene again."""
+    from PySide6.QtCore import QPointF, Qt
+    from PySide6.QtQml import QQmlApplicationEngine
+    from PySide6.QtQuick import QQuickWindow
+    from PySide6.QtTest import QTest
+    from shiboken6 import Shiboken
+    from app.qt.main import QML_DIR
+
+    ctl = make_controller(tmp_path)
+    engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty("panel", ctl)
+    engine.rootContext().setContextProperty("initialWidth", 1024)
+    engine.rootContext().setContextProperty("initialHeight", 600)
+    engine.load(QML_DIR / "Main.qml")
+    win = Shiboken.wrapInstance(Shiboken.getCppPointer(engine.rootObjects()[0])[0], QQuickWindow)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 29)
+
+    def find(name, item=None):
+        for child in (item or win.contentItem()).childItems():
+            if child.objectName() == name and child.isVisible():
+                return child
+            if (hit := find(name, child)) is not None:
+                return hit
+        return None
+
+    def tap(name, hold=False):
+        assert pump_until(lambda: find(name) is not None), name
+        pump_until(lambda: False, timeout=0.15)
+        it = find(name)
+        p = it.mapToScene(QPointF(it.width() / 2, it.height() / 2)).toPoint()
+        if hold:
+            QTest.mousePress(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, p)
+            QTest.qWait(1000)
+            QTest.mouseRelease(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, p)
+        else:
+            QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, p)
+
+    tap("category:scenes")
+    assert pump_until(lambda: ctl.category == "scenes" and ctl.currentRoom == "General")
+    tap("newScene")
+    assert pump_until(lambda: find("sceneEditor") is not None)
+    editor = find("sceneEditor")
+    def rows():
+        v = editor.property("rows")
+        return v.toVariant() if hasattr(v, "toVariant") else v
+    ids = [r["id"] for r in rows()]
+    light = ids[0]
+    assert ctl.devices.get(light)["type"] == "light"
+    pump_until(lambda: False, timeout=0.3)
+    QTest.keyClick(win, Qt.Key.Key_Escape)          # the name keyboard opened by itself
+    editor.setProperty("draftName", "Evening")
+    tap("sceneCheck:" + ids[1])                     # the second device is left out
+    assert pump_until(lambda: rows()[1]["included"] is False)
+
+    tap("sceneAdjust:" + light)                     # change it in the detail view
+    assert pump_until(lambda: win.property("openDevice") == light)
+    ctl.setAttrs(light, {"on": True, "brightness": 40})
+    assert pump_until(lambda: ctl.devices.get(light)["state"].get("brightness") == 40)
+    win.setProperty("openDevice", "")
+    assert pump_until(lambda: next(r for r in rows() if r["id"] == light)["attrs"]
+                      .get("brightness") == 40)
+    tap("sceneSave")
+    assert pump_until(lambda: find("sceneEditor") is None)
+    [sc] = ctl.store.scenes
+    assert sc["name"] == "Evening" and sc["room"] == "General"
+    assert set(sc["devices"]) == set(ids) - {ids[1]} and sc["devices"][light]["brightness"] == 40
+
+    assert pump_until(lambda: find("scene:" + sc["id"]) is not None)
+    win.grabWindow().save(str(tmp_path / "scene_grid.png"))
+    tap("scene:" + sc["id"], hold=True)             # long press: edit
+    def draft():
+        v = win.property("sceneDraft")
+        return (v.toVariant() if hasattr(v, "toVariant") else v) or {}
+    assert pump_until(lambda: draft().get("id") == sc["id"])
+    assert pump_until(lambda: find("sceneDelete") is not None)
+    win.grabWindow().save(str(tmp_path / "scene_editor.png"))
+    ctl.shutdown()
+    win.close()
+    engine.deleteLater()
+    pump_until(lambda: False, timeout=0.3)

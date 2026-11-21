@@ -2,13 +2,15 @@ import QtQuick
 import QtQuick.Layouts
 import "Categories.js" as Categories
 
-// Menu of the sidebar: Favorites, Lights, Climate, Security with a short status on the right
+// Menu of the sidebar: Favorites, Lights, Scenes, Climate, Security with a short status on the right
 ColumnLayout {
     id: root
 
     property bool compact: false
-    readonly property var labels: ({ favorites: qsTr("Favorites"), light: qsTr("Lights"), climate: qsTr("Climate"),
-                                     security: qsTr("Security") })
+    property real maxEntryHeight: Infinity      // set by the sidebar: the whole menu must fit
+    readonly property int count: Categories.keys.length
+    readonly property var labels: ({ favorites: qsTr("Favorites"), light: qsTr("Lights"), scenes: qsTr("Scenes"),
+                                     climate: qsTr("Climate"), security: qsTr("Security") })
 
     objectName: "categoryMenu"
     spacing: compact ? 0 : 6
@@ -25,7 +27,7 @@ ColumnLayout {
             objectName: "category:" + modelData
             Layout.fillWidth: true
             Layout.leftMargin: -14
-            Layout.preferredHeight: root.compact ? 38 : Theme.s(52)
+            Layout.preferredHeight: Math.max(30, Math.min(root.compact ? 38 : Theme.s(52), root.maxEntryHeight))
             radius: 12
             color: selected ? Theme.goldSoft : (mouse.pressed ? Theme.tilePress : "transparent")
             border.color: Theme.gold

@@ -1,7 +1,7 @@
 """Backups of the panel settings (Settings → System → Backups).
 
 A backup is a copy of settings.json – display, connection, alarm PIN, rooms, names, favorites,
-light and switch groups and virtual devices – in the folder "backups" next to it, wrapped with
+light and switch groups, virtual devices and scenes – in the folder "backups" next to it, wrapped with
 the time and app version:
 
     {"smarthome_panel_backup": 1, "created": "2026-11-20T18:10:00+01:00", "version": "0.0.4",
@@ -86,6 +86,7 @@ class Backups:
                 "favorites": count(rooms.get("favorites")),
                 "groups": count(settings.get("groups")) + count(settings.get("switch_groups")),
                 "virtual": count(settings.get("virtual")),
+                "scenes": count(settings.get("scenes")),
                 "names": count(rooms.get("names"))}
 
     # ---------- actions ----------

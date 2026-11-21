@@ -1,12 +1,13 @@
 import QtQuick
 import QtQuick.Layouts
 
-// Left column: clock, indoor temperature, menu (lights, climate, security), status, settings
+// Left column: clock, indoor temperature, menu (favorites, lights, scenes, climate, security), status, settings
 ColumnLayout {
     id: root
 
     property date now: new Date()
     property bool compact: false
+    property real fitHeight: height     // height the sidebar gets (set from outside: no layout loop)
     signal openSettings
 
     spacing: 0
@@ -19,7 +20,13 @@ ColumnLayout {
         onTriggered: root.now = new Date()
     }
 
+    // room left for the menu entries (the clock, temperatures and status come first)
+    readonly property real menuSpace: fitHeight - clockText.implicitHeight - dateText.implicitHeight - 6
+                                      - (climate.visible ? climate.implicitHeight + climate.Layout.topMargin : 0)
+                                      - menu.Layout.topMargin - statusRow.implicitHeight - statusRow.Layout.topMargin
+
     Text {
+        id: clockText
         objectName: "clock"
         text: Qt.formatTime(root.now, "hh:mm")
         color: Theme.ink
@@ -28,6 +35,7 @@ ColumnLayout {
         lineHeight: 0.95
     }
     Text {
+        id: dateText
         objectName: "date"
         Layout.topMargin: 6
         text: Theme.date(root.now)
@@ -36,6 +44,7 @@ ColumnLayout {
     }
 
     ColumnLayout {
+        id: climate
         objectName: "climate"
         visible: panel.indoorTemp !== "" || panel.outdoorTemp !== ""
         Layout.topMargin: root.compact ? 16 : Theme.s(26)
@@ -74,7 +83,9 @@ ColumnLayout {
     }
 
     CategoryMenu {
+        id: menu
         Layout.fillWidth: true
+        maxEntryHeight: (root.menuSpace - spacing * (count - 1)) / count
         Layout.topMargin: root.compact ? 8 : Theme.s(30)
         compact: root.compact
     }
@@ -84,6 +95,7 @@ ColumnLayout {
     }
 
     RowLayout {
+        id: statusRow
         Layout.fillWidth: true
         Layout.topMargin: 12
         spacing: 8

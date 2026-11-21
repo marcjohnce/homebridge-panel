@@ -5,6 +5,7 @@ ApplicationWindow {
     id: window
 
     property string openDevice: ""
+    property var sceneDraft: null      // the scene editor is open (panel.sceneDraft)
     property bool settingsOpen: false
     property bool idle: false
     property bool displayOff: false    // switched off some time after the screen saver started
@@ -71,6 +72,19 @@ ApplicationWindow {
         anchors.fill: parent
         onOpenDetail: id => window.openDevice = id
         onOpenSettings: Busy.run(qsTr("Loading settings …"), () => window.settingsOpen = true)
+        onEditScene: id => window.sceneDraft = panel.sceneDraft(id)
+    }
+
+    // below the detail view: a device of the scene is changed there
+    Loader {
+        anchors.fill: parent
+        active: !!window.sceneDraft
+        sourceComponent: SceneEditor {
+            draft: window.sceneDraft
+            detailOpen: window.openDevice !== ""
+            onOpenDevice: id => window.openDevice = id
+            onClosed: window.sceneDraft = null
+        }
     }
 
     Loader {
@@ -132,6 +146,7 @@ ApplicationWindow {
         running: panel.idleSeconds > 0 && !window.idle
         onTriggered: {
             window.openDevice = "";
+            window.sceneDraft = null;
             window.settingsOpen = false;
             window.idle = true;
             panel.selectStart();      // after waking up: favorites (if any) or lights
@@ -189,6 +204,7 @@ ApplicationWindow {
         function onSecurityAlarm(message) {
             window.idle = false;
             window.openDevice = "";
+            window.sceneDraft = null;
             window.settingsOpen = false;
             panel.selectCategory("security");
             panel.selectRoom("");               // the alarm may be in any room
