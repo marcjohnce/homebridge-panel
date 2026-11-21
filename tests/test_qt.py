@@ -2109,3 +2109,61 @@ def test_white_tone_presets(qapp, tmp_path):
     win.close()
     engine.deleteLater()
     pump_until(lambda: False, timeout=0.3)
+
+
+def test_keyboard_follows_the_language(qapp, tmp_path):
+    """German: umlauts and ß on the letter keys (ß stays ß with shift), the accents of the
+    language on the "?123" page."""
+    from PySide6.QtCore import Qt
+    from PySide6.QtQml import QQmlApplicationEngine
+    from PySide6.QtQuick import QQuickWindow
+    from PySide6.QtTest import QTest
+    from shiboken6 import Shiboken
+    from app.qt.main import QML_DIR
+
+    ctl = make_controller(tmp_path, language="de")
+    engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty("panel", ctl)
+    engine.rootContext().setContextProperty("initialWidth", 1024)
+    engine.rootContext().setContextProperty("initialHeight", 600)
+    engine.load(QML_DIR / "Main.qml")
+    win = Shiboken.wrapInstance(Shiboken.getCppPointer(engine.rootObjects()[0])[0], QQuickWindow)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 29)
+
+    def find(name, item=None):
+        root = win.contentItem()
+        while root.parentItem() is not None:
+            root = root.parentItem()
+        for child in (item or root).childItems():
+            if child.objectName() == name and child.isVisible():
+                return child
+            if (hit := find(name, child)) is not None:
+                return hit
+        return None
+
+    def tap(name):
+        assert pump_until(lambda: find(name) is not None), name
+        it = find(name)
+        QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier,
+                         it.mapToScene(it.boundingRect().center()).toPoint())
+        pump_until(lambda: False, timeout=0.1)
+
+    ctl.selectCategory("scenes")
+    ctl.selectRoom("Kitchen")
+    win.setProperty("sceneDraft", ctl.sceneDraft(""))     # the name keyboard opens by itself
+    assert pump_until(lambda: find("key:ü") is not None)
+    for k in ("ä", "ö", "ü", "ß"):
+        assert find("key:" + k) is not None
+    assert find("key:ß").property("text") == "ß"           # shift is on: no "SS"
+    for k in ("ß", "ü", "ß"):
+        tap("key:" + k)
+    assert find("keyboardInput").property("text") == "ßüß"
+    tap("key:symbols")
+    assert find("key:é") is not None and find("key:ñ") is not None
+    from app import i18n
+    i18n.set_language("en")                     # module state: later tests expect English
+    ctl.shutdown()
+    win.close()
+    engine.deleteLater()
+    pump_until(lambda: False, timeout=0.3)

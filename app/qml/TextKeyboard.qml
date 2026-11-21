@@ -26,9 +26,24 @@ Popup {
         default: return ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
         }
     }
-    // digits and the characters MQTT topics, host names, user names and passwords need, then accents
-    readonly property var symbolRows: ["1234567890", "-/_#+.:@&*", "()',!?$%=~",
-        panel.language === "pt" ? "ãõâêôáéíóúà" : "éèêàçùòìíóá"]
+    // digits and the characters MQTT topics, host names, user names and passwords need, then the
+    // accented letters of the panel language (and a few common ones of the others)
+    readonly property var symbolRows: ["1234567890", "-/_#+.:@&*", "()',!?$%=~", accentRow]
+    readonly property string accentRow: {
+        switch (panel.language) {
+        case "de": return "äöüßéèàçñ";
+        case "fr": return "éèêëàâçùûôœ";
+        case "it": return "àèéìíòóùú";
+        case "es": return "áéíóúüñ¿¡";
+        case "pt": return "ãõâêôáéíóúà";
+        default: return "éèêàçùòìíóá";
+        }
+    }
+    // capital letter for a key: "ß" has none of its own ("SS" would be two letters)
+    function caps(ch) {
+        const up = ch.toUpperCase();
+        return up.length === 1 ? up : ch;
+    }
     readonly property var rows: symbols ? symbolRows : letterRows
     readonly property real unit: (availableWidth - 10 * keySpacing) / 11
     readonly property int keySpacing: 6
@@ -56,7 +71,7 @@ Popup {
             input.remove(input.selectionStart, input.selectionEnd);
         if (input.length >= maxLength)
             return;
-        input.insert(input.cursorPosition, shift ? ch.toUpperCase() : ch);
+        input.insert(input.cursorPosition, shift ? caps(ch) : ch);
         shift = false;
     }
     function backspace() {
@@ -172,7 +187,7 @@ Popup {
                         KeyCap {
                             required property string modelData
                             objectName: "key:" + modelData
-                            text: root.shift ? modelData.toUpperCase() : modelData
+                            text: root.shift ? root.caps(modelData) : modelData
                             onPressed: root.type(modelData)
                         }
                     }
