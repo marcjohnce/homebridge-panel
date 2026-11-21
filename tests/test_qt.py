@@ -2051,3 +2051,61 @@ def test_gestures_detail_edge_two_fingers_idle(qapp, tmp_path):
     win.close()
     engine.deleteLater()
     pump_until(lambda: False, timeout=0.3)
+
+
+def test_white_tone_presets(qapp, tmp_path):
+    """Shades of white below the white tone slider set the colour temperature directly; one the
+    light cannot reach is greyed out and does nothing."""
+    from PySide6.QtCore import Qt
+    from PySide6.QtQml import QQmlApplicationEngine
+    from PySide6.QtQuick import QQuickWindow
+    from PySide6.QtTest import QTest
+    from shiboken6 import Shiboken
+    from app.qt.main import QML_DIR
+
+    ctl = make_controller(tmp_path)
+    engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty("panel", ctl)
+    engine.rootContext().setContextProperty("initialWidth", 1024)
+    engine.rootContext().setContextProperty("initialHeight", 600)
+    engine.load(QML_DIR / "Main.qml")
+    win = Shiboken.wrapInstance(Shiboken.getCppPointer(engine.rootObjects()[0])[0], QQuickWindow)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 29)
+    lamp = next(d["id"] for d in ctl.devices.all() if d["name"] == "Kitchen Light")
+
+    def find(name, item=None):
+        for child in (item or win.contentItem()).childItems():
+            if child.objectName() == name and child.isVisible():
+                return child
+            if (hit := find(name, child)) is not None:
+                return hit
+        return None
+
+    def tap(name):
+        it = find(name)
+        QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier,
+                         it.mapToScene(it.boundingRect().center()).toPoint())
+
+    win.setProperty("openDevice", lamp)
+    assert pump_until(lambda: find("whitePreset:2700") is not None)
+    tap("whitePreset:2700")
+    assert pump_until(lambda: ctl.devices.get(lamp)["state"].get("color_temp") == 370)
+    assert ctl.devices.get(lamp)["state"]["on"] is True
+    assert pump_until(lambda: find("whitePreset:2700").property("current") is True)
+    tap("whitePreset:7000")
+    assert pump_until(lambda: ctl.devices.get(lamp)["state"].get("color_temp") == 143)
+
+    # a light that reaches only 2700–6500 K: cool white is greyed out
+    d = ctl.devices.get(lamp)
+    ctl._on_message({"type": "device", "device": {**d, "meta": {**d["meta"], "min_mired": 153, "max_mired": 370}}})
+    assert pump_until(lambda: find("whitePreset:7000").property("possible") is False)
+    assert find("whitePreset:2200").property("possible") is False
+    assert find("whitePreset:2700").property("possible") is True
+    tap("whitePreset:7000")
+    pump_until(lambda: False, timeout=0.5)
+    assert ctl.devices.get(lamp)["state"].get("color_temp") == 143
+    ctl.shutdown()
+    win.close()
+    engine.deleteLater()
+    pump_until(lambda: False, timeout=0.3)
