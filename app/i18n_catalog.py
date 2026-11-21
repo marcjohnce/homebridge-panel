@@ -444,7 +444,7 @@ _ROWS: list[tuple[str, str, str, str, str]] = [
     ('Cool white', 'Kaltweiß', 'Blanc froid', 'Bianco freddo', 'Blanco frío'),
     ('Daylight white', 'Tageslichtweiß', 'Blanc lumière du jour', 'Bianco luce diurna', 'Blanco luz día'),
     ('White', 'Weiß', 'Blanc', 'Bianco', 'Blanco'),
-    ('Soft white', 'Sanftweiß', 'Blanc doux', 'Bianco morbido', 'Blanco suave'),
+    ('Soft white', 'Weiches Weiß', 'Blanc doux', 'Bianco morbido', 'Blanco suave'),
     ('Warm white', 'Warmweiß', 'Blanc chaud', 'Bianco caldo', 'Blanco cálido'),
     ('%1, %2 K', '%1, %2 K', '%1, %2 K', '%1, %2 K', '%1, %2 K'),
     ("%1, lights on", "%1, Licht an", "%1, lumière allumée", "%1, luci accese", "%1, luces encendidas"),
