@@ -2167,3 +2167,33 @@ def test_keyboard_follows_the_language(qapp, tmp_path):
     win.close()
     engine.deleteLater()
     pump_until(lambda: False, timeout=0.3)
+
+
+def test_energy_view(qapp, tmp_path):
+    """Menu entry "Energy": every device that measures its power (whatever its own menu area),
+    total power in the menu; left out without such devices."""
+    ctl = make_controller(tmp_path)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 29)
+    assert ctl.hasEnergy
+    ctl.selectCategory("energy")
+    ctl.selectRoom("")
+    names = sorted(ctl.devices.get(r)["name"] for r in ctl.devices._rows)
+    assert names == ["TV Plug", "Washing Machine"]
+    assert ctl.summary["energy"] == "446 W"                      # 384 W + 62.5 W
+    assert set(ctl.rooms) == {ctl.devices.get(r)["room"] for r in ctl.devices._rows}
+    tv = next(r for r in ctl.devices._rows if ctl.devices.get(r)["name"] == "TV Plug")
+    ctl.toggle(tv)                                               # off: 0 W, still listed
+    assert pump_until(lambda: ctl.summary["energy"] == "384 W")
+    assert tv in ctl.devices._rows
+    ctl.shutdown()
+
+    # no measuring devices: no menu entry
+    store = SettingsStore(tmp_path / "other.json")
+    store.update({"hap_enabled": False, "language": "en"})
+    cfg = AppConfig.model_validate({"demo": {"enabled": True}, "blacklist": ["Washing Machine", "TV Plug"]})
+    ctl = Controller(cfg, store)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 26)      # the leak sensor goes too
+    assert not ctl.hasEnergy and ctl.summary["energy"] == ""
+    ctl.shutdown()

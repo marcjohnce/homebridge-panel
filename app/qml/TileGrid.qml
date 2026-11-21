@@ -55,6 +55,7 @@ GridView {
             : panel.category === "favorites" ? qsTr("No favorites yet. Mark devices as favorite in Settings → Rooms and devices.")
             : panel.category === "light" ? qsTr("No lights, switches or blinds here.")
             : panel.category === "climate" ? qsTr("No heating or climate sensors here.")
+            : panel.category === "energy" ? qsTr("No devices that measure their power here.")
             : qsTr("No security sensors here.")
         color: Theme.muted
         font.pixelSize: Theme.s(18)

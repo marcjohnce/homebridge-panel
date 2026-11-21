@@ -24,7 +24,8 @@ _DEVICES = [
      [("On", False, True, {}), ("Brightness", 100, True, dict(min=0, max=100, step=1)),
       ("ColorTemperature", 300, True, dict(min=140, max=500, step=1))]),
     ("coffee", "Outlet", "Coffee Maker", [("On", False, True, {}), ("OutletInUse", False, False, {})]),
-    ("tv", "Outlet", "TV Plug", [("On", True, True, {}), ("OutletInUse", True, False, {})]),
+    ("tv", "Outlet", "TV Plug", [("On", True, True, {}), ("OutletInUse", True, False, {}),
+                                 ("EvePower", 62.5, False, {}), ("EveEnergy", 48.9, False, {})]),
     ("washer", "Outlet", "Washing Machine", [("On", True, True, {}), ("OutletInUse", True, False, {}),
                                              ("EvePower", 384.0, False, {}), ("EveEnergy", 213.4, False, {})]),
     ("heating-living", "Thermostat", "Living Room Heating",
@@ -196,6 +197,8 @@ class DemoBackend(Backend):
                 self._valve_started = None
         coffee = self._services["coffee"].chars
         coffee["OutletInUse"].value = bool(coffee["On"].value)
+        tv = self._services["tv"].chars             # a plug that measures: power only while on
+        tv["EvePower"].value = 62.5 if tv["On"].value else 0.0
 
     async def fetch(self) -> list[ServiceSnapshot]:
         self._simulate()

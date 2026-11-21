@@ -36,7 +36,7 @@ from ..models import AREAS, KIND_ICONS, KIND_KEYS, QUIET_KINDS, guess_lamp
 from ..wifi import Wifi, qr_image
 from . import format as fmt
 from .format import (air_warning, alert_level, battery_low, battery_text, category, fmt_temp, has_detail,
-                     short_name, state_text)
+                     has_power, in_area, power_text, short_name, state_text)
 
 log = logging.getLogger(__name__)
 ALL_ROOMS = ""
@@ -144,7 +144,7 @@ class DeviceModel(QAbstractListModel):
     # --- maintenance ---
     def rooms(self, cat: str | None = None) -> list[str]:
         """Rooms with devices (of a menu area), in the order set in the settings."""
-        return self.layout.sort({d["room"] for d in self.shown() if not cat or category(d) == cat})
+        return self.layout.sort({d["room"] for d in self.shown() if not cat or in_area(d, cat)})
 
     def device_rooms(self) -> dict[str, str]:
         return {d["id"]: d["room"] for d in self.all()}
@@ -205,7 +205,7 @@ class DeviceModel(QAbstractListModel):
             favs = [d for d in self.shown() + self.tiles() if d.get("favorite")]
             return [d["id"] for d in sorted(favs, key=lambda d: self.layout.favorite_rank(d["id"]))]
         devs = [d for d in self.shown() if self._room in (ALL_ROOMS, d["room"])
-                and self._category in ("", category(d))]
+                and (self._category == "" or in_area(d, self._category))]
         # alarms first, then open windows/doors; otherwise the order of rooms and devices – under
         # "All" by name instead
         alerts = {d["id"]: alert_level(d) for d in devs}
@@ -279,7 +279,7 @@ class DeviceModel(QAbstractListModel):
         d = self._place(d)
         self._all[d["id"]] = d
         structural = (old is None or any(old.get(k) != d.get(k) for k in ("room", "name", "order", "hidden", "grouped", "favorite"))
-                      or alert_level(old) != alert_level(d))
+                      or alert_level(old) != alert_level(d) or has_power(old) != has_power(d))
         if structural:
             self._relayout()
         elif d["id"] in self._rows:
@@ -1333,6 +1333,11 @@ class Controller(QObject):
         return rooms
 
     def _refresh_rooms(self) -> None:
+        if self._category == "energy" and not self.hasEnergy:     # the last measuring device is gone
+            self._category = "light"
+            self._room_auto = True
+            self._model.set_category("light", self._room)
+            self.categoryChanged.emit()
         rooms = self._tab_rooms()
         # after switching the menu entry (or at start) the first room is selected; "All" only
         # when chosen or when there are no rooms
@@ -1850,11 +1855,18 @@ class Controller(QObject):
         on = m.count(_is_on_light)
         heating = m.count(lambda d: d["type"] == "thermostat" and d["reachable"] and d.get("state", {}).get("heating"))
         alerts = self.securityCount
+        watts = sum(d["state"]["power"] for d in m.shown() if has_power(d))
         return {
+            "energy": power_text(watts) if self.hasEnergy else "",
             "light": tr("{n} on").format(n=on) if on else "",
             "climate": tr("{n} heating").format(n=heating) if heating else "",
             "security": (tr("1 alert") if alerts == 1 else tr("{n} alerts").format(n=alerts)) if alerts else "",
         }
+
+    @Property(bool, notify=summaryChanged)
+    def hasEnergy(self) -> bool:
+        """Menu entry "Energy": only while a device measures its power."""
+        return any(has_power(d) for d in self._model.shown())
 
     @Property("QVariantMap", notify=summaryChanged)
     def roomMarks(self) -> dict[str, str]:

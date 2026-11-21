@@ -241,7 +241,7 @@ def home_callouts(p: Panel, top_layout: bool) -> list[tuple]:
     if not top_layout:
         out.append((2, [p.rect("climate")], "Indoor and outdoor temperature"))
     out += [
-        (3, [p.rect("categoryMenu")], "Menu: favorites, lights, scenes, climate, security", *(["top"] if top_layout else ["left"])),
+        (3, [p.rect("categoryMenu")], "Menu: favorites, lights, scenes, climate, energy, security", *(["top"] if top_layout else ["left"])),
         (4, [status], "Connection status"),
         (5, [p.rect("settingsButton")], "Settings"),
         (6, [p.rect("roomTabs")], "Rooms; “All” comes last", *([] if top_layout else ["top"])),
@@ -272,6 +272,12 @@ def menu_views(p: Panel, out: Path, size: str, suffix: str = "") -> None:
         (2, [p.rect(f"tile:{p.device_id('Living Room Heating')}")], "Heating tile"),
         (3, [p.rect(f"tile:{p.device_id('Weather Station')}")], "Sensor tile"),
     ], f"Climate – {size}"), out, f"home-climate{suffix}")
+    p.ctl.selectCategory("energy")
+    p.ctl.selectRoom("")
+    save(annotate(p.grab(), [
+        (1, [p.rect("category:energy")], "Energy with the total power now", "left" if not suffix else "top"),
+        (2, [p.rect(f"tile:{p.device_id('Washing Machine')}")], "Device that measures its power"),
+    ], f"Energy – {size}"), out, f"home-energy{suffix}")
     p.ctl.selectCategory("security")
     p.ctl.selectRoom("")
     save(annotate(p.grab(), [

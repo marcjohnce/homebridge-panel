@@ -447,6 +447,8 @@ _ROWS: list[tuple[str, str, str, str, str]] = [
     ('Soft white', 'Weiches Weiß', 'Blanc doux', 'Bianco morbido', 'Blanco suave'),
     ('Warm white', 'Warmweiß', 'Blanc chaud', 'Bianco caldo', 'Blanco cálido'),
     ('%1, %2 K', '%1, %2 K', '%1, %2 K', '%1, %2 K', '%1, %2 K'),
+    ('Energy', 'Energie', 'Énergie', 'Energia', 'Energía'),
+    ('No devices that measure their power here.', 'Hier gibt es keine Geräte, die ihren Verbrauch messen.', 'Aucun appareil qui mesure sa consommation ici.', 'Nessun dispositivo che misura il consumo qui.', 'No hay dispositivos que midan su consumo aquí.'),
     ("%1, lights on", "%1, Licht an", "%1, lumière allumée", "%1, luci accese", "%1, luces encendidas"),
     ("Language", "Sprache", "Langue", "Lingua", "Idioma"),
     ("System", "System", "Système", "Sistema", "Sistema"),

@@ -87,6 +87,7 @@ Tiles leave out the room from the device name when the room is shown anyway
 | Lights | lights, switches, plugs and blinds |
 | Scenes | the scenes of a room, see [Scenes](#scenes) |
 | Climate | heating, temperature, humidity, air pressure and light sensors, fans, air purifiers, humidifiers |
+| Energy | every device that measures its power, e.g. Eve plugs; see [Energy](#energy). Only shown while there is such a device |
 | Security | alarm system, door locks, garage doors, motorized windows and doors, window, door, glass break, leak, motion, presence, smoke and CO sensors – alarms and open windows first |
 
 Swipe left or right over the tiles to go to the next or previous room tab (*All* comes last);
@@ -161,6 +162,21 @@ Scenes are part of every [backup](#backups) and of the settings [shared with oth
 | 1 | Climate | Selected menu entry |
 | 2 | Heating tile | Small arc with the target temperature; the text turns orange while heating. Tap to open the thermostat |
 | 3 | Sensor tile | Current readings, e.g. temperature, humidity and air pressure of a weather station. Tap to open the [sensor view](#sensors) |
+
+### Energy
+
+*Energy* lists every device that measures its power – plugs such as Eve Energy, and any other
+device that reports it – whatever menu entry it belongs to otherwise. The menu entry shows the
+power of all of them together; it is left out when no device measures its power. Each tile
+shows the device's power now (*On, 62 W*; washing machines and dishwashers *Running, 384 W*);
+tap to switch it, *›* opens the detail view with the power and, for Eve plugs, its history.
+
+![Energy](images/home-energy.png)
+
+| # | Element | What it does |
+|---|---|---|
+| 1 | Energy | Menu entry with the power of all measuring devices together |
+| 2 | Tile | A device that measures its power, with the power now |
 
 ### Security
 
