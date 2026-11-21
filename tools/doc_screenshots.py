@@ -494,8 +494,9 @@ def main() -> int:
         (1, [p.rect("section:system")], "System", "left"),
         (2, [p.rect("action:update")], "Software update: install a new release", "right"),
         (3, [p.rect("row:backups_page")], "Backups", "right"),
-        (4, [p.rect("action:restart_app")], "Restart app", "right"),
-        (5, [p.rect("action:reboot")], "Restart Raspberry Pi", "right"),
+        (4, [p.rect("row:panel_name")], "Panel name (for sharing)", "right"),
+        (5, [p.rect("action:restart_app")], "Restart app", "right"),
+        (6, [p.rect("action:reboot")], "Restart Raspberry Pi", "right"),
     ], "Settings: System"), out, "settings-system")
 
     reboot = p.rect("action:reboot")
@@ -512,6 +513,8 @@ def main() -> int:
     wait(1100)                              # a second one with another time
     p.ctl.roomEditor.saveDevice(p.device_id("Coffee Maker"), {"favorite": True})
     p.ctl.settings.createBackup()
+    p.ctl.settings.save({"mqtt_enabled": True})          # shows "Share with other panels"
+    wait(300)
     p.tap("row:backups_page")
     wait(500)
     first = p.ctl.settings.backups[0]["name"]
@@ -520,6 +523,7 @@ def main() -> int:
         (2, [p.rect(f"backup:{first}")], "Backup: date and what it holds", "left"),
         (3, [p.rect(f"restore:{first}")], "Restore (asks first, then the app restarts)", "top"),
         (4, [p.rect(f"deleteBackup:{first}")], "Delete", "right"),
+        (5, [p.rect("shareSave").united(p.rect("shareLoad"))], "Share with other panels over MQTT", "right"),
     ], "Backups"), out, "backups")
     p.win.setProperty("settingsOpen", False)
     wait(300)

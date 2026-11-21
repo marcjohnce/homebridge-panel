@@ -106,7 +106,9 @@ FIELDS = [
     # Software update: state and button come from the controller (Controller.updateInfo)
     Field("update", "system", "Software update", "update", None),
     Field("backups_page", "system", "Backups", "page", None,
-          help="Save the panel settings and restore them later"),
+          help="Save the panel settings and restore them later, or share them with other panels"),
+    Field("panel_name", "system", "Panel name", "text", "",
+          help="Shown to other panels when sharing the settings over MQTT, e.g. Kitchen"),
     # Actions are buttons, not stored values. The controller runs them (Controller.run_action).
     Field("restart_app", "system", "Restart app", "action", None,
           help="Reloads the panel and reconnects to Homebridge",
