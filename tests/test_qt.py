@@ -1948,3 +1948,104 @@ def test_swipe_switches_rooms(qapp, tmp_path):
     win.close()
     engine.deleteLater()
     pump_until(lambda: False, timeout=0.3)
+
+
+def test_gestures_detail_edge_two_fingers_idle(qapp, tmp_path):
+    """Detail view: swipe to the next/previous device, but not while dragging a slider;
+    swipe in from the left edge = back; two fingers down = lights of the room off, with undo;
+    double tap on the screen saver runs its scene, a single tap wakes up."""
+    from PySide6.QtCore import QPoint, Qt
+    from PySide6.QtQml import QQmlApplicationEngine
+    from PySide6.QtQuick import QQuickWindow
+    from PySide6.QtTest import QTest
+    from shiboken6 import Shiboken
+    from app.qt.main import QML_DIR
+
+    ctl = make_controller(tmp_path)
+    engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty("panel", ctl)
+    engine.rootContext().setContextProperty("initialWidth", 1024)
+    engine.rootContext().setContextProperty("initialHeight", 600)
+    engine.load(QML_DIR / "Main.qml")
+    win = Shiboken.wrapInstance(Shiboken.getCppPointer(engine.rootObjects()[0])[0], QQuickWindow)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 29)
+    by_name = {d["name"]: d["id"] for d in ctl.devices.all()}
+
+    def find(name, item=None):
+        for child in (item or win.contentItem()).childItems():
+            if child.objectName() == name and child.isVisible():
+                return child
+            if (hit := find(name, child)) is not None:
+                return hit
+        return None
+
+    def drag(start, delta, steps=10):
+        QTest.mousePress(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, start)
+        for i in range(1, steps + 1):
+            QTest.mouseMove(win, start + QPoint(delta.x() * i // steps, delta.y() * i // steps), 15)
+        QTest.mouseRelease(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, start + delta, 15)
+        pump_until(lambda: False, timeout=0.3)
+
+    # --- detail view: swipe to the neighbours (all lights, by name)
+    ctl.selectCategory("light")
+    ctl.selectRoom("")
+    kitchen = by_name["Kitchen Light"]
+    win.setProperty("openDevice", kitchen)
+    assert pump_until(lambda: find("colorTemp") is not None)
+    drag(QPoint(600, 560), QPoint(-300, 0))
+    assert win.property("openDevice") == by_name["Kitchen Speaker"]
+    drag(QPoint(600, 560), QPoint(300, 0))
+    assert win.property("openDevice") == kitchen
+    slider = find("colorTemp").childItems()[1]           # label row, slider
+    before = ctl.devices.get(kitchen)["state"].get("color_temp")
+    c = slider.mapToScene(slider.boundingRect().center()).toPoint()
+    drag(QPoint(int(slider.mapToScene(slider.boundingRect().topLeft()).x()) + 20, c.y()), QPoint(250, 0))
+    assert win.property("openDevice") == kitchen            # the slider kept the drag
+    assert pump_until(lambda: ctl.devices.get(kitchen)["state"].get("color_temp") != before)
+
+    # --- edge swipe: back
+    drag(QPoint(4, 300), QPoint(220, 0))
+    assert win.property("openDevice") == ""
+
+    # --- two fingers down: lights of the room off, undo
+    ctl.setAttrs(kitchen, {"on": True, "brightness": 35})
+    assert pump_until(lambda: ctl.devices.get(kitchen)["state"].get("brightness") == 35)
+    ctl.selectRoom(ctl.devices.get(kitchen)["room"])
+    on_before = {i for i, d in ((d["id"], d) for d in ctl.devices.all())
+                 if d["type"] == "light" and d["state"].get("on") and d["room"] == ctl.currentRoom}
+    assert kitchen in on_before
+    dev = QTest.createTouchDevice()
+    a, b = QPoint(560, 200), QPoint(700, 200)
+    QTest.touchEvent(win, dev).press(0, a, win).press(1, b, win).commit()
+    for i in range(1, 11):
+        QTest.touchEvent(win, dev).move(0, a + QPoint(0, 25 * i), win).move(1, b + QPoint(0, 25 * i), win).commit()
+        QTest.qWait(15)
+    QTest.touchEvent(win, dev).release(0, a + QPoint(0, 250), win).release(1, b + QPoint(0, 250), win).commit()
+    assert pump_until(lambda: all(not ctl.devices.get(i)["state"].get("on") for i in on_before))
+    assert pump_until(lambda: find("toastAction") is not None)
+    act = find("toastAction")
+    QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier,
+                     act.mapToScene(act.boundingRect().center()).toPoint())
+    assert pump_until(lambda: ctl.devices.get(kitchen)["state"].get("on") is True)
+    assert ctl.devices.get(kitchen)["state"].get("brightness") == 35
+
+    # --- double tap on the screen saver
+    coffee = by_name["Coffee Maker"]
+    ctl.selectCategory("scenes")
+    assert ctl.saveScene("", "Night", "Kitchen", {coffee: {"on": True}}, False, True) == ""
+    assert ctl.idleScene["name"] == "Night"
+    win.setProperty("idle", True)
+    assert pump_until(lambda: find("idleTouch") is not None)
+    p = QPoint(500, 300)
+    QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, p)
+    QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, p, 80)
+    assert pump_until(lambda: ctl.devices.get(coffee)["state"].get("on") is True)
+    pump_until(lambda: False, timeout=0.6)
+    assert win.property("idle") is True                       # still on the screen saver
+    QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, p)
+    assert pump_until(lambda: win.property("idle") is False)  # a single tap wakes up
+    ctl.shutdown()
+    win.close()
+    engine.deleteLater()
+    pump_until(lambda: False, timeout=0.3)

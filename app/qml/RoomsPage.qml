@@ -530,4 +530,8 @@ Rectangle {
         objectName: "roomConfirm"
         onConfirmed: name => Busy.run(qsTr("Saving …"), () => root.message = root.editor.deleteRoom(name))
     }
+
+    EdgeBack {
+        onBack: root.closed()
+    }
 }

@@ -15,6 +15,7 @@ Rectangle {
 
     property string draftName: draft.name
     property bool draftFavorite: !!draft.favorite
+    property bool draftIdle: !!draft.idle
     property var rows: draft.devices
     property string adjusting           // device changed in its detail view
     property string error
@@ -60,7 +61,7 @@ Rectangle {
                 if (r.included)
                     devices[r.id] = r.attrs;
             }
-            const err = panel.saveScene(draft.id, draftName, draft.room, devices, draftFavorite);
+            const err = panel.saveScene(draft.id, draftName, draft.room, devices, draftFavorite, draftIdle);
             if (err !== "")
                 error = err;
             else
@@ -317,6 +318,17 @@ Rectangle {
                     toggleName: "sceneFavorite"
                     onToggled: root.draftFavorite = !root.draftFavorite
                 }
+                ToggleRow {
+                    readonly property var other: panel.idleScene
+                    width: parent.width
+                    label: qsTr("Double tap on the screen saver")
+                    help: other.id !== undefined && other.id !== root.draft.id
+                          ? qsTr("Runs this scene without waking the panel – instead of “%1”").arg(other.name)
+                          : qsTr("Runs this scene without waking the panel")
+                    checked: root.draftIdle
+                    toggleName: "sceneIdle"
+                    onToggled: root.draftIdle = !root.draftIdle
+                }
                 Text {
                     width: parent.width
                     visible: root.error !== ""
@@ -376,5 +388,9 @@ Rectangle {
             panel.deleteScene(root.draft.id);
             root.closed();
         })
+    }
+
+    EdgeBack {
+        onBack: root.closed()
     }
 }

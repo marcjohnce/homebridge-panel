@@ -269,6 +269,7 @@ ColumnLayout {
             MouseArea {
                 anchors.fill: parent
                 enabled: root.points.length > 0
+                preventStealing: true           // reading the chart, not swiping to the next device
                 function pick(mx) {
                     let best = 0;
                     for (let i = 1; i < root.points.length; i++)

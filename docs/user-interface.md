@@ -90,7 +90,8 @@ Tiles leave out the room from the device name when the room is shown anyway
 | Security | alarm system, door locks, garage doors, motorized windows and doors, window, door, glass break, leak, motion, presence, smoke and CO sensors – alarms and open windows first |
 
 Swipe left or right over the tiles to go to the next or previous room tab (*All* comes last);
-this works under every menu entry with room tabs, including *Scenes*.
+this works under every menu entry with room tabs, including *Scenes*. All gestures are shown
+in [Gestures](#gestures).
 
 A dot before a room tab shows where something is going on: under *Lights* a dot in the accent
 colour marks rooms with at least one light, switch or plug on (blinds don't count); under
@@ -141,6 +142,7 @@ should not touch, and save.
 | 5 | Use current state | Takes over how all devices are now (when editing a scene) |
 | 6 | Save | Saves the scene; *Delete* removes it after a confirmation |
 | 7 | Favorite | Shows the scene under *Favorites* as well |
+| 8 | Double tap on the screen saver | A double tap on the screen saver runs this scene without waking the panel (one scene at a time; choosing it here replaces the previous one) |
 
 A scene marked as favorite is a tile under *Favorites* like the devices; tap it to run the scene.
 Its place among the favorites is set in Settings → Rooms and devices, as for every favorite. Like
@@ -225,6 +227,44 @@ armed). The kind can be switched between presence and motion in the device edito
 HomeKit has no glass break type: plugins expose such detectors as contact or motion sensors.
 Choose the kind of a contact or motion sensor in [Settings → Rooms and devices](#rooms-and-devices)
 (window, door, contact, glass break, motion) or with `security:` in `config.yaml`. A *contact* is any other opening, e.g. a gate or a cupboard.
+
+## Gestures
+
+Besides tapping and long pressing, the panel understands a few swipes. The orange marks show
+where the finger goes down and where it moves.
+
+![Gestures on the home screen](images/gestures-home.png)
+
+| # | Gesture | What it does |
+|---|---|---|
+| 1 | Swipe left over the tiles | Next room tab (*All* comes last; it does not wrap around) |
+| 2 | Swipe right over the tiles | Previous room tab |
+| 3 | Two fingers down over the tiles | Switches off the lights that are on in the selected room – in every room under *All* and *Favorites*. Lights in a light group count, hidden ones don't; switches and plugs stay on |
+| 4 | Room tab | Scrolls along, so the chosen room is always visible |
+
+Scrolling the tiles up and down still works as before, and a swipe never switches the tile under
+the finger. Under *Favorites* there are no room tabs, so swiping does nothing there.
+
+After two fingers down, a message says how many lights went off. *Undo* switches them on again
+with their brightness, for six seconds.
+
+![Message with Undo](images/gestures-undo.png)
+
+![Gestures in the detail view](images/gestures-detail.png)
+
+| # | Gesture | What it does |
+|---|---|---|
+| 1 | Swipe left / right on a free spot | Next / previous device, in the order of the tiles you came from (devices with a detail view). Sliders, the colour wheel and the dial keep their own drags |
+| 2 | Swipe in from the left edge | Back – like the back button. Also on the settings pages and in the scene editor; a round arrow follows the finger and turns gold when letting go goes back |
+
+Opened from the scene editor, the detail view shows that one device only, so swiping to other
+devices is off there.
+
+![Gesture on the screen saver](images/gestures-screensaver.png)
+
+| # | Gesture | What it does |
+|---|---|---|
+| 1 | Double tap | Runs the scene chosen with *Double tap on the screen saver* in the scene editor and stays on the screen saver (a short message names the scene). Without such a scene, or with the display switched off, the first touch wakes the panel as before; with one, a single tap wakes it a moment later |
 
 ## Thermostat
 

@@ -72,7 +72,12 @@ ApplicationWindow {
         anchors.fill: parent
         onOpenDetail: id => window.openDevice = id
         onOpenSettings: Busy.run(qsTr("Loading settings …"), () => window.settingsOpen = true)
+        covered: window.openDevice !== "" || window.settingsOpen || !!window.sceneDraft || window.idle
         onEditScene: id => window.sceneDraft = panel.sceneDraft(id)
+        onLightsOff: {
+            const r = panel.lightsOff();
+            toast.show(r.text, r.count > 0 ? qsTr("Undo") : "", () => panel.undoLightsOff());
+        }
     }
 
     // below the detail view: a device of the scene is changed there
@@ -92,7 +97,9 @@ ApplicationWindow {
         active: window.openDevice !== ""
         sourceComponent: DetailSheet {
             deviceId: window.openDevice
+            swipeEnabled: !window.sceneDraft        // from the scene editor: that one device only
             onClosed: window.openDevice = ""
+            onSwitchTo: id => window.openDevice = id
         }
     }
 
@@ -109,7 +116,12 @@ ApplicationWindow {
         anchors.fill: parent
         active: window.idle
         sourceComponent: IdleScreen {
+            displayOff: window.displayOff
             onWoken: window.wake()
+            onRunScene: (id, name) => {         // double tap: stays on the screen saver
+                panel.runScene(id);
+                toast.show(qsTr("Scene “%1”").arg(name));
+            }
         }
     }
 

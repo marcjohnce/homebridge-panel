@@ -7,7 +7,9 @@ Rectangle {
     property string deviceId
     property var dev: panel.device(deviceId)
     property bool busy: false
+    property bool swipeEnabled: true    // swipe to the next / previous device of the tiles
     signal closed
+    signal switchTo(string id)
 
     readonly property bool isThermostat: dev.type === "thermostat"
     readonly property bool isSensor: dev.type === "sensor"
@@ -69,8 +71,24 @@ Rectangle {
         }
     }
 
+    // keeps touches away from the home screen below; a horizontal swipe on the free area goes
+    // to the next / previous device (the controls above it keep their own drags)
     MouseArea {
+        property real startX
+        property real startY
         anchors.fill: parent
+        onPressed: mouse => {
+            startX = mouse.x;
+            startY = mouse.y;
+        }
+        onReleased: mouse => {
+            const dx = mouse.x - startX;
+            if (!root.swipeEnabled || Math.abs(dx) < Theme.s(70) || Math.abs(dx) < 2 * Math.abs(mouse.y - startY))
+                return;
+            const next = panel.neighbourDevice(root.deviceId, dx < 0 ? 1 : -1);
+            if (next !== "")
+                root.switchTo(next);
+        }
     }
 
     ColumnLayout {
@@ -199,5 +217,9 @@ Rectangle {
             dev: root.dev
             sheet: root
         }
+    }
+
+    EdgeBack {
+        onBack: root.closed()
     }
 }

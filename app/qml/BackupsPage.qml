@@ -296,4 +296,8 @@ Rectangle {
                 panel.settings.deleteBackup(name);
         }
     }
+
+    EdgeBack {
+        onBack: root.closed()
+    }
 }

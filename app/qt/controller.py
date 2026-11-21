@@ -937,6 +937,7 @@ class Controller(QObject):
         self._category = self._start_category()
         self._model._category = self._category
         self._alarms: set[str] = set()
+        self._undo: list[tuple[str, dict[str, Any]]] = []     # lights switched off by two fingers
         self._since: dict[str, float] = {}           # security sensor -> time it was triggered
         self._since_timer = QTimer(self, interval=30_000, timeout=self._model.refresh_texts)
         self._since_timer.start()
@@ -1628,12 +1629,12 @@ class Controller(QObject):
         sc = next((x for x in self.store.scenes if x["id"] == scene_id), None)
         if sc is None:
             room = self._room
-            return {"id": "", "name": "", "room": room, "favorite": False,
+            return {"id": "", "name": "", "room": room, "favorite": False, "idle": False,
                     "devices": [self._scene_row(d, None, True) for d in self._scene_devices(room)]}
         rows = [self._scene_row(d, sc["devices"].get(d["id"]), d["id"] in sc["devices"])
                 for d in self._scene_devices(sc["room"])]
         return {"id": sc["id"], "name": sc["name"], "room": sc["room"], "devices": rows,
-                "favorite": SCENE_TILE + sc["id"] in self._model.layout.favorites}
+                "favorite": SCENE_TILE + sc["id"] in self._model.layout.favorites, "idle": bool(sc.get("idle"))}
 
     @Slot(str, result="QVariantMap")
     def sceneCapture(self, dev_id: str) -> dict[str, Any]:
@@ -1644,10 +1645,11 @@ class Controller(QObject):
         row = self._scene_row(d, None, True)
         return {"attrs": row["attrs"], "stateText": row["stateText"]}
 
-    @Slot(str, str, str, "QVariantMap", bool, result=str)
-    def saveScene(self, scene_id: str, name: str, room: str, devices: dict[str, Any], favorite: bool = False) -> str:
+    @Slot(str, str, str, "QVariantMap", bool, bool, result=str)
+    def saveScene(self, scene_id: str, name: str, room: str, devices: dict[str, Any], favorite: bool = False,
+                  idle: bool = False) -> str:
         """Saves a scene (new with id ""); devices: {device id: commands}; favorite: shown under
-        Favorites. Returns an error text."""
+        Favorites; idle: run by a double tap on the screen saver (one scene only). Returns an error text."""
         name = " ".join(name.split())[:panel_scenes.MAX_SCENE_NAME]
         if not name:
             return tr("Please enter a name.")
@@ -1663,6 +1665,11 @@ class Controller(QObject):
         else:
             sid = panel_scenes.new_id({x["id"] for x in self.store.scenes})
             self.store.scenes.append({"id": sid, "name": name, "room": room, "devices": stored})
+        for x in self.store.scenes:
+            if x["id"] == sid and idle:
+                x["idle"] = True
+            elif x["id"] == sid or idle:
+                x.pop("idle", None)
         self._model.layout.set_favorite(SCENE_TILE + sid, favorite)
         self.store.rooms = self._model.layout.to_dict()
         self.store.save()
@@ -1689,6 +1696,49 @@ class Controller(QObject):
             self.store.save()
             self._sync_scene_tiles()
             self.scenesChanged.emit()
+
+    @Slot(result="QVariantMap")
+    def lightsOff(self) -> dict[str, Any]:
+        """Two fingers down: the lights on in the selected room off (every room under "All" and
+        Favorites); not hidden ones, lights in a light group included. {count, text}; undoLightsOff
+        switches them back on as they were."""
+        room = ALL_ROOMS if self._category == FAVORITES else self._room
+        lights = [d for d in self._model.all() if d["type"] == "light" and not d.get("meta", {}).get("group")
+                  and not d.get("hidden") and d["reachable"] and d["state"].get("on")
+                  and room in (ALL_ROOMS, d["room"])]
+        self._undo = [(d["id"], {"on": True, **({"brightness": d["state"]["brightness"]}
+                                                 if d["state"].get("brightness") is not None else {})})
+                      for d in lights]
+        if not lights:
+            return {"count": 0, "text": tr("No lights on here.")}
+
+        async def run(m):  # noqa: ANN001, ANN202
+            await asyncio.gather(*(m.command(d["id"], {"on": False}) for d in lights), return_exceptions=True)
+        self._command(run)
+        n = len(lights)
+        if room:
+            text = tr("1 light switched off in {room}") if n == 1 else tr("{n} lights switched off in {room}")
+        else:
+            text = tr("1 light switched off") if n == 1 else tr("{n} lights switched off")
+        return {"count": n, "text": text.format(n=n, room=room)}
+
+    @Slot()
+    def undoLightsOff(self) -> None:
+        undo, self._undo = self._undo, []
+        if undo:
+            async def run(m):  # noqa: ANN001, ANN202
+                await asyncio.gather(*(m.command(ref, attrs) for ref, attrs in undo), return_exceptions=True)
+            self._command(run)
+
+    @Slot(str, int, result=str)
+    def neighbourDevice(self, dev_id: str, step: int) -> str:
+        """The next (+1) or previous (-1) tile with a detail view after dev_id, in the order the
+        tiles are shown now; "" at either end."""
+        rows = [r for r in self._model._rows if (d := self._model.get(r)) and has_detail(d)]
+        if dev_id not in rows:
+            return ""
+        i = rows.index(dev_id) + step
+        return rows[i] if 0 <= i < len(rows) else ""
 
     @Slot(str, result="QVariantMap")
     def device(self, dev_id: str) -> dict[str, Any]:
@@ -1782,6 +1832,12 @@ class Controller(QObject):
         collator.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         collator.setNumericMode(True)
         return sorted(out, key=lambda x: collator.sortKey(x["name"]))
+
+    @Property("QVariantMap", notify=scenesChanged)
+    def idleScene(self) -> dict[str, Any]:
+        """The scene a double tap on the screen saver runs: {id, name}, or {} if none."""
+        sc = next((x for x in self.store.scenes if x.get("idle")), None)
+        return {"id": sc["id"], "name": sc["name"]} if sc else {}
 
     @Property(str, notify=categoryChanged)
     def category(self) -> str:

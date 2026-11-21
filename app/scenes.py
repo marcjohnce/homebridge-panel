@@ -2,7 +2,8 @@
 
 A scene belongs to a room and holds, for some of the room's lights, switches, plugs and blinds,
 the state to switch them to. It is made from the state the devices have when it is saved; devices
-left out are not changed when the scene runs. Stored in settings.json (so they are part of every
+left out are not changed when the scene runs. One scene can be run by a double tap on the
+screen saver ("idle": true). Stored in settings.json (so they are part of every
 backup and of the settings shared over MQTT):
 
     "scenes": [{"id": "s1a2b3", "name": "Ice age", "room": "Living Room",
@@ -73,5 +74,6 @@ def clean(scenes: Any) -> list[dict[str, Any]]:
                 and isinstance(sc.get("room"), str) and isinstance(sc.get("devices"), dict)):
             continue
         devices = {str(k): v for k, v in sc["devices"].items() if isinstance(v, dict)}
-        out.append({"id": sc["id"], "name": sc["name"], "room": sc["room"], "devices": devices})
+        out.append({"id": sc["id"], "name": sc["name"], "room": sc["room"], "devices": devices,
+                    **({"idle": True} if sc.get("idle") is True else {})})
     return out
