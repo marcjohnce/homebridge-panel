@@ -46,6 +46,8 @@ Item {
                 Layout.leftMargin: 6
                 spacing: Theme.s(12)
 
+                SwipeRooms {}
+
                 RoomTabs {
                     visible: panel.category !== "favorites"
                     Layout.fillWidth: true
@@ -72,6 +74,8 @@ Item {
 
         ColumnLayout {
             spacing: 10
+
+            SwipeRooms {}
 
             TopBar {
                 Layout.fillWidth: true

@@ -40,8 +40,9 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 - **Security**: window, door, glass break, leak, motion, presence, smoke and CO sensors; open windows and alarms
   first, a leak, glass break, smoke or CO alarm wakes the panel and shows a message
 - **Favorites** as the start page: devices from every room on one page, in your own order
-- **Menu** Favorites, Lights, Climate, Security; room tabs per menu entry with "All" last; a dot marks
-  rooms with lights on (Lights) or an open window or alarm (Security)
+- **Menu** Favorites, Lights, Scenes, Climate, Security; room tabs per menu entry with "All" last, also
+  switched by swiping left/right over the tiles; a dot marks rooms with lights on (Lights) or an open
+  window or alarm (Security)
 - **MQTT**: virtual devices show values of MQTT topics (e.g. boiler pressure in bar), broker set up in the settings
 - **Light groups**: several lights of a room as one tile
 - **Alarm system**: arm (Home, Away, Night) and disarm a HomeKit security system, optionally with a PIN;
