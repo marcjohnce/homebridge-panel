@@ -1221,13 +1221,20 @@ def test_upside_down(qapp, tmp_path):
         it = find(name)
         return it.mapToScene(QPointF(it.width() / 2, it.height() / 2))
 
-    before = center("category:climate")
+    # the menu settles once the devices are there: measure when it no longer moves
+    last = None
+    while (before := center("category:climate")) != last:
+        last = before
+        pump_until(lambda: False, timeout=0.2)
     assert win.contentItem().property("rotation") == 0
     assert ctl.settings.save({"upside_down": True}) == {}
-    pump_until(lambda: False, timeout=0.3)
-    assert win.contentItem().property("rotation") == 180
+    assert pump_until(lambda: win.contentItem().property("rotation") == 180)
+
+    def mirrored():
+        after = center("category:climate")
+        return abs(after.x() - (1024 - before.x())) < 1 and abs(after.y() - (600 - before.y())) < 1
+    assert pump_until(mirrored)
     after = center("category:climate")
-    assert abs(after.x() - (1024 - before.x())) < 1 and abs(after.y() - (600 - before.y())) < 1
     QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, after.toPoint())
     assert pump_until(lambda: ctl.category == "climate")              # the tap reaches the turned item
     assert ctl.settings.save({"upside_down": False}) == {}
@@ -1490,6 +1497,41 @@ def test_arming_away_warns_about_open_windows(qapp, tmp_path):
     win.close()
     engine.deleteLater()
     pump_until(lambda: False, timeout=0.3)
+
+
+def test_new_lights_get_a_lamp_kind_from_their_name(qapp, tmp_path):
+    from app.models import guess_lamp
+    assert [guess_lamp(n) for n in ("Wandleuchte Flur", "Deckenspot Bad", "Schreibtischlampe", "Tischlampe",
+                                    "Lámpara de techo", "Licht Flur")] == ["wall", "spot", "desk", "table", "ceiling", None]
+    ctl = make_controller(tmp_path)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 29)
+    # the first start: every device counts as known, nothing changes
+    assert ctl._model.layout.seen and "demo:living-ceiling" in ctl._model.layout.seen
+    assert ctl._model.layout.kinds == {}
+
+    def light(dev_id, name, lamp="bulb"):
+        ctl._on_message({"type": "device", "device": {
+            "id": dev_id, "name": name, "type": "light", "backend": "demo", "room": "General", "icon": "light",
+            "state": {"on": False}, "capabilities": ["on"], "reachable": True, "order": 100,
+            "meta": {"lamp": lamp, "kinds": ["bulb", "ceiling", "wall", "spot"]}}})
+
+    light("demo:new-wall", "Wandleuchte Flur")                    # new: kind from the name
+    assert ctl.device("demo:new-wall")["meta"]["lamp"] == "wall" and ctl.device("demo:new-wall")["icon"] == "wall"
+    light("demo:new-plain", "Licht Keller")                        # nothing in the name: a bulb
+    assert ctl.device("demo:new-plain")["meta"]["lamp"] == "bulb"
+    light("demo:new-config", "Deckenlampe", lamp="spot")           # kind from config.yaml: kept
+    assert ctl.device("demo:new-config")["meta"]["lamp"] == "spot"
+    # changed on the panel afterwards: stays as chosen, also when the device reports again
+    assert ctl.roomEditor.saveDevice("demo:new-wall", {"kind": "ceiling"}) == ""
+    light("demo:new-wall", "Wandleuchte Flur")
+    assert ctl.device("demo:new-wall")["meta"]["lamp"] == "ceiling"
+    stored = SettingsStore(tmp_path / "settings.json").rooms
+    assert {"demo:new-wall", "demo:new-plain"} <= set(stored["seen"])
+    ctl.shutdown()
+    again = make_controller(tmp_path)                                # known after a restart
+    assert "demo:new-wall" in again._model.layout.seen
+    again.shutdown()
 
 
 def test_wifi_tile_in_the_favorites(qapp, tmp_path):
