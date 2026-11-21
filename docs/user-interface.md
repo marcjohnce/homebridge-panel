@@ -568,9 +568,10 @@ At the bottom of the settings page, above *Info*.
 |---|---|---|
 | 1 | System | Actions that act on the app or the device |
 | 2 | Software update | Shows whether a new release is available. *Check now* looks again; *Install* (after a confirmation) installs it and restarts the app |
-| 3 | Backups | Saves the panel settings and puts them back later, see [Backups](#backups) |
-| 4 | Restart app | Closes and starts the panel again with the same options and reconnects to Homebridge – useful after editing `config.yaml` |
-| 5 | Restart Raspberry Pi | Reboots the device; the panel is back after about a minute |
+| 3 | Backups | Saves the panel settings and puts them back later, or shares them with other panels, see [Backups](#backups) |
+| 4 | Panel name | Shown to other panels when sharing the settings over MQTT, e.g. *Kitchen*; empty: the computer's host name |
+| 5 | Restart app | Closes and starts the panel again with the same options and reconnects to Homebridge – useful after editing `config.yaml` |
+| 6 | Restart Raspberry Pi | Reboots the device; the panel is back after about a minute |
 
 The panel looks for updates on GitHub a minute after it starts and then once a day. Only
 stable releases count – pre-releases and the latest commits on `main` are not offered. The
@@ -607,11 +608,33 @@ tap *Create backup*.
 | 2 | Backup | When it was made and what it holds (rooms, favorites, groups, virtual devices) |
 | 3 | Restore | After a confirmation the current settings are replaced by the backup and the app restarts |
 | 4 | Delete | Removes the backup (after a confirmation) |
+| 5 | Save to MQTT, Load from MQTT | Share the settings with other panels (only with MQTT set up), see below |
 
 The backups are kept on the Pi in `~/.config/smarthome-panel/backups/` (one JSON file each), next
 to the settings. To move the settings to another panel, copy a backup file into the same folder
 there and restore it. `config.yaml` (scenes, schedules) and the history of the readings are not
 part of a backup.
+
+### Sharing the settings with other panels
+
+With an MQTT broker set up (*Settings → MQTT*), several panels can share what is set up on them –
+by hand, nothing happens in the background:
+
+- **Save to MQTT** puts the shared settings on the broker (topic `smarthome-panel/shared`,
+  retained). If another panel saved there before, the panel first asks whether to overwrite it
+  and shows which panel saved it, when, and what it holds.
+- **Load from MQTT** shows the same and, after a confirmation, takes the settings over: a backup of
+  the current settings is made first, then the app restarts.
+
+| Shared | Stays on each panel |
+|---|---|
+| Rooms and their order, display names, kinds, menu areas, order of the devices | Favorites |
+| Hidden devices, *No alerts*, outdoor sensors | Display: appearance, language, screen saver, display off, upside down |
+| Light and switch groups, virtual devices | MQTT connection, panel name |
+| Homebridge address and port, *Show the "General" room*, guest Wi-Fi name | PIN to disarm, Homebridge PIN, Wi-Fi and MQTT passwords |
+
+PINs and passwords are left out on purpose: anyone with access to the broker could read them.
+Enter them once on each panel.
 
 ## Screen saver
 

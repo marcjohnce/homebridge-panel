@@ -29,6 +29,7 @@ from ..scheduler import Scheduler
 from ..updater import UpdateError, Updater
 from ..eve_history import DeviceHistory, bucket, energy_kwh
 from ..backup import BackupError, Backups
+from .. import share
 from ..display_power import DisplayPower
 from ..settings import ACTIONS, SettingsStore, apply_to_config, validate
 from ..models import AREAS, KIND_ICONS, KIND_KEYS, QUIET_KINDS
@@ -318,16 +319,76 @@ class SettingsBridge(QObject):
         """Newest first, with a short text of what each one contains."""
         def plural(n: int, one: str, many: str) -> str:
             return one if n == 1 else many.format(n=n)
-        out = []
-        for b in self._backups.list():
-            parts = [plural(b["rooms"], tr("1 room"), tr("{n} rooms")),
-                     plural(b["favorites"], tr("1 favorite"), tr("{n} favorites"))]
-            if b["groups"]:
-                parts.append(plural(b["groups"], tr("1 group"), tr("{n} groups")))
-            if b["virtual"]:
-                parts.append(plural(b["virtual"], tr("1 virtual device"), tr("{n} virtual devices")))
-            out.append({**b, "text": ", ".join(parts)})
-        return out
+        return [{**b, "text": self._contents(b)} for b in self._backups.list()]
+
+    @staticmethod
+    def _contents(summary: dict[str, int], favorites: bool = True) -> str:
+        """"8 rooms, 2 favorites, 3 groups" – what a backup or the shared settings hold."""
+        def plural(n: int, one: str, many: str) -> str:
+            return one if n == 1 else many.format(n=n)
+        parts = [plural(summary["rooms"], tr("1 room"), tr("{n} rooms"))]
+        if favorites:
+            parts.append(plural(summary["favorites"], tr("1 favorite"), tr("{n} favorites")))
+        if summary["groups"]:
+            parts.append(plural(summary["groups"], tr("1 group"), tr("{n} groups")))
+        if summary["virtual"]:
+            parts.append(plural(summary["virtual"], tr("1 virtual device"), tr("{n} virtual devices")))
+        return ", ".join(parts)
+
+    # ---------- sharing with other panels over MQTT (also on the backups page) ----------
+    @Property(bool, notify=sectionsChanged)
+    def sharingAvailable(self) -> bool:
+        return bool(self._store.get("mqtt_enabled"))
+
+    def _mqtt(self):
+        cfg = self._ctl.effective_config().mqtt
+        if cfg is None:
+            raise share.ShareError(tr("Set up the MQTT broker under Settings → MQTT first."))
+        return cfg
+
+    def panel_name(self) -> str:
+        import socket
+        return str(self._store.get("panel_name") or "").strip() or socket.gethostname()
+
+    @Slot(result="QVariantMap")
+    def sharedInfo(self) -> dict[str, Any]:
+        """What is on the broker: {error, empty, panel, saved (ISO), text}."""
+        try:
+            data = share.load(self._mqtt())
+        except share.ShareError as e:
+            return {"error": tr("MQTT broker: {error}").format(error=e)}
+        if data is None:
+            return {"error": "", "empty": True}
+        return {"error": "", "empty": False, "panel": str(data.get("panel", "")), "saved": str(data.get("saved", "")),
+                "text": self._contents(Backups.summary(data["settings"]), favorites=False)}
+
+    @Slot(result=str)
+    def saveShared(self) -> str:
+        """Saves the shared settings on the broker; returns an error text or ""."""
+        try:
+            self._store.save()
+            share.save(self._mqtt(), share.payload(self._backups.current(), self.panel_name(), __version__))
+        except (share.ShareError, BackupError, OSError) as e:
+            return tr("Saving to MQTT failed: {error}").format(error=e)
+        return ""
+
+    @Slot(result=str)
+    def loadShared(self) -> str:
+        """Takes over the shared settings from the broker (a backup of the current ones first)
+        and restarts the app to load them; returns an error text or ""."""
+        try:
+            data = share.load(self._mqtt())
+            if data is None:
+                return tr("Nothing saved on the MQTT broker yet.")
+            self._store.save()
+            self._backups.create()
+            self._backups.write_settings(share.merge(self._backups.current(), data["settings"]))
+        except (share.ShareError, BackupError, OSError) as e:
+            return tr("Loading from MQTT failed: {error}").format(error=e)
+        self.backupsChanged.emit()
+        self._ctl.restarting.emit(tr("Settings loaded. Restarting the app …"))
+        QTimer.singleShot(600, self._ctl._restart_app)
+        return ""
 
     @Property(str, constant=True)
     def backupFolder(self) -> str:

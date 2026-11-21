@@ -67,6 +67,7 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
   with keypad, connection test and apply without restart; **restart** the app or the Raspberry Pi
 - **Wi-Fi for guests**: a tile in the favorites shows the guest Wi-Fi as a QR code for the phone camera
 - **Backups** of the panel settings (rooms, names, favorites, groups, connection), restored with one tap
+- **Several panels**: share rooms, names, groups and virtual devices over the MQTT broker – saved and loaded by hand, favorites and PINs stay on each panel
 - **Updates** from the settings: new stable releases are found automatically and installed with one tap
 - Optimized for **1280×800** and **720×720**; also works on 800×480, 1024×600, 1280×720 and portrait displays
 
@@ -176,7 +177,7 @@ In the app (icon at the bottom left), stored in `~/.config/smarthome-panel/setti
 | Homebridge | Connect to Homebridge (on/off) | saved with **Apply** |
 | Homebridge | Address (IP or host name), port, PIN | saved with **Apply**, try **Test connection** first |
 | MQTT | Connect to an MQTT broker, address, port, protocol, user name, password, Test | saved with **Apply** |
-| System | Software update; Backups: create, restore and delete backups of the panel settings (`~/.config/smarthome-panel/backups/`); Restart app, Restart Raspberry Pi | buttons with a confirmation dialog |
+| System | Software update; Backups: create, restore and delete backups of the panel settings (`~/.config/smarthome-panel/backups/`), share them with other panels over MQTT; panel name; Restart app, Restart Raspberry Pi | buttons with a confirmation dialog |
 
 Entries are validated (port 1–65535, PIN as 123-45-678, valid IP address or host name).
 After **Apply** the app reconnects without restarting.

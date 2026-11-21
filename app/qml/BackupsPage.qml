@@ -3,6 +3,7 @@ import QtQuick.Layouts
 
 // Settings → System → Backups: save the panel settings (rooms, names, favorites, groups,
 // virtual devices, display, connection) and put them back later; restoring restarts the app.
+// With MQTT set up, the shared part can also be saved on the broker and loaded by other panels.
 Rectangle {
     id: root
 
@@ -17,6 +18,50 @@ Rectangle {
             const err = panel.settings.createBackup();
             root.messageError = err !== "";
             root.message = err !== "" ? err : qsTr("Backup created.");
+        });
+    }
+    // Sharing over MQTT: look what is on the broker first, then ask before overwriting / loading
+    function saveShared() {
+        Busy.run(qsTr("Looking on the MQTT broker …"), () => {
+            const info = panel.settings.sharedInfo();
+            if (info.error !== "") {
+                root.messageError = true;
+                root.message = info.error;
+            } else if (info.empty) {
+                root.saveSharedNow();
+            } else {
+                confirm.ask({
+                    key: "shareSave:",
+                    label: qsTr("Save to MQTT"),
+                    button: qsTr("Overwrite"),
+                    confirm: qsTr("Overwrite the settings %1 saved on %2 (%3)?")
+                             .arg(info.panel).arg(root.created(info.saved)).arg(info.text)
+                });
+            }
+        });
+    }
+    function saveSharedNow() {
+        Busy.run(qsTr("Saving …"), () => {
+            const err = panel.settings.saveShared();
+            root.messageError = err !== "";
+            root.message = err !== "" ? err : qsTr("Saved on the MQTT broker. Other panels can load it now.");
+        });
+    }
+    function loadShared() {
+        Busy.run(qsTr("Looking on the MQTT broker …"), () => {
+            const info = panel.settings.sharedInfo();
+            if (info.error !== "" || info.empty) {
+                root.messageError = info.error !== "";
+                root.message = info.error !== "" ? info.error : qsTr("Nothing saved on the MQTT broker yet.");
+                return;
+            }
+            confirm.ask({
+                key: "shareLoad:",
+                label: qsTr("Load from MQTT"),
+                button: qsTr("Load"),
+                confirm: qsTr("Load the settings %1 saved on %2 (%3)? Rooms, names, groups and virtual devices are replaced; favorites, display settings and PINs stay. A backup is made first, then the app restarts.")
+                         .arg(info.panel).arg(root.created(info.saved)).arg(info.text)
+            });
         });
     }
     function created(iso) {
@@ -187,6 +232,45 @@ Rectangle {
                     font.pixelSize: Theme.s(13)
                     wrapMode: Text.WrapAnywhere
                 }
+
+                // ---------- share with other panels (MQTT) ----------
+                Text {
+                    objectName: "shareTitle"
+                    visible: panel.settings.sharingAvailable
+                    Layout.fillWidth: true
+                    Layout.topMargin: Theme.s(22)
+                    leftPadding: 4
+                    text: qsTr("Share with other panels")
+                    color: Theme.muted
+                    font.pixelSize: Theme.s(15)
+                    Accessible.role: Accessible.Heading
+                }
+                Text {
+                    visible: panel.settings.sharingAvailable
+                    Layout.fillWidth: true
+                    leftPadding: 4
+                    text: qsTr("Saves rooms, names, kinds, groups and virtual devices on the MQTT broker, where other panels can load them. Favorites, display settings and PINs stay on each panel.")
+                    color: Theme.muted
+                    font.pixelSize: Theme.s(15)
+                    wrapMode: Text.WordWrap
+                }
+                Flow {
+                    visible: panel.settings.sharingAvailable
+                    Layout.fillWidth: true
+                    spacing: Theme.s(10)
+                    PillButton {
+                        objectName: "shareSave"
+                        iconName: "up"
+                        text: qsTr("Save to MQTT")
+                        onClicked: root.saveShared()
+                    }
+                    PillButton {
+                        objectName: "shareLoad"
+                        iconName: "down"
+                        text: qsTr("Load from MQTT")
+                        onClicked: root.loadShared()
+                    }
+                }
             }
         }
     }
@@ -196,7 +280,14 @@ Rectangle {
         objectName: "backupConfirm"
         onConfirmed: key => {
             const name = key.substring(key.indexOf(":") + 1);
-            if (key.startsWith("restore:"))
+            if (key === "shareSave:")
+                root.saveSharedNow();
+            else if (key === "shareLoad:")
+                Busy.run(qsTr("Loading …"), () => {
+                    root.message = panel.settings.loadShared();
+                    root.messageError = root.message !== "";
+                });
+            else if (key.startsWith("restore:"))
                 Busy.run(qsTr("Restoring …"), () => {
                     root.message = panel.settings.restoreBackup(name);
                     root.messageError = root.message !== "";

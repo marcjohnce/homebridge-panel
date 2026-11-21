@@ -40,6 +40,22 @@ class Backups:
             raise BackupError(f"unknown backup {name!r}")
         return self.folder / name
 
+    def write_settings(self, settings: dict[str, Any]) -> None:
+        """Replaces settings.json (the app has to restart)."""
+        try:
+            self._write(self.settings_path, settings)
+        except OSError as e:
+            raise BackupError(str(e)) from e
+
+    def current(self) -> dict[str, Any]:
+        """settings.json as it is now."""
+        try:
+            return json.loads(self.settings_path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            return {}
+        except (OSError, ValueError) as e:
+            raise BackupError(f"settings not readable: {e}") from e
+
     @staticmethod
     def _write(path: Path, data: Any) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
