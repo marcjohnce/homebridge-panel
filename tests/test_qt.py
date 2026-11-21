@@ -814,6 +814,14 @@ def test_manual_device_order_per_room(qapp, tmp_path):
     first = model.data(model.index(0), list(model.roleNames())[model.ROLES.index("name")])
     assert first == before[-1]                                          # the tiles follow the order
     assert ed.renameRoom("General", "House") == "" and "House" in ed._layout.device_order
+
+    # under "All": alphabetically by the name shown, whatever the room or the manual order
+    ctl.selectRoom("")
+    role = lambda r: list(model.roleNames())[model.ROLES.index(r)]   # noqa: E731
+    shown = [model.data(model.index(i), role("shortName")) for i in range(model.rowCount())]
+    assert shown == sorted(shown, key=str.casefold) and len(shown) > 5    # as the tiles read
+    assert ed.saveDevice(last["id"], {"name": "Aaa first lamp"}) == ""        # the display name counts
+    assert model.data(model.index(0), role("name")) == "Aaa first lamp"
     ctl.shutdown()
 
 

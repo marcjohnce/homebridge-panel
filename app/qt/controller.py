@@ -15,8 +15,8 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from PySide6.QtCore import (QAbstractListModel, QByteArray, QEvent, QModelIndex, QObject, Qt, QTimer,
-                            Property, Signal, Slot)
+from PySide6.QtCore import (QAbstractListModel, QByteArray, QCollator, QEvent, QLocale, QModelIndex, QObject, Qt,
+                            QTimer, Property, Signal, Slot)
 
 from .. import __version__, i18n
 from ..i18n import tr
@@ -203,10 +203,25 @@ class DeviceModel(QAbstractListModel):
             return [d["id"] for d in sorted(favs, key=lambda d: self.layout.favorite_rank(d["id"]))]
         devs = [d for d in self.shown() if self._room in (ALL_ROOMS, d["room"])
                 and self._category in ("", category(d))]
-        # alarms first, then open windows/doors; otherwise the order of rooms and devices
+        # alarms first, then open windows/doors; otherwise the order of rooms and devices – under
+        # "All" by name instead
         alerts = {d["id"]: alert_level(d) for d in devs}
+        base = self.by_name(devs) if self._room == ALL_ROOMS else self.ordered(devs)
         # the alarm system always comes first
-        return [d["id"] for d in sorted(self.ordered(devs), key=lambda d: (d["type"] != "alarm", -alerts[d["id"]]))]
+        return [d["id"] for d in sorted(base, key=lambda d: (d["type"] != "alarm", -alerts[d["id"]]))]
+
+    @staticmethod
+    def by_name(devs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Alphabetically by the name on the tile – the display name (set on the panel or from
+        Homebridge) without the room the tile shows above it, "Living Room Blinds" → "Blinds" –,
+        as the panel language sorts ("Ä" with "A" in German) and "Lamp 2" before "Lamp 10".
+        Same names: by room."""
+        collator = QCollator(QLocale(i18n.locale_name()))
+        collator.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        collator.setNumericMode(True)
+        stable = sorted(devs, key=lambda d: d["id"])        # same names and rooms: always the same order
+        stable = sorted(stable, key=lambda d: collator.sortKey(d["room"]))
+        return sorted(stable, key=lambda d: collator.sortKey(short_name(d["name"], d["room"])))
 
     def ordered(self, devs: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Room order, then the manual order in the room (settings), then kind of device,

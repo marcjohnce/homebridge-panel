@@ -45,7 +45,7 @@ Start the app at a given size in a window with `.venv/bin/python -m app --size 8
 | 3 | Menu | Chooses what the tiles show: [Favorites](#favorites), [Lights](#menu), [Climate](#menu), [Security](#security). Each entry shows a short status, e.g. *2 on*, *1 heating* or *1 alert* in red. The top bar shows the menu as icons with a red count on *Security* |
 | 4 | Connection status | Green: all bridges connected. Red: a bridge is not reachable (details under Settings → Info) |
 | 5 | Settings | Opens the [settings page](#settings) |
-| 6 | Rooms | Filter the tiles by room. Only rooms with devices of the chosen menu entry appear. Choosing a menu entry selects the first room; *All* comes last and shows every device with its room above the name |
+| 6 | Rooms | Filter the tiles by room. Only rooms with devices of the chosen menu entry appear. Choosing a menu entry selects the first room; *All* comes last and shows every device with its room above the name, sorted alphabetically by name |
 | 7 | Device that is on | Gold tiles are switched on. Tap a tile to switch it on or off (blinds: open or close) |
 | 8 | Open controls | Opens brightness, color or speed controls. A long press on the tile does the same |
 
@@ -450,8 +450,10 @@ listed here, marked *Hidden*, so it can be shown again. (`hidden: true` in `conf
 device completely, also from the settings. `blacklist:` in `config.yaml` does the same for every
 device whose original name contains one of the listed texts, e.g. `blacklist: ["Test"]`.)
 
-The arrows next to each device set the order of the tiles in the room (under *All*: rooms first,
-then this order; alarms stay in front under *Security*). The list follows the moved device and
+The arrows next to each device set the order of the tiles in the room. Under *All* the tiles are
+always sorted alphabetically by the name on the tile (the display name set here, else the one
+from Homebridge, without the room shown above it), as the panel language sorts; under *Security*
+alarms stay in front. The list follows the moved device and
 marks it, so tapping the same arrow again keeps moving the same device.
 
 Moving rooms and devices is not saved after every tap: the rows only change places on this page.
