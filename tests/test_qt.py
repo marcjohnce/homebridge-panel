@@ -1152,9 +1152,13 @@ def test_history_chart_switches_between_quantities(qapp, tmp_path):
 
     def tap(name):
         assert pump_until(lambda: find(name) is not None), name
-        it = find(name)
-        p = it.mapToScene(QPointF(it.width() / 2, it.height() / 2)).toPoint()
-        QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, p)
+        # the buttons move once the history arrived (one or two lines): tap where they end up
+        where = lambda: find(name).mapToScene(QPointF(find(name).width() / 2, find(name).height() / 2))   # noqa: E731
+        last = None
+        while (now := where()) != last:
+            last = now
+            pump_until(lambda: False, timeout=0.15)
+        QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, last.toPoint())
 
     def range_text():
         assert pump_until(lambda: find("historyRange") is not None)
@@ -1326,6 +1330,89 @@ def test_display_off_after_screen_saver(qapp, tmp_path):
     assert ctl.settings.save({"display_off": 0}) == {} and ctl.displayOffSeconds == 0
     win.setProperty("idle", True)
     assert not timer.property("running")                           # never
+    ctl.shutdown()
+    win.close()
+    engine.deleteLater()
+    pump_until(lambda: False, timeout=0.3)
+
+
+def test_touch_that_wakes_the_display_switches_nothing(qapp, tmp_path):
+    """With the display off, the touch that wakes the panel – and further taps while the display
+    is still lighting up – must not reach the tiles underneath."""
+    import time as _time
+    from PySide6.QtCore import QObject, QPointF, Qt
+    from PySide6.QtQml import QQmlApplicationEngine
+    from PySide6.QtQuick import QQuickWindow
+    from PySide6.QtTest import QTest
+    from shiboken6 import Shiboken
+    from app.display_power import DisplayPower
+    from app.qt.main import QML_DIR
+
+    class SlowPower(DisplayPower):                       # a display that takes a while to light up
+        def __init__(self):
+            super().__init__(tmp_path / "none", env={})
+            self.calls = []
+
+        def set(self, on):
+            _time.sleep(0.4)
+            self.calls.append(on)
+            self.is_on = on
+            return True
+
+    store = SettingsStore(tmp_path / "settings.json")
+    store.update({"hap_enabled": False, "language": "en", "idle_seconds": 60, "display_off": 300})
+    power = SlowPower()
+    ctl = Controller(AppConfig.model_validate({"demo": {"enabled": True}}), store, display_power=power)
+    engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty("panel", ctl)
+    engine.rootContext().setContextProperty("initialWidth", 1024)
+    engine.rootContext().setContextProperty("initialHeight", 600)
+    engine.load(QML_DIR / "Main.qml")
+    win = Shiboken.wrapInstance(Shiboken.getCppPointer(engine.rootObjects()[0])[0], QQuickWindow)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 29)
+    ctl.selectCategory("light")
+    ctl.selectRoom("")
+
+    def find(name, item=None):
+        for child in (item or win.contentItem()).childItems():
+            if child.objectName() == name and child.isVisible():
+                return child
+            if (hit := find(name, child)) is not None:
+                return hit
+        return None
+
+    light = next(d["id"] for d in ctl.devices.all() if d["type"] == "light" and d["reachable"])
+    assert pump_until(lambda: find("tile:" + light) is not None)
+    tile = find("tile:" + light)
+    spot = tile.mapToScene(QPointF(tile.width() / 2, tile.height() / 2)).toPoint()
+    was_on = ctl.device(light)["state"]["on"]
+
+    def tap():
+        QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, spot)
+
+    timer = win.findChild(QObject, "displayOffTimer")
+    win.setProperty("idle", True)
+    timer.setProperty("interval", 50)
+    assert pump_until(lambda: power.calls == [False])              # display off
+    tap()                                                           # wakes the panel …
+    assert not win.property("idle") and win.property("shielded")
+    for _ in range(3):                                              # … taps in the dark go nowhere
+        pump_until(lambda: False, timeout=0.15)
+        tap()
+    assert pump_until(lambda: power.calls == [False, True])
+    assert win.property("shielded")                                 # one more second after it is lit
+    pump_until(lambda: False, timeout=0.5)
+    assert ctl.device(light)["state"]["on"] == was_on               # nothing switched
+    assert pump_until(lambda: not win.property("shielded"), timeout=3)
+    tap()                                                           # now the tile works again
+    assert pump_until(lambda: ctl.device(light)["state"]["on"] != was_on)
+
+    # the screen saver alone (display still on): only a short moment
+    win.setProperty("idle", True)
+    tap()
+    assert win.property("shielded")
+    assert pump_until(lambda: not win.property("shielded"), timeout=1)
     ctl.shutdown()
     win.close()
     engine.deleteLater()
