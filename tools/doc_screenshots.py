@@ -328,12 +328,108 @@ def scene_views(p: Panel, out: Path) -> None:
         (5, [p.rect("sceneCapture")], "Take over how the devices are now", "bottom"),
         (6, [p.rect("sceneSave")], "Save", "bottom"),
         (7, [p.rect("sceneFavorite")], "Also show it under Favorites", "right"),
+        (8, [p.rect("sceneIdle")], "Run it by a double tap on the screen saver", "right"),
     ], "Scene editor"), out, "scene-editor")
     p.win.setProperty("sceneDraft", None)
     for sc in list(p.ctl.store.scenes):
         p.ctl.deleteScene(sc["id"])
     p.ctl.selectCategory("light")
     p.ctl.selectRoom("")
+
+
+GESTURE = (234, 88, 12)        # finger marks and arrows of the gesture pictures
+
+
+def gesture(img: Image.Image, start: tuple[float, float], end: tuple[float, float] | None = None,
+            fingers: int = 1, taps: int = 1) -> QRectF:
+    """Draws a gesture on a screenshot: fingertips at the start, an arrow to the end (a swipe)
+    or rings for the taps. Returns the area of the fingertips, for a callout."""
+    over = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    d = ImageDraw.Draw(over)
+    r = 24
+    gap = 2.6 * r
+    offsets = [(i - (fingers - 1) / 2) * gap for i in range(fingers)]
+    sx, sy = start
+    horizontal = end is not None and abs(end[0] - sx) >= abs(end[1] - sy)
+    for off in offsets:
+        fx, fy = (sx, sy + off) if horizontal else (sx + off, sy)
+        if end is not None:
+            ex, ey = (end[0], end[1] + off) if horizontal else (end[0] + off, end[1])
+            # fading trail, then a solid shaft and head
+            for k in range(1, 4):
+                t = k / 4
+                tx, ty = fx + (ex - fx) * t, fy + (ey - fy) * t
+                d.ellipse((tx - r * 0.55, ty - r * 0.55, tx + r * 0.55, ty + r * 0.55), fill=GESTURE + (60 + 30 * k,))
+            d.line([(fx, fy), (ex, ey)], fill=GESTURE + (255,), width=6)
+            length = max(1.0, ((ex - fx) ** 2 + (ey - fy) ** 2) ** 0.5)
+            ux, uy = (ex - fx) / length, (ey - fy) / length
+            head = [(ex + ux * 14, ey + uy * 14), (ex - ux * 16 - uy * 16, ey - uy * 16 + ux * 16),
+                    (ex - ux * 16 + uy * 16, ey - uy * 16 - ux * 16)]
+            d.polygon(head, fill=GESTURE + (255,))
+        for k in range(1, taps):         # rings of the further taps
+            rr = r + 12 * k
+            d.ellipse((fx - rr, fy - rr, fx + rr, fy + rr), outline=GESTURE + (200,), width=4)
+        d.ellipse((fx - r, fy - r, fx + r, fy + r), fill=GESTURE + (150,), outline=(255, 255, 255, 255), width=4)
+    img.paste(Image.alpha_composite(img.convert("RGBA"), over).convert("RGB"))
+    span = (fingers - 1) * gap / 2 + r + 12 * max(0, taps - 1)
+    return QRectF(sx - span, sy - span, 2 * span, 2 * span) if not horizontal else \
+        QRectF(sx - r, sy - span, 2 * r, 2 * span)
+
+
+def gesture_views(p: Panel, out: Path) -> None:
+    """The gestures, drawn onto screenshots: home screen, detail view, screen saver."""
+    p.win.setProperty("openDevice", "")
+    p.win.findChild(QObject, "toast").setProperty("shown", False)
+    p.ctl.selectCategory("light")
+    p.ctl.selectRoom("Living Room")
+    wait(300)
+    grid = p.rect("tileGrid")
+    img = p.grab()
+    y1, y2 = grid.top() + grid.height() * 0.22, grid.top() + grid.height() * 0.5
+    x1, x2 = grid.left() + grid.width() * 0.72, grid.left() + grid.width() * 0.28
+    left = gesture(img, (x1, y1), (x2, y1))
+    right = gesture(img, (x2, y2), (x1, y2))
+    down = gesture(img, (grid.center().x(), grid.top() + grid.height() * 0.66),
+                   (grid.center().x(), grid.top() + grid.height() * 0.66 + 150), fingers=2)
+    save(annotate(img, [
+        (1, [left], "Swipe left: next room tab", "right"),
+        (2, [right], "Swipe right: previous room tab", "left"),
+        (3, [down], "Two fingers down: lights of the room off", "bottom"),
+        (4, [p.rect("roomTabs")], "The room tab follows", "top"),
+    ], "Gestures on the home screen"), out, "gestures-home")
+
+    result = p.ctl.lightsOff()
+    QMetaObject.invokeMethod(p.win.findChild(QObject, "toast"), "show", Q_ARG("QVariant", result["text"]),
+                             Q_ARG("QVariant", "Undo"), Q_ARG("QVariant", None))
+    wait(400)
+    save(annotate(p.grab(), [
+        (1, [p.rect("toastAction")], "Undo switches them back on", "bottom"),
+    ], "After two fingers down"), out, "gestures-undo")
+    p.ctl.undoLightsOff()
+    p.win.findChild(QObject, "toast").setProperty("shown", False)
+
+    p.ctl.selectRoom("")
+    p.win.setProperty("openDevice", p.device_id("Living Room Ceiling Light"))
+    wait(500)
+    img = p.grab()
+    w, h = img.size
+    swipe = gesture(img, (w * 0.82, h * 0.86), (w * 0.62, h * 0.86))
+    edge = gesture(img, (14, h * 0.5), (190, h * 0.5))
+    save(annotate(img, [
+        (1, [swipe], "Swipe left/right on a free spot: next/previous device", "right"),
+        (2, [edge], "From the left edge to the right: back", "left"),
+    ], "Gestures in the detail view"), out, "gestures-detail")
+    p.win.setProperty("openDevice", "")
+
+    p.win.setProperty("idle", True)
+    wait(900)
+    img = p.grab()
+    tap = gesture(img, (img.size[0] * 0.5, img.size[1] * 0.9), taps=3)
+    save(annotate(img, [
+        (1, [tap], "Double tap: runs the scene chosen for it; one tap wakes the panel", "bottom"),
+    ], "Gesture on the screen saver"), out, "gestures-screensaver")
+    p.win.setProperty("idle", False)
+    wait(300)
 
 
 def detail_views(p: Panel, out: Path, suffix: str, size: str) -> None:
@@ -452,6 +548,7 @@ def main() -> int:
     detail_views(p, out, "", "1280 × 800")
     menu_views(p, out, "1280 × 800")
     scene_views(p, out)
+    gesture_views(p, out)
 
     # Settings, keypad and screen saver at the primary size
 

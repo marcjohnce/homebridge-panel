@@ -79,8 +79,29 @@ Rectangle {
         }
     }
 
+    // With a scene for the double tap, the first tap waits a moment for a second one; a dark
+    // display (switched off) always just wakes up.
+    property bool displayOff: false
+    readonly property bool doubleTap: panel.idleScene.id !== undefined && !displayOff
+    signal runScene(string id, string name)
+
+    Timer {
+        id: secondTap
+        interval: 350
+        onTriggered: root.woken()
+    }
     MouseArea {
+        objectName: "idleTouch"
         anchors.fill: parent
-        onPressed: root.woken()
+        onPressed: {
+            if (!root.doubleTap) {
+                root.woken();
+            } else if (secondTap.running) {
+                secondTap.stop();
+                root.runScene(panel.idleScene.id, panel.idleScene.name);
+            } else {
+                secondTap.start();
+            }
+        }
     }
 }

@@ -135,4 +135,8 @@ Rectangle {
             }
         }
     }
+
+    EdgeBack {
+        onBack: root.closed()
+    }
 }

@@ -9,6 +9,8 @@ Item {
     signal openDetail(string id)
     signal openSettings
     signal editScene(string id)         // "" = new scene in the selected room
+    signal lightsOff                    // two fingers down
+    property bool covered: false        // a page lies above: no gestures here
 
     readonly property bool topLayout: width / height < 1.4
     readonly property bool compact: height < 520
@@ -46,7 +48,13 @@ Item {
                 Layout.leftMargin: 6
                 spacing: Theme.s(12)
 
-                SwipeRooms {}
+                SwipeRooms {
+                    enabled: !root.covered && panel.category !== "favorites" && panel.rooms.length > 0
+                }
+                TwoFingerOff {
+                    enabled: !root.covered
+                    onLightsOff: root.lightsOff()
+                }
 
                 RoomTabs {
                     visible: panel.category !== "favorites"
@@ -75,7 +83,13 @@ Item {
         ColumnLayout {
             spacing: 10
 
-            SwipeRooms {}
+            SwipeRooms {
+                enabled: !root.covered && panel.category !== "favorites" && panel.rooms.length > 0
+            }
+            TwoFingerOff {
+                enabled: !root.covered
+                onLightsOff: root.lightsOff()
+            }
 
             TopBar {
                 Layout.fillWidth: true

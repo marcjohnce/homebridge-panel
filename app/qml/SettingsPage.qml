@@ -280,4 +280,9 @@ Rectangle {
         objectName: "confirmDialog"
         onConfirmed: key => key === "update" ? panel.installUpdate() : panel.settings.runAction(key)
     }
+
+    EdgeBack {
+        enabled: root.subPage === ""        // a sub page has its own
+        onBack: root.closed()
+    }
 }
