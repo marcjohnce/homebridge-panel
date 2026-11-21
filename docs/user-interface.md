@@ -89,6 +89,9 @@ Tiles leave out the room from the device name when the room is shown anyway
 | Climate | heating, temperature, humidity, air pressure and light sensors, fans, air purifiers, humidifiers |
 | Security | alarm system, door locks, garage doors, motorized windows and doors, window, door, glass break, leak, motion, presence, smoke and CO sensors – alarms and open windows first |
 
+Swipe left or right over the tiles to go to the next or previous room tab (*All* comes last);
+this works under every menu entry with room tabs, including *Scenes*.
+
 A dot before a room tab shows where something is going on: under *Lights* a dot in the accent
 colour marks rooms with at least one light, switch or plug on (blinds don't count); under
 *Security* a red dot marks rooms with an open window or door or an alarm (motion does not count

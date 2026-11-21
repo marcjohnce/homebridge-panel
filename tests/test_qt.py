@@ -1887,3 +1887,64 @@ def test_scene_as_favorite(qapp, tmp_path):
     ctl.deleteScene(sid)                                # deleted: no longer a favorite
     assert ctl.devices.get(tile) is None and tile not in ctl.store.rooms["favorites"]
     ctl.shutdown()
+
+
+def test_swipe_switches_rooms(qapp, tmp_path):
+    """Swiping left over the tiles opens the next room tab, right the previous one; a short
+    drag or a vertical one changes nothing, a tap still switches the tile."""
+    from PySide6.QtCore import QPoint, Qt
+    from PySide6.QtQml import QQmlApplicationEngine
+    from PySide6.QtQuick import QQuickWindow
+    from PySide6.QtTest import QTest
+    from shiboken6 import Shiboken
+    from app.qt.main import QML_DIR
+
+    ctl = make_controller(tmp_path)
+    engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty("panel", ctl)
+    engine.rootContext().setContextProperty("initialWidth", 1024)
+    engine.rootContext().setContextProperty("initialHeight", 600)
+    engine.load(QML_DIR / "Main.qml")
+    win = Shiboken.wrapInstance(Shiboken.getCppPointer(engine.rootObjects()[0])[0], QQuickWindow)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 29)
+    ctl.selectCategory("light")
+    assert pump_until(lambda: ctl.currentRoom == "General")
+    tabs = ctl.rooms + [""]
+
+    def states():
+        return {d["id"]: d["state"].get("on") for d in ctl.devices.all()}
+    before = states()
+
+    def swipe(dx, dy=0):
+        start = QPoint(650, 350)
+        QTest.mousePress(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, start)
+        for i in range(1, 11):
+            QTest.mouseMove(win, start + QPoint(dx * i // 10, dy * i // 10), 15)
+        QTest.mouseRelease(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier,
+                           start + QPoint(dx, dy), 15)
+        pump_until(lambda: False, timeout=0.3)
+
+    swipe(-250)
+    assert ctl.currentRoom == tabs[1]
+    swipe(-250)
+    assert ctl.currentRoom == tabs[2]
+    swipe(250)
+    assert ctl.currentRoom == tabs[1]
+    pump_until(lambda: False, timeout=0.5)
+    assert states() == before                   # the tile under the finger was not switched
+    swipe(-30)                                  # too short
+    assert ctl.currentRoom == tabs[1]
+    swipe(10, -200)                             # scrolling the tiles
+    assert ctl.currentRoom == tabs[1]
+    ctl.selectRoom("")
+    swipe(-250)                                 # "All" is the last tab
+    assert ctl.currentRoom == ""
+    ctl.selectCategory("scenes")                # also over the scenes
+    ctl.selectRoom(tabs[0])
+    swipe(-250)
+    assert ctl.currentRoom == tabs[1]
+    ctl.shutdown()
+    win.close()
+    engine.deleteLater()
+    pump_until(lambda: False, timeout=0.3)

@@ -24,6 +24,19 @@ ListView {
 
     model: panel.rooms.concat([""])      // "All" comes last
 
+    // a room chosen by swiping over the tiles: bring its tab into view
+    function showCurrent() {
+        const i = model.indexOf(panel.currentRoom);
+        if (i >= 0)
+            positionViewAtIndex(i, ListView.Contain);
+    }
+    Connections {
+        target: panel
+        function onCurrentRoomChanged() {
+            Qt.callLater(tabs.showCurrent);
+        }
+    }
+
     delegate: UnderlineButton {
         required property string modelData
         text: modelData === "" ? qsTr("All") : modelData
