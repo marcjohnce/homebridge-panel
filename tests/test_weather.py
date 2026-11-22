@@ -71,7 +71,7 @@ def test_fetch_and_search(server, monkeypatch):
 
 def test_codes_coordinates_and_places():
     assert weather.describe(0) == ("clear", "Clear") and weather.describe(95)[0] == "thunder"
-    assert weather.describe(999) == ("cloudy", "Overcast")
+    assert weather.describe(999) == ("cloud", "Overcast")
     assert weather.parse_coordinates("52.52, 13.41") == (52.52, 13.41)
     assert weather.parse_coordinates("52,52; 13,41") == (52.52, 13.41)
     assert weather.parse_coordinates("52,52, 13,41") == (52.52, 13.41)
@@ -84,3 +84,13 @@ def test_codes_coordinates_and_places():
         weather.parse_forecast({"current": {}})
     demo = weather.demo(52.5, 13.4)
     assert len(demo["days"]) == 7 and demo == weather.demo(52.5, 13.4)
+
+
+def test_every_weather_kind_has_an_icon():
+    """A kind without an icon would show the light bulb that LineIcon falls back to."""
+    from pathlib import Path
+    icons = (Path(__file__).parent.parent / "app" / "qml" / "Icons.js").read_text(encoding="utf-8")
+    for kind, _ in weather.KINDS.values():
+        name = {"clear": "sun", "partly": "weather"}.get(kind, kind)
+        assert f"\n    {name}:" in icons, kind
+    assert "\n    moon:" in icons

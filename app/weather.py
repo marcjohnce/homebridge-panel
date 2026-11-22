@@ -28,7 +28,7 @@ KINDS: dict[int, tuple[str, str]] = {
     0: ("clear", "Clear"),
     1: ("clear", "Mainly clear"),
     2: ("partly", "Partly cloudy"),
-    3: ("cloudy", "Overcast"),
+    3: ("cloud", "Overcast"),
     45: ("fog", "Fog"), 48: ("fog", "Fog"),
     51: ("drizzle", "Light drizzle"), 53: ("drizzle", "Drizzle"), 55: ("drizzle", "Heavy drizzle"),
     56: ("sleet", "Freezing drizzle"), 57: ("sleet", "Freezing drizzle"),
@@ -42,11 +42,12 @@ KINDS: dict[int, tuple[str, str]] = {
 
 
 def describe(code: Any) -> tuple[str, str]:
-    """(kind, English text) for a WMO code; unknown codes count as cloudy."""
+    """(kind, English text) for a WMO code; the kind names the icon (Icons.js), except "clear"
+    (sun or moon) and "partly" (sun behind a cloud). Unknown codes count as overcast."""
     try:
         return KINDS[int(code)]
     except (TypeError, ValueError, KeyError):
-        return ("cloudy", "Overcast")
+        return ("cloud", "Overcast")
 
 
 class WeatherError(Exception):
