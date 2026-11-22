@@ -62,7 +62,7 @@ Item {
                     Layout.preferredHeight: Theme.s(44)
                 }
                 TileGrid {
-                    visible: panel.category !== "scenes"
+                    visible: panel.category !== "scenes" && panel.category !== "weather"
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     onOpenDetail: id => root.openDetail(id)
@@ -72,6 +72,12 @@ Item {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     onEditScene: id => root.editScene(id)
+                }
+                WeatherView {
+                    visible: panel.category === "weather"
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Layout.bottomMargin: Theme.s(16)
                 }
             }
         }
@@ -107,7 +113,7 @@ Item {
                 Layout.rightMargin: 24
             }
             TileGrid {
-                visible: panel.category !== "scenes"
+                visible: panel.category !== "scenes" && panel.category !== "weather"
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 Layout.leftMargin: 24
@@ -121,6 +127,14 @@ Item {
                 Layout.leftMargin: 24
                 Layout.rightMargin: 24
                 onEditScene: id => root.editScene(id)
+            }
+            WeatherView {
+                visible: panel.category === "weather"
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.leftMargin: 24
+                Layout.rightMargin: 24
+                Layout.bottomMargin: 16
             }
         }
     }

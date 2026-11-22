@@ -50,6 +50,7 @@ SECTIONS = [
     Section("rooms", "Rooms", instant=True),
     Section("security", "Security", instant=True),
     Section("wifi", "Wi-Fi for guests", instant=True),
+    Section("weather", "Weather", instant=True),
     Section("homebridge", "Homebridge", instant=False),
     Section("mqtt", "MQTT", instant=False),
     Section("system", "System", instant=True),
@@ -84,6 +85,8 @@ FIELDS = [
     Field("wifi_password", "wifi", "Wi-Fi password", "password", "", help="Empty for an open network"),
     Field("wifi_favorite", "wifi", "Show in favorites", "toggle", False,
           help="A “Wi-Fi QR code” tile in the favorites; tapping it shows the code for guests"),
+    Field("weather_page", "weather", "Places", "page", None,
+          help="Places for the weather view; the default one is shown on the screen saver"),
     Field("hap_enabled", "homebridge", "Connect to Homebridge", "toggle", True),
     Field("hap_host", "homebridge", "Address", "host", "127.0.0.1",
           help="IP address or name of the computer running Homebridge"),
@@ -196,6 +199,7 @@ class SettingsStore:
         self.groups: list[dict[str, Any]] = []    # light groups, see Controller
         self.switch_groups: list[dict[str, Any]] = []   # switch groups (one switch on at a time)
         self.scenes: list[dict[str, Any]] = []    # scenes set up on the panel, see app/scenes.py
+        self.weather_places: list[dict[str, Any]] = []    # places for the weather, see app/weather.py
         self.load()
 
     def load(self) -> None:
@@ -215,6 +219,8 @@ class SettingsStore:
             self.switch_groups = [g for g in data["switch_groups"] if isinstance(g, dict)]
         from .scenes import clean
         self.scenes = clean(data.get("scenes"))
+        from . import weather
+        self.weather_places = weather.clean(data.get("weather_places"))
         for key, value in data.items():
             if key in FIELDS_BY_KEY:
                 v, err = validate(key, value)
@@ -244,7 +250,8 @@ class SettingsStore:
         fd, tmp = tempfile.mkstemp(dir=self.path.parent, prefix=".settings-")
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             json.dump({**self.values, "rooms": self.rooms, "virtual": self.virtual, "groups": self.groups,
-                       "switch_groups": self.switch_groups, "scenes": self.scenes},
+                       "switch_groups": self.switch_groups, "scenes": self.scenes,
+                       "weather_places": self.weather_places},
                       fh, indent=2, ensure_ascii=False)
         os.replace(tmp, self.path)
 

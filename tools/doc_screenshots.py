@@ -84,6 +84,8 @@ class Panel:
             raise SystemExit("QML failed to load:\n" + "\n".join(warnings))
         self.win = Shiboken.wrapInstance(Shiboken.getCppPointer(self.engine.rootObjects()[0])[0], QQuickWindow)
         self.ctl.start()
+        for name, lat, lon in (("Berlin", 52.52, 13.41), ("Munich", 48.14, 11.58), ("Hamburg", 53.55, 9.99)):
+            self.ctl.weather.addPlace(name, lat, lon)       # demo weather, no network needed
         wait(1500)
         self.ctl.selectRoom("")     # "All", so the screenshots show every kind of tile
 
@@ -241,7 +243,7 @@ def home_callouts(p: Panel, top_layout: bool) -> list[tuple]:
     if not top_layout:
         out.append((2, [p.rect("climate")], "Indoor and outdoor temperature"))
     out += [
-        (3, [p.rect("categoryMenu")], "Menu: favorites, lights, scenes, climate, energy, security", *(["top"] if top_layout else ["left"])),
+        (3, [p.rect("categoryMenu")], "Menu: favorites, lights, scenes, climate, weather, energy, security", *(["top"] if top_layout else ["left"])),
         (4, [status], "Connection status"),
         (5, [p.rect("settingsButton")], "Settings"),
         (6, [p.rect("roomTabs")], "Rooms; “All” comes last", *([] if top_layout else ["top"])),
@@ -438,6 +440,37 @@ def gesture_views(p: Panel, out: Path) -> None:
     wait(300)
 
 
+def weather_views(p: Panel, out: Path, suffix: str = "", size: str = "1280 × 800") -> None:
+    """Menu "Weather" and its settings page."""
+    p.win.setProperty("openDevice", "")
+    p.win.findChild(QObject, "toast").setProperty("shown", False)
+    p.ctl.selectCategory("weather")
+    wait(500)
+    save(annotate(p.grab(), [
+        (1, [p.rect("category:weather")], "Weather", "left" if not suffix else "top"),
+        (2, [p.rect("roomTabs")], "One tab per place; the default place comes first", "top"),
+        (3, [p.rect("weatherNow")], "Weather now", "right"),
+        (4, [p.rect("weatherDays")], "The next 7 days, with the chance of rain", "bottom"),
+    ], f"Weather – {size}"), out, f"weather{suffix}")
+    p.ctl.selectCategory("light")
+    p.ctl.selectRoom("")
+    if suffix:
+        return
+    p.win.setProperty("settingsOpen", True)
+    wait(400)
+    p.item("settingsPage").setProperty("subPage", "weather_page")
+    wait(500)
+    save(annotate(p.grab(), [
+        (1, [p.rect("default:Berlin")], "Default place (screen saver, opens first)", "left"),
+        (2, [p.rect("place:Munich")], "Place with its coordinates", "left"),
+        (3, [p.rect("deletePlace:Munich")], "Order, rename, delete", "right"),
+        (4, [p.rect("addPlace")], "Add by name or coordinates", "left"),
+    ], "Weather places"), out, "weather-places")
+    p.item("settingsPage").setProperty("subPage", "")
+    p.win.setProperty("settingsOpen", False)
+    wait(300)
+
+
 def detail_views(p: Panel, out: Path, suffix: str, size: str) -> None:
     p.win.setProperty("openDevice", p.device_id("Living Room Heating"))
     save(annotate(p.grab(), [
@@ -550,11 +583,13 @@ def main() -> int:
     square = Panel(SQUARE_SIZE)
     detail_views(square, out, "-720x720", "720 × 720")
     menu_views(square, out, "720 × 720", "-720x720")
+    weather_views(square, out, "-720x720", "720 × 720")
     square.close()
     p = Panel(DETAIL_SIZE)
     detail_views(p, out, "", "1280 × 800")
     menu_views(p, out, "1280 × 800")
     scene_views(p, out)
+    weather_views(p, out)
     gesture_views(p, out)
 
     # Settings, keypad and screen saver at the primary size

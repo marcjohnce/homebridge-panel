@@ -87,6 +87,7 @@ Tiles leave out the room from the device name when the room is shown anyway
 | Lights | lights, switches, plugs and blinds |
 | Scenes | the scenes of a room, see [Scenes](#scenes) |
 | Climate | heating, temperature, humidity, air pressure and light sensors, fans, air purifiers, humidifiers |
+| Weather | the weather now and the next 7 days for the places set under Settings → Weather; see [Weather](#weather). Only shown with a place |
 | Energy | every device that measures its power, e.g. Eve plugs; see [Energy](#energy). Only shown while there is such a device |
 | Security | alarm system, door locks, garage doors, motorized windows and doors, window, door, glass break, leak, motion, presence, smoke and CO sensors – alarms and open windows first |
 
@@ -162,6 +163,25 @@ Scenes are part of every [backup](#backups) and of the settings [shared with oth
 | 1 | Climate | Selected menu entry |
 | 2 | Heating tile | Small arc with the target temperature; the text turns orange while heating. Tap to open the thermostat |
 | 3 | Sensor tile | Current readings, e.g. temperature, humidity and air pressure of a weather station. Tap to open the [sensor view](#sensors) |
+
+### Weather
+
+*Weather* shows one large tile for the place chosen in the tabs: the weather now (temperature,
+description, today's highest and lowest temperature, how warm it feels, humidity and wind) and
+the next 7 days with their highest and lowest temperature and, from 20 %, the chance of rain.
+Each place has a tab; the default place opens first. The weather comes from
+[Open-Meteo](https://open-meteo.com) over the internet and is updated every 15 minutes; if an
+update fails, the last weather stays and a note says why. The menu entry appears once a place is
+set under [Settings → Weather](#weather-places).
+
+![Weather](images/weather.png)
+
+| # | Element | What it does |
+|---|---|---|
+| 1 | Weather | Menu entry |
+| 2 | Places | One tab per place (no *All*); swipe left or right to change |
+| 3 | Now | Temperature and description, today's highest / lowest, feels like, humidity, wind |
+| 4 | 7 days | Weekday, symbol, highest and lowest temperature, chance of rain from 20 % |
 
 ### Energy
 
@@ -636,6 +656,24 @@ Tapping *Address*, *Port* or *PIN* opens a keypad.
 
 A connected keyboard works as well, including letters for host names.
 
+### Weather places
+
+*Settings → Weather → Places* holds the places of the weather view. *Add place* opens the
+keyboard: type a place name and pick it from the places found (several with the same name are
+told apart by region and country), or type coordinates such as *53.55, 9.99* (digits and the
+comma are on the *?123* page). The default place opens first under *Weather* and is shown on the
+screen saver; tap the circle in front of another place to make it the default. The places are
+part of backups and of the settings shared with other panels.
+
+![Weather places](images/weather-places.png)
+
+| # | Element | What it does |
+|---|---|---|
+| 1 | Default place | Opens first under *Weather* and is shown on the screen saver |
+| 2 | Place | Name and coordinates |
+| 3 | Arrows, pencil, bin | Order of the tabs, rename, delete (after a confirmation) |
+| 4 | Add place | By name (search) or coordinates |
+
 ### Wi-Fi for guests
 
 Shows the guest Wi-Fi as a QR code: guests point the phone camera at it and join without typing
@@ -742,8 +780,9 @@ Enter them once on each panel.
 
 ## Screen saver
 
-After the time set under *Screen saver after*, the panel shows a large clock with the
-indoor temperature. The first touch only wakes the panel and does not trigger anything
+After the time set under *Screen saver after*, the panel shows a large clock with the weather of
+the default [weather place](#weather-places) (if one is set) and the outdoor and indoor
+temperature. The first touch only wakes the panel and does not trigger anything
 underneath.
 
 *Display off after* switches the display off completely some time after the screen saver

@@ -87,6 +87,7 @@ class Backups:
                 "groups": count(settings.get("groups")) + count(settings.get("switch_groups")),
                 "virtual": count(settings.get("virtual")),
                 "scenes": count(settings.get("scenes")),
+                "weather_places": count(settings.get("weather_places")),
                 "names": count(rooms.get("names"))}
 
     # ---------- actions ----------

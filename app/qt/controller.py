@@ -34,6 +34,7 @@ from ..display_power import DisplayPower
 from ..settings import ACTIONS, SettingsStore, apply_to_config, validate
 from ..models import AREAS, KIND_ICONS, KIND_KEYS, QUIET_KINDS, guess_lamp
 from ..wifi import Wifi, qr_image
+from .weather_bridge import WeatherBridge
 from . import format as fmt
 from .format import (air_warning, alert_level, battery_low, battery_text, category, fmt_temp, has_detail,
                      has_power, in_area, power_text, short_name, state_text)
@@ -42,6 +43,7 @@ log = logging.getLogger(__name__)
 ALL_ROOMS = ""
 FAVORITES = "favorites"
 SCENES = "scenes"           # menu entry "Scenes": room tabs as under "Lights"
+WEATHER = "weather"         # menu entry "Weather": one tab per place
 WIFI_TILE = "wifi:guest"            # tile of the panel itself: shows the guest Wi-Fi as a QR code
 SCENE_TILE = "scene:"               # + scene id: a scene of the panel among the favorites
 NIGHT_FROM, NIGHT_TO = 19, 7
@@ -337,6 +339,8 @@ class SettingsBridge(QObject):
             parts.append(plural(summary["virtual"], tr("1 virtual device"), tr("{n} virtual devices")))
         if summary.get("scenes"):
             parts.append(plural(summary["scenes"], tr("1 scene"), tr("{n} scenes")))
+        if summary.get("weather_places"):
+            parts.append(plural(summary["weather_places"], tr("1 weather place"), tr("{n} weather places")))
         return ", ".join(parts)
 
     # ---------- sharing with other panels over MQTT (also on the backups page) ----------
@@ -929,6 +933,8 @@ class Controller(QObject):
             store.rooms, lambda: tr(BUILTIN_DEFAULT) if default_room == BUILTIN_DEFAULT else default_room))
         self._settings = SettingsBridge(store, self)
         self._room_editor = RoomsBridge(store, self)
+        self._weather = WeatherBridge(self)
+        self.currentRoomChanged.connect(self._weather.changed)      # the weather of the chosen place
         self._rooms: list[str] = []
         self._room = ALL_ROOMS
         self._room_auto = True        # follow the first room until one is chosen
@@ -1049,6 +1055,7 @@ class Controller(QObject):
 
     def start(self) -> None:
         self.runner.submit(self._restart(self.effective_config()))
+        self._weather.refresh()
         if self._updater.supported:
             QTimer.singleShot(60_000, self, self.checkUpdate)
 
@@ -1327,13 +1334,16 @@ class Controller(QObject):
     def _tab_rooms(self) -> list[str]:
         if self._category == FAVORITES:     # favorites are listed without room tabs
             return []
+        if self._category == WEATHER:       # one tab per place, no "All"
+            return [p["name"] for p in self._weather.places]
         rooms = self._model.rooms("light" if self._category == SCENES else self._category)
         if not self.store.get("show_general"):
             rooms = [r for r in rooms if r != self._model.layout.default_room]
         return rooms
 
     def _refresh_rooms(self) -> None:
-        if self._category == "energy" and not self.hasEnergy:     # the last measuring device is gone
+        if (self._category == "energy" and not self.hasEnergy) or (self._category == WEATHER and not self.hasWeather):
+            # the last measuring device or weather place is gone
             self._category = "light"
             self._room_auto = True
             self._model.set_category("light", self._room)
@@ -1341,8 +1351,11 @@ class Controller(QObject):
         rooms = self._tab_rooms()
         # after switching the menu entry (or at start) the first room is selected; "All" only
         # when chosen or when there are no rooms
-        if self._room_auto or (self._room != ALL_ROOMS and self._room not in rooms):
+        no_all = self._category == WEATHER and self._room == ALL_ROOMS
+        if self._room_auto or no_all or (self._room != ALL_ROOMS and self._room not in rooms):
             target = rooms[0] if rooms else ALL_ROOMS
+            if self._category == WEATHER and (d := self._weather.default()):
+                target = d["name"]              # the weather opens with the default place
             if target != self._room:
                 self._room = target
                 self._model.set_room(target)
@@ -1771,6 +1784,8 @@ class Controller(QObject):
 
     @Slot(str)
     def selectRoom(self, room: str) -> None:
+        if self._category == WEATHER and room not in self._rooms:     # one tab per place, no "All"
+            return
         self._room_auto = False
         if room != self._room:
             self._room = room
@@ -1862,6 +1877,18 @@ class Controller(QObject):
             "climate": tr("{n} heating").format(n=heating) if heating else "",
             "security": (tr("1 alert") if alerts == 1 else tr("{n} alerts").format(n=alerts)) if alerts else "",
         }
+
+    @Property(bool, notify=summaryChanged)
+    def hasWeather(self) -> bool:
+        """Menu entry "Weather": only with a place set in the settings."""
+        return bool(self._weather.places)
+
+    @Property(QObject, constant=True)
+    def weather(self) -> QObject:
+        return self._weather
+
+    def weather_places_changed(self) -> None:
+        self._refresh_rooms()           # the place tabs; leaves the weather view without places
 
     @Property(bool, notify=summaryChanged)
     def hasEnergy(self) -> bool:
