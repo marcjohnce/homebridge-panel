@@ -22,7 +22,8 @@ ListView {
         color: Theme.page
     }
 
-    model: panel.rooms.concat([""])      // "All" comes last
+    // "All" comes last; the weather has one tab per place and no "All"
+    model: panel.category === "weather" ? panel.rooms : panel.rooms.concat([""])
 
     // a room chosen by swiping over the tiles: bring its tab into view
     function showCurrent() {

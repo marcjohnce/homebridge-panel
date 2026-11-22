@@ -2197,3 +2197,86 @@ def test_energy_view(qapp, tmp_path):
     assert pump_until(lambda: len(ctl.devices.all()) == 26)      # the leak sensor goes too
     assert not ctl.hasEnergy and ctl.summary["energy"] == ""
     ctl.shutdown()
+
+
+def test_weather_places_view_and_screen_saver(qapp, tmp_path):
+    """Weather: places in the settings (backup, MQTT share), the menu entry only with places, one
+    tab per place (no "All"), the default place first and on the screen saver."""
+    import json as _json
+    from PySide6.QtCore import QPoint, Qt
+    from PySide6.QtQml import QQmlApplicationEngine
+    from PySide6.QtQuick import QQuickWindow
+    from PySide6.QtTest import QTest
+    from shiboken6 import Shiboken
+    from app import share
+    from app.backup import Backups
+    from app.qt.main import QML_DIR
+
+    ctl = make_controller(tmp_path)
+    engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty("panel", ctl)
+    engine.rootContext().setContextProperty("initialWidth", 1024)
+    engine.rootContext().setContextProperty("initialHeight", 600)
+    engine.load(QML_DIR / "Main.qml")
+    win = Shiboken.wrapInstance(Shiboken.getCppPointer(engine.rootObjects()[0])[0], QQuickWindow)
+    found = []
+
+    async def find(name, lang):
+        found.append((name, lang))
+        return [{"name": "Hamburg", "region": "Germany", "lat": 53.55, "lon": 9.99}]
+    ctl.weather.find = find
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 29)
+
+    def find_item(name):
+        root = win.contentItem()
+        while root.parentItem() is not None:
+            root = root.parentItem()
+        stack = [root]
+        while stack:
+            it = stack.pop()
+            if it.objectName() == name and it.isVisible():
+                return it
+            stack.extend(it.childItems())
+        return None
+
+    assert not ctl.hasWeather and find_item("category:weather") is None
+    w = ctl.weather
+    assert w.addPlace("Berlin", 52.52, 13.41) == ""
+    assert w.addPlace("berlin", 1, 2) != ""                      # names are unique
+    assert w.addCoordinates("48,14; 11,58") == "" and w.addCoordinates("nowhere") != ""
+    assert [p["name"] for p in w.placeList] == ["Berlin", "48.14, 11.58"] and w.placeList[0]["default"]
+    assert w.renamePlace(w.placeList[1]["id"], "Munich") == ""
+    assert ctl.hasWeather and pump_until(lambda: find_item("category:weather") is not None)
+
+    saved = _json.loads((tmp_path / "settings.json").read_text())
+    assert [p["name"] for p in saved["weather_places"]] == ["Berlin", "Munich"]
+    assert share.shared_part(saved)["weather_places"] == saved["weather_places"]
+    assert Backups.summary(saved)["weather_places"] == 2
+
+    w.setDefault(w.placeList[1]["id"])                          # Munich opens first
+    ctl.selectCategory("weather")
+    assert ctl.rooms == ["Berlin", "Munich"] and ctl.currentRoom == "Munich"
+    assert pump_until(lambda: w.current.get("state") == "ok") and w.current["name"] == "Munich"
+    assert len(w.current["days"]) == 7 and w.current["days"][0]["day"] == "Today"
+    assert pump_until(lambda: find_item("weatherTemp") is not None)
+    ctl.selectRoom("")                                         # there is no "All"
+    assert ctl.currentRoom == "Munich"
+    ctl.selectRoom("Berlin")
+    assert w.current["name"] == "Berlin"
+
+    w.search("Hamburg")
+    assert pump_until(lambda: found == [("Hamburg", "en")])
+
+    assert w.idle["name"] == "Munich" and w.idle["temp"] != ""
+    win.setProperty("idle", True)
+    assert pump_until(lambda: find_item("idleWeather") is not None)
+    win.setProperty("idle", False)
+
+    for p in list(w.placeList):                                # no places: back to Lights
+        w.deletePlace(p["id"])
+    assert not ctl.hasWeather and ctl.category == "light"
+    ctl.shutdown()
+    win.close()
+    engine.deleteLater()
+    pump_until(lambda: False, timeout=0.3)

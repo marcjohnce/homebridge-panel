@@ -255,6 +255,17 @@ Rectangle {
 
     Loader {
         anchors.fill: parent
+        active: root.subPage === "weather_page"
+        sourceComponent: WeatherPage {
+            onClosed: {
+                root.subPage = "";
+                root.forceActiveFocus();
+            }
+        }
+    }
+
+    Loader {
+        anchors.fill: parent
         active: root.subPage === "backups_page"
         sourceComponent: BackupsPage {
             objectName: "backupsPage"

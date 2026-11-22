@@ -148,6 +148,10 @@ Item {
                     : root.field.key === "batteries_page"
                       ? (panel.lowBatteryCount > 0 ? qsTr("%1 almost empty").arg(panel.lowBatteryCount)
                          : panel.batteries.length > 0 ? qsTr("All OK") : qsTr("No battery devices"))
+                    : root.field.key === "weather_page"
+                      ? (panel.weather.placeList.length === 0 ? qsTr("None yet")
+                         : panel.weather.placeList.length === 1 ? qsTr("1 place")
+                         : qsTr("%1 places").arg(panel.weather.placeList.length))
                     : ""
                 color: parent.lowBatteries ? Theme.err : Theme.muted
                 font.pixelSize: Theme.s(16)

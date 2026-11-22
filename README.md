@@ -40,7 +40,9 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 - **Security**: window, door, glass break, leak, motion, presence, smoke and CO sensors; open windows and alarms
   first, a leak, glass break, smoke or CO alarm wakes the panel and shows a message
 - **Favorites** as the start page: devices from every room on one page, in your own order
-- **Menu** Favorites, Lights, Scenes, Climate, Energy (devices that measure their power, total power in the menu), Security; room tabs per menu entry with "All" last; a dot
+- **Weather** from Open-Meteo (no account needed) for one or more places, found by name or given as
+  coordinates: the weather now and the next 7 days, one tab per place; the default place on the screen saver
+- **Menu** Favorites, Lights, Scenes, Climate, Weather, Energy (devices that measure their power, total power in the menu), Security; room tabs per menu entry with "All" last; a dot
   marks rooms with lights on (Lights) or an open window or alarm (Security)
 - **Gestures**: swipe left/right to change rooms or, in the detail view, devices; swipe in from the left
   edge to go back; two fingers down switch the lights of the room off (with Undo); a double tap on the
@@ -236,6 +238,7 @@ app/
   settings.py          settings schema, validation, storage, effect on the configuration
   rooms.py             rooms edited on the panel: order and device assignment
   scenes.py            scenes made on the panel: capturing device states
+  weather.py           weather from Open-Meteo: forecast, place search
   i18n.py              language selection, number and date formats
   i18n_catalog.py      translations (German, French, Italian, Spanish; Portuguese in i18n_catalog_pt.py)
   config.py            config.yaml (Pydantic)
