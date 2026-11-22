@@ -164,6 +164,20 @@ def attach_battery(snaps: list["ServiceSnapshot"], battery: dict[str, "Char"]) -
             snap.chars.setdefault(name, ch)
 
 
+POWER_CHARS = ("EvePower", "EveEnergy")
+POWER_OWNERS = ("Outlet", "Switch", "Lightbulb", "Fan", "Fanv2")
+
+
+def attach_power(snaps: list["ServiceSnapshot"], power: dict[str, "Char"]) -> None:
+    """Some plugins (e.g. HomematicIP plugs) put the Eve power and energy readings into a service
+    of their own next to the outlet. They go to the accessory's plug or switch – only if it has
+    exactly one, so they cannot end up at the wrong device."""
+    owners = [s for s in snaps if s.service_type in POWER_OWNERS]
+    if power and len(owners) == 1:
+        for name, ch in power.items():
+            owners[0].chars.setdefault(name, ch)
+
+
 DEVICE_TYPE_BY_SERVICE: dict[str, DeviceType] = {
     "Lightbulb": DeviceType.LIGHT,
     "Outlet": DeviceType.PLUG,

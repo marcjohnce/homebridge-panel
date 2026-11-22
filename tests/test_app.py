@@ -711,3 +711,38 @@ def test_old_schedules_and_scenes_are_ignored(tmp_path, caplog):
     cfg = load_config(f)
     assert not hasattr(cfg, "schedules") and not hasattr(cfg, "scenes")
     assert "schedules are no longer" in caplog.text and "scenes are no longer" in caplog.text
+
+
+def test_eve_power_in_a_service_of_its_own():
+    """HomematicIP plugs (homebridge-homematicip): the Eve power and energy readings sit in a
+    custom service next to the outlet; the panel shows them at the plug."""
+    eve = lambda s: f"E863F{s}-079E-48FF-8F27-9C2605A29F52"  # noqa: E731
+    data = {"accessories": [{"aid": 64, "services": [
+        {"iid": 1, "type": U("3E"), "characteristics": [{"iid": 2, "type": U("23"), "value": "HmIP PSMCO", "perms": ["pr"]}]},
+        {"iid": 10, "type": eve("007"), "characteristics": [{"iid": 11, "type": eve("116"), "value": "", "perms": ["pr"]}]},
+        {"iid": 20, "type": eve("117"), "characteristics": [
+            {"iid": 21, "type": eve("10D"), "value": 12.5, "perms": ["pr", "ev"]},
+            {"iid": 22, "type": eve("10C"), "value": 3.2, "perms": ["pr", "ev"]},
+            {"iid": 23, "type": eve("10A"), "value": 230, "perms": ["pr"]}]},
+        {"iid": 30, "type": U("47"), "characteristics": [{"iid": 31, "type": U("25"), "value": True, "perms": ["pr", "pw"]},
+                                                         {"iid": 32, "type": U("26"), "value": True, "perms": ["pr"]}]},
+    ]}]}
+    (plug,) = HapBackend.parse_accessories(data)
+    state = snapshot_to_state(plug)[1]
+    assert state["power"] == 12.5 and state["energy"] == 3.2 and state["on"] is True
+    assert plug.chars["EvePower"].ref == (64, 21)          # read with the outlet when polling
+
+    ui = [{"uniqueId": "o1", "aid": 64, "instance": {"username": "0E:BB"}, "type": "Outlet",
+           "serviceName": "Plug", "accessoryInformation": {"Name": "Plug"},
+           "serviceCharacteristics": [{"type": "On", "value": False, "canWrite": True}]},
+          {"uniqueId": "p1", "aid": 64, "instance": {"username": "0E:BB"}, "type": "CustomService",
+           "uuid": eve("117"), "serviceName": "Power", "accessoryInformation": {"Name": "Plug"},
+           "serviceCharacteristics": [{"type": "CustomCharacteristic", "uuid": eve("10D"), "value": 0.5,
+                                       "canWrite": False}]}]
+    (plug,) = HomebridgeUiBackend.parse_accessories(ui)
+    assert snapshot_to_state(plug)[1]["power"] == 0.5
+
+    # two outlets in one accessory: unclear which one measures, so neither gets it
+    data["accessories"][0]["services"].append(
+        {"iid": 40, "type": U("47"), "characteristics": [{"iid": 41, "type": U("25"), "value": False, "perms": ["pr", "pw"]}]})
+    assert all("power" not in snapshot_to_state(s)[1] for s in HapBackend.parse_accessories(data))

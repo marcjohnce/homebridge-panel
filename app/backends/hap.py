@@ -19,8 +19,8 @@ import httpx
 
 from ..config import HapBackendConfig
 from ..hap_types import (CHAR_TYPES, DEVICE_TYPE_BY_SERVICE, EVE_HISTORY_CHARS, EVE_HISTORY_SERVICE, SENSOR_SERVICES,
-                         SERVICE_TYPES, Char, ServiceSnapshot, TV_PARTS, attach_battery, attach_tv_parts,
-                         merge_sensors, short_uuid)
+                         POWER_CHARS, SERVICE_TYPES, Char, ServiceSnapshot, TV_PARTS, attach_battery,
+                         attach_power, attach_tv_parts, merge_sensors, short_uuid)
 from ..i18n import tr
 from .base import Backend, BackendError
 
@@ -70,6 +70,7 @@ class HapBackend(Backend):
             battery: dict[str, Char] = {}
             parts: list[ServiceSnapshot] = []          # input sources and speaker of a television
             history: dict[str, Any] = {}
+            power: dict[str, Char] = {}            # Eve power/energy in a service of its own
             for svc in services:
                 if str(svc.get("type", "")).upper() == EVE_HISTORY_SERVICE:
                     history = {EVE_HISTORY_CHARS[t]: (aid, ch["iid"]) for ch in svc.get("characteristics", [])
@@ -78,6 +79,11 @@ class HapBackend(Backend):
                 stype = SERVICE_TYPES.get(short_uuid(svc.get("type", "")))
                 if stype not in DEVICE_TYPE_BY_SERVICE and stype not in SENSOR_SERVICES \
                         and stype != "Battery" and stype not in TV_PARTS:
+                    for ch in svc.get("characteristics", []):
+                        cname = CHAR_TYPES.get(short_uuid(ch.get("type", "")))
+                        if cname in POWER_CHARS:
+                            power[cname] = Char(name=cname, value=ch.get("value"), writable=False,
+                                                ref=(aid, ch["iid"]))
                     continue
                 chars: dict[str, Char] = {}
                 for ch in svc.get("characteristics", []):
@@ -106,6 +112,7 @@ class HapBackend(Backend):
                 devices.append(merge_sensors(str(aid), acc_name, sensors))
             attach_tv_parts(devices, parts)
             attach_battery(devices, battery)
+            attach_power(devices, power)
             if len(history) == 3:
                 # the history belongs to the accessory's temperature device, else to the one
                 # with humidity or air pressure, else to a plug that measures power
