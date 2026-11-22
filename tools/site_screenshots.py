@@ -20,18 +20,35 @@ from PIL import Image  # noqa: E402
 from PySide6.QtGui import QGuiApplication  # noqa: E402
 
 OUT = ROOT / "site" / "assets" / "screens"
-CATEGORIES = ("light", "climate", "security")
+CATEGORIES = ("favorites", "light", "scenes", "climate", "weather", "energy", "security")
 
 
 def save(p: ds.Panel, name: str) -> None:
     p.grab().save(OUT / f"{name}.webp", "WEBP", quality=88, method=6)
 
 
+def populate(p: ds.Panel) -> None:
+    """Scenes, favorites and the guest Wi-Fi tile, so every menu entry has something to show."""
+    room = "Living Room" if "Living Room" in p.ctl.rooms else p.ctl.rooms[0]
+    p.ctl.selectRoom(room)
+    rows = p.ctl.sceneDraft("")["devices"]
+    p.ctl.saveScene("", "Movie night", room, {r["id"]: {"on": False} for r in rows[:2]}, True)
+    p.ctl.saveScene("", "Reading", room, {r["id"]: r["attrs"] for r in rows})
+    p.ctl.saveScene("", "Good morning", room, {r["id"]: r["attrs"] for r in rows[1:]})
+    for name in ("Living Room Ceiling Light", "Living Room Heating", "Front Door Lock",
+                 "Coffee Maker", "Living Room Blinds", "Kitchen Light"):
+        p.ctl.roomEditor.saveDevice(p.device_id(name), {"favorite": True})
+    p.ctl.settings.save({"wifi_ssid": "Holiday Home Guests", "wifi_password": "sunny-days-42",
+                         "wifi_favorite": True})
+    ds.wait(600)
+
+
 def home(size, theme, prefix, lang="en", cats=CATEGORIES) -> ds.Panel:
     p = ds.Panel(size, theme=theme, lang=lang)
+    populate(p)
     for c in cats:
         p.ctl.selectCategory(c)
-        p.ctl.selectRoom("")
+        p.ctl.selectRoom("" if c != "scenes" else "Living Room")
         save(p, f"{prefix}-home-{c}")
     return p
 
@@ -94,6 +111,45 @@ def main() -> int:
     row = p.rect("row:batteries_page")
     p.click(row.center().x(), row.center().y())
     save(p, "dark-batteries")
+    p.close()
+
+    # History charts, power, guest Wi-Fi, screen saver with weather
+    p = ds.Panel((1280, 800), theme="dark")
+    populate(p)
+    p.win.setProperty("openDevice", p.device_id("Weather Station"))
+    ds.wait(400)
+    tab = p.rect("detailHistory")
+    p.click(tab.center().x(), tab.center().y())
+    ds.wait(600)
+    seven = p.rect("historyRange:7")
+    p.click(seven.center().x(), seven.center().y())
+    ds.wait(600)
+    plot = p.rect("historyPlot")
+    p.click(plot.x() + plot.width() * 0.62, plot.center().y())
+    save(p, "dark-history")
+    p.win.setProperty("openDevice", "")
+    ds.wait(200)
+    p.win.setProperty("openDevice", p.device_id("Washing Machine"))
+    ds.wait(500)
+    tab = p.rect("detailHistory")
+    p.click(tab.center().x(), tab.center().y())
+    ds.wait(600)
+    seven = p.rect("historyRange:7")
+    p.click(seven.center().x(), seven.center().y())
+    ds.wait(800)
+    save(p, "dark-history-power")
+    p.win.setProperty("openDevice", "")
+    p.ctl.selectCategory("favorites")
+    ds.wait(400)
+    tile = p.rect("tile:wifi:guest")
+    p.click(tile.center().x(), tile.center().y())
+    ds.wait(600)
+    save(p, "dark-wifi-code")
+    p.key(ds.Qt.Key.Key_Escape)
+    ds.wait(300)
+    p.win.setProperty("idle", True)
+    ds.wait(900)
+    save(p, "dark-screensaver")
     p.close()
 
     # Dark blue theme
