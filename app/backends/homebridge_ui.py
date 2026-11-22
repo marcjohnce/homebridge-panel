@@ -20,7 +20,8 @@ import httpx
 
 from ..config import HomebridgeUiBackendConfig
 from ..hap_types import (CHAR_TYPES, DEVICE_TYPE_BY_SERVICE, SENSOR_SERVICES, SERVICE_TYPES, Char, ServiceSnapshot,
-                         TV_PARTS, attach_battery, attach_tv_parts, merge_sensors, short_uuid)
+                         POWER_CHARS, TV_PARTS, attach_battery, attach_power, attach_tv_parts, merge_sensors,
+                         short_uuid)
 from ..i18n import tr
 from .base import Backend, BackendError
 
@@ -89,6 +90,7 @@ class HomebridgeUiBackend(Backend):
         devices: dict[str, list[ServiceSnapshot]] = {}     # per accessory, to attach the battery
         batteries: dict[str, dict[str, Char]] = {}
         parts: dict[str, list[ServiceSnapshot]] = {}     # input sources and speaker of a television
+        power: dict[str, dict[str, Char]] = {}          # Eve power/energy in a service of its own
         for svc in data:
             stype = svc.get("type")
             if stype == "BatteryService":
@@ -101,6 +103,13 @@ class HomebridgeUiBackend(Backend):
                 stype = SERVICE_TYPES.get(short_uuid(svc.get("uuid", "")), stype)
             if stype not in DEVICE_TYPE_BY_SERVICE and stype not in SENSOR_SERVICES and stype != "Battery" \
                     and stype not in TV_PARTS:
+                instance = (svc.get("instance") or {}).get("username", "")
+                group = f"{instance}:{svc['aid']}" if svc.get("aid") is not None else svc.get("uniqueId")
+                for ch in svc.get("serviceCharacteristics", []):
+                    ctype = CHAR_TYPES.get(short_uuid(ch.get("uuid", "")), (ch.get("type") or "").replace(" ", ""))
+                    if ctype in POWER_CHARS:
+                        power.setdefault(group, {})[ctype] = Char(
+                            name=ctype, value=ch.get("value"), writable=False, ref=(svc["uniqueId"], ctype))
                 continue
             uid = svc["uniqueId"]
             chars: dict[str, Char] = {}
@@ -137,6 +146,7 @@ class HomebridgeUiBackend(Backend):
         for group, snaps in devices.items():
             attach_tv_parts(snaps, parts.get(group, []))
             attach_battery(snaps, batteries.get(group, {}))
+            attach_power(snaps, power.get(group, {}))
             result += snaps
         return result
 

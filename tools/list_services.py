@@ -3,8 +3,10 @@
 Helps when a device does not show up on the panel: is it on this bridge at all, which HomeKit
 service does the plugin use, and does the panel know that service?
 
-    python tools/list_services.py                     # bridges from the panel settings and config.yaml
-    python tools/list_services.py --host 192.168.1.20 --port 51826 --pin 031-45-154
+    .venv/bin/python tools/list_services.py           # bridges from the panel settings and config.yaml
+    .venv/bin/python tools/list_services.py --host 192.168.1.20 --port 51826 --pin 031-45-154
+
+(with the Python of the app, in ~/homebridge-panel: the system Python lacks its packages)
 
 Child bridges have a port (and PIN) of their own: a plugin running as a child bridge is not on
 the main bridge. Add it under `hap:` in config.yaml or pass --port/--pin.
@@ -20,8 +22,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.backends.hap import HapBackend  # noqa: E402
 from app.config import HapBackendConfig, load_config  # noqa: E402
-from app.hap_types import (CHAR_TYPES, DEVICE_TYPE_BY_SERVICE, SENSOR_SERVICES, SERVICE_TYPES,  # noqa: E402
-                           short_uuid)
+from app.hap_types import (CHAR_TYPES, DEVICE_TYPE_BY_SERVICE, EVE_HISTORY_SERVICE, POWER_CHARS,  # noqa: E402
+                           SENSOR_SERVICES, SERVICE_TYPES, short_uuid)
 from app.settings import SettingsStore, apply_to_config, default_path  # noqa: E402
 
 SKIP = {"AccessoryInformation", "A2"}   # no device of their own (A2: HAP protocol information)
@@ -68,6 +70,10 @@ async def dump(b: HapBackendConfig) -> None:
                 status = "shown as sensor"
             elif stype in NOTE:
                 status = NOTE[stype]
+            elif str(svc.get("type", "")).upper() == EVE_HISTORY_SERVICE:
+                status = "Eve history (charts in the detail view)"
+            elif any(CHAR_TYPES.get(short_uuid(c.get("type", ""))) in POWER_CHARS for c in svc.get("characteristics", [])):
+                status = "power readings, shown at the plug or switch"
             else:
                 status = "NOT SUPPORTED by the panel"
             chars = [CHAR_TYPES.get(short_uuid(c.get("type", "")), short_uuid(c.get("type", "")))
