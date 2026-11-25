@@ -538,7 +538,7 @@ devices:
 
 | # | Element | What it does |
 |---|---|---|
-| 1 | Display | *Appearance* (Automatic, Light, Dark, Dark blue), *Language*, *Screen saver after*, *Display off after*, *Upside down* (turns the picture and touch by 180° for a display mounted the other way round) and *Touch sounds* (see below). Saved immediately |
+| 1 | Display | *Appearance* (Automatic, Light, Dark, Dark blue, Purple), *Language*, *Screen saver after*, *Display off after*, *Upside down* (turns the picture and touch by 180° for a display mounted the other way round) and *Touch sounds* (see below). Saved immediately |
 | – | Rooms and devices | Opens the room management (see below); shows the number of rooms |
 | – | Security | *PIN to disarm* the alarm system: 4 to 8 digits, empty for none. Also asked for when unlocking doors. Saved immediately |
 | – | Wi-Fi for guests | *Network name*, *Wi-Fi password* and *Show in favorites* (see [Wi-Fi for guests](#wi-fi-for-guests)). Saved immediately |
@@ -872,3 +872,12 @@ Dark blue with a light blue accent instead of gold. Heating stays orange and ala
 ![Home screen, dark blue](images/home-blue.png)
 
 ![Thermostat, dark blue](images/heating-blue.png)
+
+## Purple theme
+
+Dark violet with a purple accent: switched-on tiles, the selected menu entry and sliders are
+purple, good states turquoise and warnings pink. Heating stays orange.
+
+![Home screen, purple](images/home-purple.png)
+
+![Thermostat, purple](images/heating-purple.png)

@@ -832,6 +832,16 @@ def main() -> int:
     save(annotate(p.grab(), [], "Thermostat, dark blue"), out, "heating-blue")
     p.close()
 
+    # Purple theme
+    p = Panel(DETAIL_SIZE, theme="purple")
+    p.ctl.selectCategory("light")
+    p.ctl.selectRoom("Living Room")
+    wait(300)
+    save(annotate(p.grab(), [], "Home screen, purple"), out, "home-purple")
+    p.win.setProperty("openDevice", p.device_id("Living Room Heating"))
+    save(annotate(p.grab(), [], "Thermostat, purple"), out, "heating-purple")
+    p.close()
+
     # Switch group: three irrigation circuits of which only one runs at a time
     p = Panel(DETAIL_SIZE)
     for n, name in enumerate(("Garden Lawn", "Garden Beds", "Garden Hedge")):

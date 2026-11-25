@@ -160,6 +160,8 @@ def test_theme_setting(qapp, tmp_path):
     ctl.themeChanged.connect(lambda: seen.append(ctl.theme))
     ctl.settings.save({"theme": "light"})
     assert ctl.theme == "light" and seen == ["light"]
+    ctl.settings.save({"theme": "purple"})
+    assert ctl.theme == "purple" and seen == ["light", "purple"]
     ctl.shutdown()
 
 

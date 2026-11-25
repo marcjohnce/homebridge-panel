@@ -129,6 +129,7 @@ _ROWS: list[tuple[str, str, str, str, str]] = [
     ("Light", "Hell", "Clair", "Chiaro", "Claro"),
     ("Dark", "Dunkel", "Sombre", "Scuro", "Oscuro"),
     ("Dark blue", "Dunkelblau", "Bleu foncé", "Blu scuro", "Azul oscuro"),
+    ("Purple", "Violett", "Violet", "Viola", "Violeta"),
     ("%1, security warning", "%1, Sicherheitswarnung", "%1, alerte de sécurité", "%1, avviso di sicurezza",
      "%1, aviso de seguridad"),
     ('Switch group', 'Schaltergruppe', "Groupe d'interrupteurs", 'Gruppo di interruttori', 'Grupo de interruptores'),
