@@ -473,6 +473,13 @@ def snapshot_to_state(s: ServiceSnapshot) -> tuple[DeviceType, dict[str, Any], l
         state["value"] = s.get("Value")
         meta.update(unit=s.get("Unit", ""), decimals=int(s.get("Decimals", 1)), icon_hint=s.get("Icon") or "none",
                     topic=s.accessory)
+        # a power in W or kW (e.g. a smart meter): listed under Energy like a measuring plug
+        scale = {"w": 1, "kw": 1000}.get(str(meta["unit"]).strip().lower())
+        v = state["value"]
+        if scale and isinstance(v, (int, float)) and not isinstance(v, bool):
+            state["power"] = float(v) * scale
+            if isinstance(s.get("Energy"), (int, float)) and not isinstance(s.get("Energy"), bool):
+                state["energy"] = float(s.get("Energy"))
     elif s.service_type in SECURITY_SERVICES:
         char, hit, kind, kinds = SECURITY_SERVICES[s.service_type]
         v = s.get(char, 0)

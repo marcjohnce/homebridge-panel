@@ -280,6 +280,17 @@ def menu_views(p: Panel, out: Path, size: str, suffix: str = "") -> None:
         (1, [p.rect("category:energy")], "Energy with the total power now", "left" if not suffix else "top"),
         (2, [p.rect(f"tile:{p.device_id('Washing Machine')}")], "Device that measures its power"),
     ], f"Energy – {size}"), out, f"home-energy{suffix}")
+    if not suffix:
+        washer = p.device_id("Washing Machine")
+        row = next(r for r in p.ctl.roomEditor.devices if r["id"] == washer)
+        p.ctl.roomEditor.saveDevice(washer, {**row, "mainMeter": True})
+        wait(300)
+        save(annotate(p.grab(), [
+            (1, [p.rect("category:energy")], "Power of the main meter", "left"),
+            (2, [p.rect(f"tile:{washer}")], "Main meter first: power and meter reading"),
+        ], "Energy with a main meter"), out, "energy-main-meter")
+        p.ctl.roomEditor.saveDevice(washer, {**row, "mainMeter": False})
+        wait(300)
     p.ctl.selectCategory("security")
     p.ctl.selectRoom("")
     save(annotate(p.grab(), [
@@ -420,6 +431,18 @@ def gesture_views(p: Panel, out: Path) -> None:
         (1, [hold], "Hold, then drag up or down: brightness, set when letting go", "right"),
     ], "Hold and drag on a tile"), out, "gestures-hold-drag")
     tile.setProperty("adjusting", False)
+
+    grid_item = p.item("tileGrid")
+    grid_item.setProperty("pull", grid_item.property("pullNeeded"))
+    wait(300)
+    img = p.grab()
+    g = p.rect("tileGrid")
+    pull = gesture(img, (g.left() + g.width() * 0.62, g.top() + 30), (g.left() + g.width() * 0.62, g.top() + 190))
+    save(annotate(img, [
+        (1, [pull], "Pull down at the top and let go: every device is read again", "right"),
+        (2, [p.rect("pullRefresh")], "Gold: letting go refreshes", "top"),
+    ], "Pull down to refresh"), out, "gestures-pull-refresh")
+    grid_item.setProperty("pull", 0)
 
     result = p.ctl.lightsOff()
     QMetaObject.invokeMethod(p.win.findChild(QObject, "toast"), "show", Q_ARG("QVariant", result["text"]),
@@ -634,9 +657,8 @@ def main() -> int:
     p.item("settingsFlick").setProperty("contentY", 0)
     save(annotate(p.grab(), [
         (1, [p.rect("section:display")], "Display settings (saved immediately)", "left"),
-        (2, [p.rect("section:rooms")], "Rooms and devices", "left"),
-        (3, [p.rect("testButton")], "Test connection", "bottom"),
-        (4, [p.rect("applyButton")], "Apply", "bottom"),
+        (2, [p.rect("testButton")], "Test connection", "bottom"),
+        (3, [p.rect("applyButton")], "Apply", "bottom"),
     ], "Settings"), out, "settings")
 
     p.tap("row:rooms_page")

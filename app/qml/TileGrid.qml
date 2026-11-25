@@ -19,8 +19,24 @@ GridView {
     readonly property bool fitRows: rowsNeeded * naturalHeight > height && height / rowsFit >= naturalHeight * 0.85
                                     && height / rowsFit >= Theme.s(160)
     cellHeight: Math.max(118, fitRows ? Math.floor(height / rowsFit) : naturalHeight)
-    boundsBehavior: Flickable.StopAtBounds
+    // pull down at the top: read every device again now. The tiles stay put, only the
+    // overshoot is measured (verticalOvershoot).
+    boundsBehavior: Flickable.DragOverBounds
+    boundsMovement: Flickable.StopAtBounds
+    flickableDirection: Flickable.VerticalFlick
     clip: true
+
+    property bool pullEnabled: true
+    property real pull: 0
+    readonly property real pullNeeded: Theme.s(90)
+    onVerticalOvershootChanged: if (dragging) pull = Math.max(0, -verticalOvershoot)
+    onDraggingChanged: {
+        if (!dragging) {
+            if (pull >= pullNeeded && pullEnabled)
+                panel.refreshNow();
+            pull = 0;
+        }
+    }
     // The software renderer does not clip vector icons (Shape) at the edge of a scroll area;
     // rendering into a layer cuts them off. Not needed with GPU rendering.
     layer.enabled: GraphicsInfo.api === GraphicsInfo.Software
@@ -32,6 +48,40 @@ GridView {
         z: -1
         visible: grid.layer.enabled
         color: Theme.page
+    }
+
+    // shown while pulling (turns with the pull, gold once letting go refreshes) and while refreshing
+    Rectangle {
+        objectName: "pullRefresh"
+        parent: grid
+        z: 2
+        visible: grid.pull > 4 || panel.refreshing
+        width: Theme.s(44)
+        height: width
+        radius: width / 2
+        x: (grid.width - width) / 2
+        y: panel.refreshing ? Theme.s(12) : Math.min(grid.pull, grid.pullNeeded) * 0.6 - height * 0.4
+        color: Theme.tile
+        border.color: Theme.line
+        Accessible.role: Accessible.Animation
+        Accessible.name: qsTr("Refreshing")
+        Accessible.ignored: !panel.refreshing
+
+        LineIcon {
+            anchors.centerIn: parent
+            width: parent.width * 0.55
+            height: width
+            visible: !panel.refreshing
+            name: "refresh"
+            rotation: Math.min(grid.pull / grid.pullNeeded, 1) * 270
+            color: grid.pull >= grid.pullNeeded ? Theme.gold : Theme.muted
+        }
+        Spinner {
+            anchors.centerIn: parent
+            width: parent.width * 0.6
+            height: width
+            visible: panel.refreshing
+        }
     }
 
     keyNavigationEnabled: true

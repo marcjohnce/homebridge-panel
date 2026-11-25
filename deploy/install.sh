@@ -47,6 +47,8 @@ echo "==> Installing Smart Home Panel in $DIR (user: $USER_NAME)"
 sudo apt-get update -qq
 sudo apt-get install -y -qq python3-venv python3-pip \
   libegl1 libgles2 libxkbcommon0 libxkbcommon-x11-0 libxcb-cursor0 libfontconfig1 libdbus-1-3
+# touch sounds (Settings → Display → Touch sounds): aplay
+sudo apt-get install -y -qq alsa-utils 2>/dev/null || true
 # switching the display off (Settings → Display → Display off after): wlopm on Wayland
 sudo apt-get install -y -qq wlopm 2>/dev/null || true
 

@@ -17,6 +17,11 @@ Popup {
     property string draftIcon: "gauge"
     property string draftRoom
     property bool draftFavorite
+    property string draftEnergyTopic
+    property string draftEnergyKey
+    property bool draftMainMeter
+    // unit W or kW: a power, e.g. of a smart meter, which may also send its meter reading
+    readonly property bool power: ["w", "kw"].indexOf(draftUnit.trim().toLowerCase()) >= 0
     property string error
     property string lastValue
 
@@ -37,6 +42,9 @@ Popup {
         draftIcon = v ? v.icon : "gauge";
         draftRoom = d ? d.room : (panel.roomEditor.rooms.find(r => r.isDefault) || { name: "" }).name;
         draftFavorite = d ? !!d.favorite : false;
+        draftEnergyTopic = v ? (v.energy_topic || "") : "";
+        draftEnergyKey = v ? (v.energy_key || "") : "";
+        draftMainMeter = d ? !!d.mainMeter : false;
         lastValue = d ? panel.roomEditor.lastValue(d.id) : "";
         error = "";
         open();
@@ -48,7 +56,8 @@ Popup {
         const err = panel.roomEditor.saveVirtual({
             id: device ? device.virtual.id : "", name: draftName, unit: draftUnit, topic: draftTopic,
             jsonKey: draftJsonKey, decimals: draftDecimals, icon: draftIcon, room: draftRoom,
-            favorite: draftFavorite
+            favorite: draftFavorite, energyTopic: power ? draftEnergyTopic : "",
+            energyKey: power ? draftEnergyKey : "", mainMeter: power && draftMainMeter
         });
         if (err !== "")
             error = err;
@@ -127,7 +136,7 @@ Popup {
                         label: qsTr("Unit")
                         value: root.draftUnit
                         onTapped: root.editText(qsTr("Unit"), root.draftUnit, t => root.draftUnit = t,
-                                                { maxLength: 10, autoCapitalize: false, hint: qsTr("e.g. bar, kWh, %") })
+                                                { maxLength: 10, autoCapitalize: false, hint: qsTr("e.g. bar, kWh, %; W or kW for a power") })
                     }
                 }
                 EditField {
@@ -147,6 +156,26 @@ Popup {
                     note: qsTr("Key of the value if the topic sends JSON, e.g. pressure or data.pressure")
                     onTapped: root.editText(qsTr("Value from JSON (optional)"), root.draftJsonKey,
                                             t => root.draftJsonKey = t, { maxLength: 80, autoCapitalize: false })
+                }
+
+                EditField {
+                    objectName: "virtualEnergyTopic"
+                    visible: root.power
+                    width: parent.width
+                    label: qsTr("Meter reading in kWh (optional)")
+                    value: root.draftEnergyTopic
+                    note: qsTr("MQTT topic of the meter reading, e.g. of a smart meter")
+                    onTapped: root.editText(qsTr("Meter reading in kWh (optional)"), root.draftEnergyTopic,
+                                            t => root.draftEnergyTopic = t, { maxLength: 200, autoCapitalize: false })
+                }
+                EditField {
+                    objectName: "virtualEnergyKey"
+                    visible: root.power && root.draftEnergyTopic !== ""
+                    width: parent.width
+                    label: qsTr("Meter reading from JSON (optional)")
+                    value: root.draftEnergyKey
+                    onTapped: root.editText(qsTr("Meter reading from JSON (optional)"), root.draftEnergyKey,
+                                            t => root.draftEnergyKey = t, { maxLength: 80, autoCapitalize: false })
                 }
 
                 Text {
@@ -219,6 +248,15 @@ Popup {
                     checked: root.draftFavorite
                     toggleName: "virtualFavorite"
                     onToggled: root.draftFavorite = !root.draftFavorite
+                }
+                ToggleRow {
+                    visible: root.power
+                    width: parent.width
+                    label: qsTr("Main meter")
+                    help: qsTr("Measures the whole house, e.g. a smart meter: its power is the total under Energy")
+                    checked: root.draftMainMeter
+                    toggleName: "virtualMainMeter"
+                    onToggled: root.draftMainMeter = !root.draftMainMeter
                 }
                 Text {
                     width: parent.width

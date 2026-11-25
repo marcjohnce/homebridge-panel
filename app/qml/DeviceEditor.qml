@@ -17,6 +17,7 @@ Popup {
     property bool draftOutdoor
     property bool draftQuiet
     property bool draftMeasureOnly
+    property bool draftMainMeter
     // window, door, contact, motion and presence sensors can be kept out of security alerts (not alarms)
     // (devices without a kind, e.g. garage doors and motorized windows, always can)
     readonly property bool canQuiet: !!device.canQuiet && (!(draftKind || device.kind)
@@ -34,6 +35,7 @@ Popup {
         draftOutdoor = !!d.outdoor;
         draftQuiet = !!d.quiet;
         draftMeasureOnly = !!d.measureOnly;
+        draftMainMeter = !!d.mainMeter;
         draftArea = d.area || "";
         error = "";
         open();
@@ -45,7 +47,7 @@ Popup {
         const err = panel.roomEditor.saveDevice(device.id, {
             name: draftName, kind: draftKind, room: draftRoom, area: draftArea,
             hidden: draftHidden, favorite: draftFavorite, outdoor: draftOutdoor, quiet: canQuiet ? draftQuiet : false,
-            measureOnly: draftMeasureOnly
+            measureOnly: draftMeasureOnly, mainMeter: draftMainMeter
         });
         if (err !== "")
             error = err;
@@ -278,13 +280,23 @@ Popup {
                 }
                 ToggleRow {
                     objectName: "measureOnlyRow"
-                    visible: !!root.device.canMeasureOnly
+                    visible: !!root.device.canMeasureOnly && !root.draftMainMeter
                     width: parent.width
                     label: qsTr("Only measure")
                     help: qsTr("The panel shows the power but never switches it, e.g. a fridge or a server")
                     checked: root.draftMeasureOnly
                     toggleName: "measureOnlyToggle"
                     onToggled: root.draftMeasureOnly = !root.draftMeasureOnly
+                }
+                ToggleRow {
+                    objectName: "mainMeterRow"
+                    visible: !!root.device.canMainMeter
+                    width: parent.width
+                    label: qsTr("Main meter")
+                    help: qsTr("Measures the whole house, e.g. a smart meter: its power is the total under Energy")
+                    checked: root.draftMainMeter
+                    toggleName: "mainMeterToggle"
+                    onToggled: root.draftMainMeter = !root.draftMainMeter
                 }
                 ToggleRow {
                     width: parent.width
