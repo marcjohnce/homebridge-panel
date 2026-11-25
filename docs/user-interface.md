@@ -204,6 +204,16 @@ tap to switch it, *›* opens the detail view with the power and, for Eve plugs,
 | 1 | Energy | Menu entry with the power of all measuring devices together |
 | 2 | Tile | A device that measures its power, with the power now |
 
+**Main meter:** a smart meter or the main electricity meter measures the whole house. Mark it
+with *Main meter* in its dialog (Settings → Rooms and devices; for a Homebridge device or a
+virtual device over MQTT). The menu entry then shows its power instead of the devices added
+up, and its tile comes first under *Energy* with the power and the meter reading
+(*1,250 W, 12,345.6 kWh*). A negative power means the house feeds into the grid. Only one
+device can be the main meter; marking another one replaces it. The main meter is never
+switched on the panel, like a plug set to *Only measure*.
+
+![Main meter](images/energy-main-meter.png)
+
 ### Security
 
 ![Security](images/home-security.png)
@@ -294,6 +304,12 @@ where the finger goes down and where it moves.
 
 Scrolling the tiles up and down still works as before, and a swipe never switches the tile under
 the finger.
+
+**Pull down to refresh:** at the top of the tiles, pull down with one finger and let go once the
+round arrow turns gold. The panel then reads every device again right away instead of waiting
+for the next poll; a spinner shows while it does. A shorter pull does nothing.
+
+![Pull down to refresh](images/gestures-pull-refresh.png)
 
 **Hold and drag on a tile:** hold a dimmable light or a blind until a gold level appears on the
 tile, then drag up or down without lifting the finger: brightness or blind position follows the
@@ -522,19 +538,27 @@ devices:
 
 | # | Element | What it does |
 |---|---|---|
-| 1 | Display | *Appearance* (Automatic, Light, Dark, Dark blue), *Language*, *Screen saver after*, *Display off after* and *Upside down* (turns the picture and touch by 180° for a display mounted the other way round). Saved immediately |
-| 2 | Rooms and devices | Opens the room management (see below); shows the number of rooms |
+| 1 | Display | *Appearance* (Automatic, Light, Dark, Dark blue), *Language*, *Screen saver after*, *Display off after*, *Upside down* (turns the picture and touch by 180° for a display mounted the other way round) and *Touch sounds* (see below). Saved immediately |
+| – | Rooms and devices | Opens the room management (see below); shows the number of rooms |
 | – | Security | *PIN to disarm* the alarm system: 4 to 8 digits, empty for none. Also asked for when unlocking doors. Saved immediately |
 | – | Wi-Fi for guests | *Network name*, *Wi-Fi password* and *Show in favorites* (see [Wi-Fi for guests](#wi-fi-for-guests)). Saved immediately |
 | – | Homebridge | *Connect to Homebridge*, *Address*, *Port* and *PIN* (further down). Changes are collected until you apply them |
-| 3 | Test connection | Tries the entered address, port and PIN without saving and reports how many devices were found |
-| 4 | Apply | Saves the Homebridge settings and reconnects without restarting the app. Enabled only when something changed |
+| 2 | Test connection | Tries the entered address, port and PIN without saving and reports how many devices were found |
+| 3 | Apply | Saves the Homebridge settings and reconnects without restarting the app. Enabled only when something changed |
 
 *Automatic* switches to dark from 7 pm to 7 am. Scroll down for the **Info** section with
 connection details, number of devices, file locations and version.
 
 While a page is being built or a change is saved, the panel blocks taps and – if it takes longer
 than a moment, e.g. on a Raspberry Pi 3 – shows a turning spinner with *Loading …* or *Saving …*.
+
+### Touch sounds
+
+*Settings → Display → Touch sounds* (*Off*, *Quiet*, *Normal*, *Loud*) plays a short click on every
+touch through the audio output of the Raspberry Pi: HDMI (a display with speakers), the headphone
+jack or a USB or I2S amplifier with a speaker. It is played with `aplay` (package `alsa-utils`, which
+the installer sets up) on the default ALSA device. Without `aplay` the panel switches the sounds
+off by itself and notes it in the log. Off by default; the setting stays on this panel.
 
 ### Language
 
@@ -626,7 +650,9 @@ boiler in bar. Set up the broker first under *Settings → MQTT* (address, port,
 MQTT over TLS / WebSocket, user name, password, *Test*). *Virtual device (MQTT)* then asks for
 name, unit, topic, an optional JSON key (`pressure` or `data.pressure` when the topic sends JSON),
 decimal places, an icon (or none) and the room. Virtual devices appear under *Climate* and only
-show values.
+show values. With the unit *W* or *kW* the value is a power: the device is listed under
+[Energy](#energy) as well, and the dialog also asks for an optional topic (and JSON key) of the
+meter reading in kWh and offers *Main meter*, e.g. for a smart meter read by a Tasmota IR reader.
 
 ![Virtual device](images/virtual-device.png)
 

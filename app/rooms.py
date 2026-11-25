@@ -62,6 +62,8 @@ class RoomLayout:
         measure = data.get("measure_only", [])
         # plugs that measure their power and are never switched on the panel ("Only measure")
         self.measure_only: set[str] = {str(m) for m in measure} if isinstance(measure, list) else set()
+        # smart meter or main electricity meter: its power is the total under Energy
+        self.main_meter: str = str(data.get("main_meter") or "")
         seen = data.get("seen")
         # devices the panel has met (new ones get a lamp kind guessed from their name);
         # None: not noted yet – the devices of the first start count as known
@@ -77,6 +79,7 @@ class RoomLayout:
         return {"order": list(self.order), "devices": dict(self.assign),
                 "names": dict(self.names), "kinds": dict(self.kinds), "hidden": sorted(self.hidden),
                 "measure_only": sorted(self.measure_only),
+                **({"main_meter": self.main_meter} if self.main_meter else {}),
                 "quiet": dict(self.quiet),
                 "outdoor": dict(self.outdoor), "areas": dict(self.areas),
                 "device_order": {r: list(ids) for r, ids in self.device_order.items()},
@@ -233,6 +236,13 @@ class RoomLayout:
 
     def set_measure_only(self, dev_id: str, measure_only: bool) -> None:
         (self.measure_only.add if measure_only else self.measure_only.discard)(dev_id)
+
+    def set_main_meter(self, dev_id: str, main: bool) -> None:
+        """One main meter at most: marking a device replaces the previous one."""
+        if main:
+            self.main_meter = dev_id
+        elif self.main_meter == dev_id:
+            self.main_meter = ""
 
     def set_quiet(self, dev_id: str, quiet: bool, default: bool = False) -> None:
         if quiet == default:

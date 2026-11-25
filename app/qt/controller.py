@@ -36,9 +36,10 @@ from ..models import AREAS, KIND_ICONS, KIND_KEYS, QUIET_KINDS, guess_appliance,
 from ..wifi import Wifi, qr_image
 from .weather_bridge import WeatherBridge
 from .. import openings
+from ..sound import TouchSound
 from . import format as fmt
 from .format import (air_warning, alert_level, battery_low, battery_text, category, fmt_temp, has_detail,
-                     has_power, in_area, power_text, short_name, state_text)
+                     has_power, in_area, is_power_unit, power_text, short_name, state_text)
 
 log = logging.getLogger(__name__)
 ALL_ROOMS = ""
@@ -177,7 +178,9 @@ class DeviceModel(QAbstractListModel):
         out = {**d, "baseRoom": base, "room": self.layout.room_of(d["id"], base),
                "baseName": base_name, "name": self.layout.names.get(d["id"]) or base_name,
                "hidden": d["id"] in self.layout.hidden,
-               "measureOnly": d["id"] in self.layout.measure_only and has_power(d),
+               # the main meter is never switched either
+               "measureOnly": (d["id"] in self.layout.measure_only or d["id"] == self.layout.main_meter) and has_power(d),
+               "mainMeter": d["id"] == self.layout.main_meter and has_power(d),
                "favorite": d["id"] in self.layout.favorites,
                "grouped": d["id"] in self.grouped}
         meta = d.get("meta", {})
@@ -227,8 +230,9 @@ class DeviceModel(QAbstractListModel):
         # "All" by name instead
         alerts = {d["id"]: alert_level(d) for d in devs}
         base = self.by_name(devs) if self._room == ALL_ROOMS else self.ordered(devs)
-        # the alarm system always comes first
-        return [d["id"] for d in sorted(base, key=lambda d: (d["type"] != "alarm", -alerts[d["id"]]))]
+        # the alarm system always comes first, the main meter first under Energy
+        return [d["id"] for d in sorted(base, key=lambda d: (d["type"] != "alarm", not d.get("mainMeter"),
+                                                             -alerts[d["id"]]))]
 
     @staticmethod
     def by_name(devs: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -295,7 +299,7 @@ class DeviceModel(QAbstractListModel):
         old = self._all.get(d["id"])
         d = self._place(d)
         self._all[d["id"]] = d
-        structural = (old is None or any(old.get(k) != d.get(k) for k in ("room", "name", "order", "hidden", "grouped", "favorite"))
+        structural = (old is None or any(old.get(k) != d.get(k) for k in ("room", "name", "order", "hidden", "grouped", "favorite", "mainMeter"))
                       or alert_level(old) != alert_level(d) or has_power(old) != has_power(d))
         if structural:
             self._relayout()
@@ -633,6 +637,9 @@ class RoomsBridge(QObject):
                         # plugs and switches that measure their power can be set to "Only measure"
                         "canMeasureOnly": d["type"] in ("plug", "switch") and has_power(d),
                         "measureOnly": bool(d.get("measureOnly")),
+                        # a device that measures its power can be the main meter (its power is the total)
+                        "canMainMeter": has_power(d),
+                        "mainMeter": bool(d.get("mainMeter")),
                         "kinds": [{"value": k, "label": tr(self.KIND_LABELS[k]), "icon": KIND_ICONS[k]}
                                   for k in kinds] if len(kinds) > 1 else []})
         return out
@@ -681,7 +688,9 @@ class RoomsBridge(QObject):
         try:
             dev = VirtualDevice(id=vid, name=name, topic=topic, unit=str(values.get("unit", "")).strip(),
                                 json_key=str(values.get("jsonKey", "")).strip(),
-                                decimals=int(values.get("decimals", 1)), icon=str(values.get("icon") or "gauge"))
+                                decimals=int(values.get("decimals", 1)), icon=str(values.get("icon") or "gauge"),
+                                energy_topic=str(values.get("energyTopic", "")).strip(),
+                                energy_key=str(values.get("energyKey", "")).strip())
         except ValueError as e:
             return str(e)
         self._store.virtual = [v for v in self._store.virtual if v.get("id") != vid] + [dev.model_dump()]
@@ -690,6 +699,8 @@ class RoomsBridge(QObject):
             self._layout._set(f"mqtt:{vid}", str(room), BUILTIN_DEFAULT)
         if "favorite" in values:
             self._layout.set_favorite(f"mqtt:{vid}", bool(values["favorite"]))
+        if "mainMeter" in values:
+            self._layout.set_main_meter(f"mqtt:{vid}", bool(values["mainMeter"]) and is_power_unit(dev.unit))
         self._store.rooms = self._layout.to_dict()
         self._store.save()
         self._ctl.restart_backends()
@@ -701,6 +712,7 @@ class RoomsBridge(QObject):
         self._store.virtual = [v for v in self._store.virtual if v.get("id") != vid]
         self._layout.assign.pop(f"mqtt:{vid}", None)
         self._layout.set_favorite(f"mqtt:{vid}", False)
+        self._layout.set_main_meter(f"mqtt:{vid}", False)
         self._store.rooms = self._layout.to_dict()
         self._store.save()
         self._ctl.restart_backends()
@@ -821,6 +833,7 @@ class RoomsBridge(QObject):
         quiet = bool(values.get("quiet", d.get("quiet", False)))
         outdoor = bool(values.get("outdoor", meta.get("outdoor", False)))
         measure_only = bool(values.get("measureOnly", d.get("measureOnly", False)))
+        main_meter = bool(values.get("mainMeter", d.get("mainMeter", False)))
         name, err = self._layout.check_device_name(name)
         if err:
             return err
@@ -842,6 +855,8 @@ class RoomsBridge(QObject):
             self._layout.set_outdoor(dev_id, outdoor, d.get("baseOutdoor", False))
         if d["type"] in ("plug", "switch") and has_power(d):
             self._layout.set_measure_only(dev_id, measure_only)
+        if has_power(d):
+            self._layout.set_main_meter(dev_id, main_meter)
         self._commit()
         return ""
 
@@ -892,9 +907,11 @@ class RoomsBridge(QObject):
 
 
 class ActivityFilter(QObject):
-    """Reports touches and key presses (for the screen saver)."""
+    """Reports touches and key presses (for the screen saver) and clicks on a touch (touch sounds;
+    a touch arrives several times, as touch and mouse and per item: TouchSound plays it once)."""
 
     TYPES = {QEvent.Type.MouseButtonPress, QEvent.Type.TouchBegin, QEvent.Type.KeyPress}
+    TOUCHES = {QEvent.Type.MouseButtonPress, QEvent.Type.TouchBegin}
 
     def __init__(self, controller: "Controller"):
         super().__init__(controller)
@@ -902,6 +919,8 @@ class ActivityFilter(QObject):
         self._last = 0.0
 
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
+        if event.type() in self.TOUCHES:
+            self._ctl.touchSound()
         if event.type() in self.TYPES and time.monotonic() - self._last > 0.5:
             self._last = time.monotonic()
             self._ctl.userActivity.emit()
@@ -935,6 +954,8 @@ class Controller(QObject):
     displayOffChanged = Signal()
     restarting = Signal(str)
     languageChanged = Signal()
+    refreshingChanged = Signal()
+    _refreshed = Signal()             # from the asyncio thread: the refresh asked for is done
 
     # Command used to reboot the device; overridable for tests
     reboot_command = ["systemctl", "reboot"]
@@ -979,6 +1000,9 @@ class Controller(QObject):
         self._mgr: DeviceManager | None = None
         self._pump: asyncio.Task | None = None
         self._message.connect(self._on_message)
+        self._refreshing = False
+        self._refreshed.connect(self._end_refresh)
+        self._sound = TouchSound()
         self._theme_timer = QTimer(self, interval=30_000, timeout=self._update_theme)
         self._theme_timer.start()
         self._display = display_power or DisplayPower()
@@ -1430,6 +1454,37 @@ class Controller(QObject):
             else:
                 self.toast.emit(tr("Command failed: {error}").format(error=e))
         fut.add_done_callback(done)
+
+    @Slot()
+    def refreshNow(self) -> None:
+        """Pull down over the tiles: reads every device again now, not at the next poll."""
+        if self._refreshing:
+            return
+        if not self._mgr:
+            self.toast.emit(tr("Not connected to Homebridge yet."))
+            return
+        self._refreshing = True
+        self._refresh_start = time.monotonic()
+        self.refreshingChanged.emit()
+        self.runner.submit(self._mgr.refresh_all()).add_done_callback(lambda f: _emit_safely(self._refreshed))
+
+    def _end_refresh(self) -> None:
+        # the spinner stays a moment, so a quick refresh is still seen
+        wait = 0.6 - (time.monotonic() - self._refresh_start)
+        if wait > 0:
+            QTimer.singleShot(int(wait * 1000), self._end_refresh)
+            return
+        self._refreshing = False
+        self.refreshingChanged.emit()
+
+    @Property(bool, notify=refreshingChanged)
+    def refreshing(self) -> bool:
+        return self._refreshing
+
+    @Slot()
+    def touchSound(self) -> None:
+        """A touch on the screen: a short click if switched on (Settings → Display)."""
+        self._sound.play(str(self.store.get("touch_sound") or "off"))
 
     @Slot(str, int)
     def loadHistory(self, dev_id: str, days: int) -> None:
@@ -1971,7 +2026,9 @@ class Controller(QObject):
         on = m.count(_is_on_light)
         heating = m.count(lambda d: d["type"] == "thermostat" and d["reachable"] and d.get("state", {}).get("heating"))
         alerts = self.securityCount
-        watts = sum(d["state"]["power"] for d in m.shown() if has_power(d))
+        meter = next((d for d in m.all() if d.get("mainMeter") and d["reachable"]), None)
+        # a main meter measures the whole house; otherwise the devices that measure, added up
+        watts = meter["state"]["power"] if meter else sum(d["state"]["power"] for d in m.shown() if has_power(d))
         return {
             "energy": power_text(watts) if self.hasEnergy else "",
             "light": tr("{n} on").format(n=on) if on else "",

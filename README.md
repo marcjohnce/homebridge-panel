@@ -44,11 +44,11 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 - **Favorites** as the start page: devices from every room on one page, in your own order
 - **Weather** from Open-Meteo (no account needed) for one or more places, found by name or given as
   coordinates: the weather now and the next 7 days, one tab per place; the default place on the screen saver
-- **Menu** Favorites, Lights, Scenes, Climate, Weather, Energy (devices that measure their power, total power in the menu), Security; room tabs per menu entry with "All" last; a dot
+- **Menu** Favorites, Lights, Scenes, Climate, Weather, Energy (devices that measure their power, total power in the menu; a smart meter or main meter over Homebridge or MQTT replaces the sum), Security; room tabs per menu entry with "All" last; a dot
   marks rooms with lights on (Lights) or an open window or alarm (Security)
 - **Gestures**: swipe left/right to change rooms or, in the detail view, devices; swipe in from the left
   edge to go back; two fingers down switch the lights of the room off (with Undo); hold and drag on a tile to dim a light
-  or move a blind; a double tap on the screen saver runs a chosen scene
+  or move a blind; pull down at the top to read every device again now; a double tap on the screen saver runs a chosen scene
 - **MQTT**: virtual devices show values of MQTT topics (e.g. boiler pressure in bar), broker set up in the settings
 - **Light groups**: several lights of a room as one tile
 - **Alarm system**: arm (Home, Away, Night) and disarm a HomeKit security system, optionally with a PIN;
@@ -69,6 +69,7 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 - **Scenes** per room, made on the panel from how the lights, switches, plugs, blinds and heating are now;
   devices can be left out; tap runs a scene, hold edits it; an active scene is highlighted; scenes can be added to the favorites
 - **Languages**: English, German, French, Italian, Spanish, Portuguese – selectable in the settings
+- **Touch sounds**: an optional short click on every touch through the audio output (HDMI, jack or a speaker)
 - **Light / dark / dark blue / automatic** appearance and a **screen saver** with a large clock
 - **Settings page** for appearance, screen saver and the Homebridge connection (address, port, PIN)
   with keypad, connection test and apply without restart; **restart** the app or the Raspberry Pi
@@ -241,6 +242,7 @@ app/
   rooms.py             rooms edited on the panel: order and device assignment
   scenes.py            scenes made on the panel: capturing device states
   openings.py          opening log of windows, doors and garage doors (openings.json)
+  sound.py             touch sounds: a click played with aplay
   weather.py           weather from Open-Meteo: forecast, place search
   i18n.py              language selection, number and date formats
   i18n_catalog.py      translations (German, French, Italian, Spanish; Portuguese in i18n_catalog_pt.py)

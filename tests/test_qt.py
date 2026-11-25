@@ -334,6 +334,7 @@ def test_rooms_page_rename_with_keyboard(qapp, tmp_path):
         QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, p.toPoint())
 
     win.setProperty("settingsOpen", True)
+    item("settingsFlick").setProperty("contentY", 250)    # below the display settings
     tap("row:rooms_page")
     assert item("roomsPage")
     tap("rename:Kitchen")
@@ -2025,6 +2026,7 @@ def test_gestures_detail_edge_two_fingers_idle(qapp, tmp_path):
         QTest.qWait(15)
     QTest.touchEvent(win, dev).release(0, a + QPoint(0, 250), win).release(1, b + QPoint(0, 250), win).commit()
     assert pump_until(lambda: all(not ctl.devices.get(i)["state"].get("on") for i in on_before))
+    assert not hasattr(ctl, "_refresh_start")              # not a pull to refresh
     assert pump_until(lambda: find("toastAction") is not None)
     act = find("toastAction")
     QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier,
@@ -2399,4 +2401,107 @@ def test_hold_and_drag_on_tile(qapp, tmp_path):
     before = ctl.devices.get(blinds)["state"].get("position", 0)
     hold_drag(blinds, 400 if before > 0 else -400)
     assert pump_until(lambda: ctl.devices.get(blinds)["state"].get("target", before) != before)
+    ctl.shutdown()
+
+
+def test_main_meter(qapp, tmp_path):
+    """A device that measures power can be the main meter: its power is the total under Energy
+    (not the sum of the devices), it comes first there and is never switched. Over MQTT a
+    virtual device with the unit W or kW is a power, with an optional meter reading topic."""
+    ctl = make_controller(tmp_path)
+    ctl.store.update({"mqtt_enabled": True, "mqtt_host": "127.0.0.1", "mqtt_port": 1})   # nothing listens there
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 29)
+    ed = ctl.roomEditor
+    washer = "demo:washer"
+    assert ctl.summary["energy"] == "446 W"                      # the sum: 384 W + 62.5 W
+    row = next(r for r in ed.devices if r["id"] == washer)
+    assert row["canMainMeter"] and not row["mainMeter"]
+    assert ed.saveDevice(washer, {**row, "mainMeter": True}) == ""
+    assert ctl.summary["energy"] == "384 W"
+    d = ctl.devices.get(washer)
+    assert d["mainMeter"] and d["measureOnly"]
+    ctl.selectCategory("energy")
+    ctl.selectRoom("")
+    assert ctl.devices._rows[0] == washer
+    assert ctl.device(washer)["stateText"].startswith("384 W")
+
+    # MQTT smart meter: replaces the washer as main meter
+    assert ed.saveVirtual({"name": "Smart meter", "topic": "meter/power", "unit": "kW", "decimals": 2,
+                           "energyTopic": "meter/total", "energyKey": "total", "mainMeter": True}) == ""
+    assert pump_until(lambda: ctl.mqtt_backend() is not None and ctl.mqtt_backend().devices
+                      and ctl.mqtt_backend()._client is not None, timeout=10)
+    backend = ctl.mqtt_backend()
+    backend._client.loop_stop()
+    backend._connected.set()
+    backend.receive("meter/power", "-0.8")                       # feeding in
+    backend.receive("meter/total", '{"total": 12345.67}')
+    meter = "mqtt:" + ctl.store.virtual[0]["id"]
+    assert pump_until(lambda: ctl.device(meter).get("stateText") == "-800 W, 12,345.7 kWh", timeout=8)
+    assert ctl.summary["energy"] == "-800 W"
+    assert not ctl.devices.get(washer)["mainMeter"]
+    assert ctl.store.rooms["main_meter"] == meter
+    ed.deleteVirtual(ctl.store.virtual[0]["id"])
+    assert "main_meter" not in ctl.store.rooms
+    ctl.shutdown()
+
+
+def test_touch_sound(tmp_path):
+    from app.sound import TouchSound
+    sound = TouchSound(tmp_path)
+    sound.command = ["true"]
+    assert not sound.play("off")
+    assert sound.play("normal") and (tmp_path / "click-normal.wav").stat().st_size > 2000
+    assert not sound.play("normal")                              # right after: one click
+    sound._last = 0
+    sound._proc.wait()
+    assert sound.play("loud")
+    broken = TouchSound(tmp_path)
+    broken.command = ["no-such-player-here"]
+    assert not broken.play("quiet") and broken._broken
+
+
+def test_pull_to_refresh(qapp, tmp_path):
+    """Pulling the tiles down at the top reads every device again; a short pull does not."""
+    from PySide6.QtCore import QPoint, Qt
+    from PySide6.QtQml import QQmlApplicationEngine
+    from PySide6.QtQuick import QQuickWindow
+    from PySide6.QtTest import QTest
+    from shiboken6 import Shiboken
+    from app.qt.main import QML_DIR
+
+    ctl = make_controller(tmp_path)
+    engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty("panel", ctl)
+    engine.rootContext().setContextProperty("initialWidth", 1024)
+    engine.rootContext().setContextProperty("initialHeight", 600)
+    engine.load(QML_DIR / "Main.qml")
+    win = Shiboken.wrapInstance(Shiboken.getCppPointer(engine.rootObjects()[0])[0], QQuickWindow)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 29)
+    ctl.selectCategory("light")
+    ctl.selectRoom("")
+    calls = []
+    orig = ctl._mgr.refresh_all
+
+    async def counted():
+        calls.append(1)
+        await orig()
+    ctl._mgr.refresh_all = counted
+
+    def pull(dy):
+        start = QPoint(700, 260)
+        QTest.mousePress(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, start)
+        for i in range(1, 13):
+            QTest.mouseMove(win, start + QPoint(0, dy * i // 12), 15)
+        QTest.mouseRelease(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, start + QPoint(0, dy), 15)
+
+    pull(40)
+    pump_until(lambda: False, timeout=0.3)
+    assert calls == [] and not ctl.refreshing
+    pull(260)
+    assert pump_until(lambda: calls == [1])
+    assert ctl.refreshing                          # the spinner stays a moment
+    assert pump_until(lambda: not ctl.refreshing)
+    assert win.property("openDevice") == ""       # no tile was switched or opened
     ctl.shutdown()

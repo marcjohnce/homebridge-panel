@@ -63,6 +63,7 @@ Item {
                 }
                 TileGrid {
                     visible: panel.category !== "scenes" && panel.category !== "weather"
+                    pullEnabled: !root.covered
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     onOpenDetail: id => root.openDetail(id)
@@ -114,6 +115,7 @@ Item {
             }
             TileGrid {
                 visible: panel.category !== "scenes" && panel.category !== "weather"
+                pullEnabled: !root.covered
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 Layout.leftMargin: 24

@@ -64,6 +64,9 @@ class VirtualDevice(BaseModel):
     json_key: str = Field("", description="Key (a.b for nested) when the payload is JSON")
     decimals: int = Field(1, ge=0, le=3)
     icon: str = Field("gauge", description='Icon of the tile; "none" shows the value without an icon')
+    # unit W or kW: the value is a power (Energy view); a smart meter also sends its reading
+    energy_topic: str = Field("", description="Topic of the meter reading in kWh (power meters)")
+    energy_key: str = Field("", description="JSON key of the meter reading")
 
 
 class DemoBackendConfig(BaseModel):

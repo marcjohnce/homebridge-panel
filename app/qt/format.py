@@ -265,6 +265,8 @@ def state_text(d: dict[str, Any]) -> str:
     if not d.get("reachable", True):
         return tr("Not reachable")
     s = d.get("state", {})
+    if d.get("mainMeter"):
+        return meter_text(d)
     if d["type"] == "value":
         return value_text(d)
     if d["type"] == "wifi":          # the Wi-Fi tile: name of the guest network
@@ -336,8 +338,20 @@ def state_text(d: dict[str, Any]) -> str:
 
 
 def power_text(watts: float) -> str:
-    """"4.5 W", "45 W", "1,250 W"."""
-    return f"{fmt_number(float(watts), 1 if watts < 10 else 0)} W"
+    """"4.5 W", "45 W", "1,250 W", "-800 W" (a smart meter while feeding in)."""
+    return f"{fmt_number(float(watts), 1 if abs(watts) < 10 else 0)} W"
+
+
+def is_power_unit(unit: str) -> bool:
+    """A virtual device with this unit measures a power (W or kW)."""
+    return unit.strip().lower() in ("w", "kw")
+
+
+def meter_text(d: dict[str, Any]) -> str:
+    """Main meter: "1,250 W, 12,345.6 kWh" (the reading only if it sends one)."""
+    s = d.get("state", {})
+    text = power_text(s["power"])
+    return text if s.get("energy") is None else f"{text}, {fmt_number(float(s['energy']), 1)} kWh"
 
 
 def has_detail(d: dict[str, Any]) -> bool:

@@ -69,6 +69,9 @@ FIELDS = [
     Field("display_off", "display", "Display off after", "choice", 0,
           help="Time after the screen saver starts; a touch or an alarm switches it on again",
           options=((0, "Never"), (300, "5 min"), (900, "15 min"), (1800, "30 min"), (3600, "1 h"))),
+    Field("touch_sound", "display", "Touch sounds", "choice", "off",
+          help="A short click on every touch, through the audio output (HDMI, headphone jack or a speaker)",
+          options=(("off", "Off"), ("quiet", "Quiet"), ("normal", "Normal"), ("loud", "Loud"))),
     # the panel turns its picture itself: cheaper than rotating the screen in the desktop
     Field("upside_down", "display", "Upside down", "toggle", False,
           help="Turns the picture by 180° for a display mounted the other way round; touch follows"),

@@ -79,7 +79,7 @@ class MqttBackend(Backend):
             self._error = str(reason)
             return
         self._error = ""
-        for topic in {d.topic for d in self.devices.values()}:
+        for topic in {t for d in self.devices.values() for t in (d.topic, d.energy_topic) if t}:
             client.subscribe(topic)
         self._connected.set()
         self._notify()
@@ -138,6 +138,11 @@ class MqttBackend(Backend):
         payload = self.payloads.get(device.topic)
         return None if payload is None else extract(payload, device.json_key)
 
+    def energy(self, device: VirtualDevice) -> Any:
+        """Meter reading (kWh) of a power meter, from its own topic."""
+        payload = self.payloads.get(device.energy_topic) if device.energy_topic else None
+        return None if payload is None else extract(payload, device.energy_key)
+
     async def fetch(self) -> list[ServiceSnapshot]:
         if not self.connected:
             raise BackendError(tr("MQTT broker {host}:{port} not reachable: {error}").format(
@@ -150,6 +155,8 @@ class MqttBackend(Backend):
                 "Decimals": Char(name="Decimals", value=d.decimals, writable=False, ref=(d.id, "Decimals")),
                 "Icon": Char(name="Icon", value=d.icon, writable=False, ref=(d.id, "Icon")),
             }
+            if d.energy_topic:
+                chars["Energy"] = Char(name="Energy", value=self.energy(d), writable=False, ref=(d.id, "Energy"))
             snaps.append(ServiceSnapshot(key=d.id, service_type="Value", name=d.name, chars=chars, accessory=d.topic))
         return snaps
 
