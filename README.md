@@ -70,7 +70,7 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
   devices can be left out; tap runs a scene, hold edits it; an active scene is highlighted; scenes can be added to the favorites
 - **Languages**: English, German, French, Italian, Spanish, Portuguese – selectable in the settings
 - **Touch sounds**: an optional short click on every touch through the audio output (HDMI, jack or a speaker)
-- **Light / dark / dark blue / automatic** appearance and a **screen saver** with a large clock
+- **Light / dark / dark blue / purple / automatic** appearance and a **screen saver** with a large clock
 - **Settings page** for appearance, screen saver and the Homebridge connection (address, port, PIN)
   with keypad, connection test and apply without restart; **restart** the app or the Raspberry Pi
 - **Wi-Fi for guests**: a tile in the favorites shows the guest Wi-Fi as a QR code for the phone camera
@@ -175,7 +175,7 @@ In the app (icon at the bottom left), stored in `~/.config/smarthome-panel/setti
 
 | Section | Setting | Behavior |
 |---|---|---|
-| Display | Appearance: Automatic (dark 7 pm – 7 am), Light, Dark, Dark blue | saved immediately |
+| Display | Appearance: Automatic (dark 7 pm – 7 am), Light, Dark, Dark blue, Purple | saved immediately |
 | Display | Language: System, English, Deutsch, Français, Italiano, Español, Português | saved immediately |
 | Display | Screen saver after: never, 1, 2, 5, 15 minutes; display off after: never, 5, 15, 30 minutes, 1 hour (after the screen saver started); upside down (180°) | saved immediately |
 | Rooms | Rooms and devices: rooms, display names, kind of sensors, switches and plugs (TV, washing machine …), menu entry, outdoor sensors, hidden devices, room of each device | saved immediately |

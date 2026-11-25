@@ -16,7 +16,7 @@ def test_validate_and_normalize():
     assert validate("hap_host", "192.168.1.300")[1]
     assert validate("hap_host", "")[1]
     assert validate("hap_host", "bad host")[1]
-    assert validate("theme", "dark") == ("dark", None)
+    assert validate("theme", "dark") == ("dark", None) and validate("theme", "purple") == ("purple", None)
     assert validate("theme", "pink")[1]
     assert validate("idle_seconds", 120.0) == (120, None)   # numbers from QML arrive as float
     assert validate("hap_enabled", False) == (False, None)

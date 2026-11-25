@@ -93,6 +93,7 @@ PT: dict[str, str] = {
     "Light": "Claro",
     "Dark": "Escuro",
     "Dark blue": "Azul-escuro",
+    "Purple": "Violeta",
     "%1, security warning": "%1, aviso de segurança",
     'Switch group': 'Grupo de interruptores',
     'New switch group': 'Novo grupo de interruptores',
