@@ -59,6 +59,9 @@ var paths = {
     pendant: "M3 3.5h18M6.5 3.5v4M12 3.5v6.5M17.5 3.5v3M5 7.5h3v9H5zM10.5 10h3v8.5h-3zM16 6.5h3v8h-3z",
     tube: "M5.5 10.5h13v3h-13zM3 9.5h2.5v5H3zM18.5 9.5H21v5h-2.5zM1.5 11v2M22.5 11v2M8 6.5l-.8-1.8M12 6V4M16 6.5l.8-1.8",
     washer: "M5 3.5h14v17H5zM5 7.5h14M8 5.5h.01M10.5 5.5h.01M8.5 14a3.5 3.5 0 1 0 7 0a3.5 3.5 0 1 0-7 0",
+    // 3D printer: frame, print head and the printed part; computer: monitor and tower
+    printer3d: "M4 3.5h16M5.5 3.5v17M18.5 3.5v17M4 20.5h16M10 7h4l-1 2.5h-2zM12 9.5v1.5M9 17.5h6v-3H9z",
+    computer: "M3.5 5h11v8.5h-11zM6.5 17.5h5M9 13.5v4M17.5 5h3v14.5h-3zM19 8h.01",
     dishwasher: "M5 3.5h14v17H5zM5 7.5h14M8 5.5h.01M11 5.5h5M8.5 11v6M12 11v6M15.5 11v6",
     contact: "M4.5 7h5a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1zM14.5 9h5a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1zM7 10.5v3",
     leak: "M12 3.5c-2.4 3.2-4.5 5.6-4.5 8a4.5 4.5 0 0 0 9 0c0-2.4-2.1-4.8-4.5-8zM3.5 20.5c1.5 0 1.5-1 3-1s1.5 1 3 1 1.5-1 3-1 1.5 1 3 1 1.5-1 3-1 1.5 1 2.5 1",

@@ -32,9 +32,10 @@ from .. import share
 from .. import scenes as panel_scenes
 from ..display_power import DisplayPower
 from ..settings import ACTIONS, SettingsStore, apply_to_config, validate
-from ..models import AREAS, KIND_ICONS, KIND_KEYS, QUIET_KINDS, guess_lamp
+from ..models import AREAS, KIND_ICONS, KIND_KEYS, QUIET_KINDS, guess_appliance, guess_lamp
 from ..wifi import Wifi, qr_image
 from .weather_bridge import WeatherBridge
+from .. import openings
 from . import format as fmt
 from .format import (air_warning, alert_level, battery_low, battery_text, category, fmt_temp, has_detail,
                      has_power, in_area, power_text, short_name, state_text)
@@ -65,7 +66,7 @@ def _emit_safely(signal: Any, *args: Any) -> None:
 def _is_on_light(d: dict[str, Any]) -> bool:
     """A light, switch or plug of the Lights menu that is on (blinds, TVs and speakers do not count)."""
     return (category(d) == "light" and d["type"] in ("light", "switch", "plug") and d["reachable"]
-            and bool(d.get("state", {}).get("on")))
+            and bool(d.get("state", {}).get("on")) and not d.get("measureOnly"))
 
 class AsyncRunner:
     """Dedicated asyncio loop in a background thread so the UI never blocks."""
@@ -92,7 +93,7 @@ class DeviceModel(QAbstractListModel):
 
     ROLES = ("deviceId", "name", "shortName", "room", "type", "icon", "isOn", "reachable", "heating",
              "stateText", "hasDetail", "targetTemp", "minTemp", "maxTemp", "modeOff", "alertLevel", "warning",
-             "batteryLow")
+             "batteryLow", "adjustKind", "level")
     # order inside a room: per menu area
     RANK = {"light": 0, "switch": 1, "plug": 1, "tv": 1, "valve": 1, "blind": 2, "thermostat": 0, "sensor": 1, "fan": 2}
 
@@ -129,7 +130,9 @@ class DeviceModel(QAbstractListModel):
             case "type": return d["type"]
             case "icon": return d["icon"]
             # gold "on" highlight: not for heating, sensors or blinds (open is not "on")
-            case "isOn": return d["type"] not in ("thermostat", "sensor", "blind", "garage", "lock") and bool(s.get("on")) and d["reachable"]
+            # gold "on" highlight; not for plugs that only measure (the panel does not switch them)
+            case "isOn": return (d["type"] not in ("thermostat", "sensor", "blind", "garage", "lock") and bool(s.get("on"))
+                                 and d["reachable"] and not d.get("measureOnly"))
             case "reachable": return d["reachable"]
             case "heating": return bool(s.get("heating")) and d["reachable"]
             case "stateText": return state_text(d)
@@ -139,6 +142,17 @@ class DeviceModel(QAbstractListModel):
             case "maxTemp": return float(m.get("max_temp", 30))
             case "modeOff": return s.get("mode") == "off"
             case "batteryLow": return battery_low(d)
+            # hold and drag on the tile: brightness of a dimmable light, position of a blind
+            case "adjustKind":
+                if not d["reachable"] or d.get("measureOnly"):
+                    return ""
+                if d["type"] == "blind" and "position" in d.get("capabilities", []):
+                    return "position"
+                return "brightness" if "brightness" in d.get("capabilities", []) and d["type"] != "fan" else ""
+            case "level":
+                if d["type"] == "blind":
+                    return int(s.get("position") or 0)
+                return int(s.get("brightness") or 0) if s.get("on") else 0
             case "alertLevel": return alert_level(d)
             case "warning": return air_warning(d)
         return None
@@ -163,6 +177,7 @@ class DeviceModel(QAbstractListModel):
         out = {**d, "baseRoom": base, "room": self.layout.room_of(d["id"], base),
                "baseName": base_name, "name": self.layout.names.get(d["id"]) or base_name,
                "hidden": d["id"] in self.layout.hidden,
+               "measureOnly": d["id"] in self.layout.measure_only and has_power(d),
                "favorite": d["id"] in self.layout.favorites,
                "grouped": d["id"] in self.grouped}
         meta = d.get("meta", {})
@@ -580,6 +595,7 @@ class RoomsBridge(QObject):
                    "smoke": "Smoke detector", "co": "CO detector",
                    "switch": "Switch", "plug": "Plug", "coffee": "Coffee machine",
                    "washer": "Washing machine", "dishwasher": "Dishwasher", "fan": "Fan",
+                   "printer3d": "3D printer", "computer": "Computer",
                    "bulb": "Bulb", "ceiling": "Ceiling lamp", "spot": "Spotlight", "downlight": "Downlight", "wall": "Wall lamp",
                    "table": "Table lamp", "desk": "Desk lamp", "floorlamp": "Floor lamp", "globe": "Globe lamp", "tube": "Fluorescent tube", "pendant": "Pendant light", "chandelier": "Chandelier",
                    "strip": "LED strip",
@@ -614,6 +630,9 @@ class RoomsBridge(QObject):
                         # security sensors (not leak, smoke, CO, glass break) can be kept out of alerts
                         "canQuiet": d["type"] in ("security", "garage", "lock") or bool(d.get("meta", {}).get("opening")),
                         "quiet": bool(d.get("quiet")),
+                        # plugs and switches that measure their power can be set to "Only measure"
+                        "canMeasureOnly": d["type"] in ("plug", "switch") and has_power(d),
+                        "measureOnly": bool(d.get("measureOnly")),
                         "kinds": [{"value": k, "label": tr(self.KIND_LABELS[k]), "icon": KIND_ICONS[k]}
                                   for k in kinds] if len(kinds) > 1 else []})
         return out
@@ -784,7 +803,8 @@ class RoomsBridge(QObject):
     @Slot(str, "QVariantMap", result=str)
     def saveDevice(self, dev_id: str, values: dict[str, Any]) -> str:
         """Saves what the device editor changed: name ("" = original), kind, room, area
-        ("" = automatic), hidden, favorite, outdoor and quiet (no security alerts). Missing keys keep their value."""
+        ("" = automatic), hidden, favorite, outdoor, quiet (no security alerts) and measureOnly (a
+        plug that measures is never switched on the panel). Missing keys keep their value."""
         m = self._ctl._model
         d = m.get(dev_id)
         if not d:
@@ -800,6 +820,7 @@ class RoomsBridge(QObject):
         favorite = bool(values.get("favorite", d.get("favorite", False)))
         quiet = bool(values.get("quiet", d.get("quiet", False)))
         outdoor = bool(values.get("outdoor", meta.get("outdoor", False)))
+        measure_only = bool(values.get("measureOnly", d.get("measureOnly", False)))
         name, err = self._layout.check_device_name(name)
         if err:
             return err
@@ -819,6 +840,8 @@ class RoomsBridge(QObject):
         self._layout.set_area(dev_id, area, d.get("baseArea", ""))
         if d["type"] == "sensor":
             self._layout.set_outdoor(dev_id, outdoor, d.get("baseOutdoor", False))
+        if d["type"] in ("plug", "switch") and has_power(d):
+            self._layout.set_measure_only(dev_id, measure_only)
         self._commit()
         return ""
 
@@ -938,6 +961,7 @@ class Controller(QObject):
         self._rooms: list[str] = []
         self._room = ALL_ROOMS
         self._room_auto = True        # follow the first room until one is chosen
+        self._active_scenes: set[str] = set()       # scenes whose devices are all in their state
         self._sync_wifi_tile()
         self._sync_scene_tiles()
         self._category = self._start_category()
@@ -962,6 +986,8 @@ class Controller(QObject):
         self._display_worker = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         # Eve history read from the devices, kept next to settings.json
         self._history = DeviceHistory(Path(store.path).with_name("history.json"))
+        # when windows, doors and garage doors opened and closed (noted by the panel)
+        self._openings = openings.OpeningLog(Path(store.path).with_name("openings.json"))
         # software update: checked a minute after the start and then once a day
         self._updater = updater or Updater()
         supported = self._updater.supported
@@ -1250,6 +1276,7 @@ class Controller(QObject):
             self._started = "title" in msg
             self._update_armed()
             self._refresh_rooms()
+            self._update_active_scenes()
             self.climateChanged.emit()
             self.statusChanged.emit()
         elif kind == "device":
@@ -1267,6 +1294,7 @@ class Controller(QObject):
             else:
                 # an on/off change: room dots and "n on" / "n heating" in the menu follow at once
                 self.summaryChanged.emit()
+            self._update_active_scenes()
             self.deviceUpdated.emit(d["id"])
             for gid in groups:
                 self.deviceUpdated.emit(gid)        # open group detail follows its lights
@@ -1284,9 +1312,9 @@ class Controller(QObject):
             self.toast.emit(tr("Scene only partly applied. Not reached: {names}").format(names=", ".join(msg["errors"])))
 
     def _note_new(self, devices: list[dict[str, Any]]) -> None:
-        """Notes devices met for the first time. A new light whose kind is set neither in
-        config.yaml nor on the panel gets a lamp kind guessed from its original name ("Wand…" →
-        wall lamp), stored as if chosen on the panel. At the first start with this version the
+        """Notes devices met for the first time. A new light, switch or plug whose kind is set
+        neither in config.yaml nor on the panel gets a kind guessed from its original name
+        ("Wand…" → wall lamp, "3D-Drucker" → 3D printer), stored as if chosen on the panel. At the first start with this version the
         devices there count as known: nothing changes for them."""
         if not devices:                 # the empty snapshot before the backends answered
             return
@@ -1299,16 +1327,26 @@ class Controller(QObject):
                 return
             for d in new:
                 layout.seen.add(d["id"])
-                if d.get("type") == "light" and d.get("meta", {}).get("lamp") == "bulb" and d["id"] not in layout.kinds:
+                meta = d.get("meta", {})
+                if d["id"] in layout.kinds:
+                    continue
+                if d.get("type") == "light" and meta.get("lamp") == "bulb":
                     kind = guess_lamp(d.get("name", ""))
-                    if kind:
-                        layout.kinds[d["id"]] = kind
-                        log.info("New light %s: lamp kind %s from its name", d.get("name"), kind)
+                elif meta.get("appliance") in ("switch", "plug"):       # not set in config.yaml
+                    kind = guess_appliance(d.get("name", ""))
+                else:
+                    kind = None
+                if kind:
+                    layout.kinds[d["id"]] = kind
+                    log.info("New device %s: kind %s from its name", d.get("name"), kind)
         self.store.rooms = layout.to_dict()
         self.store.save()
 
     def _stamp(self, d: dict[str, Any]) -> dict[str, Any]:
-        """Remembers since when a window or door is open (shown as "Open for 25 min")."""
+        """Remembers since when a window or door is open (shown as "Open for 25 min") and notes
+        openings in the opening log."""
+        if openings.loggable(d) and d.get("reachable", True):
+            self._openings.note(d["id"], openings.is_open(d))
         if d.get("type") in ("security", "garage", "lock"):
             if d.get("state", {}).get("triggered"):
                 self._since.setdefault(d["id"], time.time())
@@ -1456,6 +1494,9 @@ class Controller(QObject):
         if d["type"] in ("garage", "lock"):         # never directly: the panel asks first
             self.confirmRequested.emit(dev_id)
             return
+        if d.get("measureOnly"):                    # only measures: show its power instead
+            self.detailRequested.emit(dev_id)
+            return
         if d.get("meta", {}).get("opening"):        # motorized window / door: open the controls
             self.detailRequested.emit(dev_id)
             return
@@ -1502,6 +1543,24 @@ class Controller(QObject):
             self._model.remove(WIFI_TILE)
         self._room_editor.notify()          # the favorites list in the settings
 
+    def _update_active_scenes(self) -> None:
+        """A scene is active while every device it sets is in its state; its tile (and its
+        favorite tile) is highlighted then."""
+        active = set()
+        for sc in self.store.scenes:
+            devs = [(self._model.get(ref), attrs) for ref, attrs in sc["devices"].items()]
+            if devs and all(d is not None and panel_scenes.matches(d, attrs) for d, attrs in devs):
+                active.add(sc["id"])
+        if active == self._active_scenes:
+            return
+        self._active_scenes = active
+        for d in self._model.tiles():
+            if d["type"] == "scene":
+                on = d["id"][len(SCENE_TILE):] in active
+                if bool(d["state"].get("on")) != on:
+                    self._model.upsert({**d, "state": {"on": on}})
+        self.scenesChanged.emit()
+
     def _sync_scene_tiles(self) -> None:
         """Scenes marked as favorite are tiles in the favorites (kept locally, like every
         favorite); favorites of scenes that are gone (deleted, other scenes loaded) are dropped."""
@@ -1519,7 +1578,8 @@ class Controller(QObject):
         for tid, sc in scenes.items():
             if tid in layout.favorites:
                 self._model.upsert({"id": tid, "name": sc["name"], "type": "scene", "backend": "panel",
-                                    "room": sc["room"], "icon": "spark", "state": {}, "capabilities": [],
+                                    "room": sc["room"], "icon": "spark",
+                                    "state": {"on": sc["id"] in self._active_scenes}, "capabilities": [],
                                     "reachable": True, "order": 100, "meta": {}, "panelTile": True})
         self._room_editor.notify()          # the favorites list in the settings
 
@@ -1566,6 +1626,9 @@ class Controller(QObject):
         if d and d["type"] in ("garage", "lock") and attrs.get("on") and self.store.get("alarm_pin"):
             # opening / unlocking goes through openClose()
             self.toast.emit(tr("Enter the PIN to unlock") if d["type"] == "lock" else tr("Enter the PIN to open"))
+            return
+        if d and d.get("measureOnly") and "on" in attrs:
+            self.toast.emit(tr("{name} only measures. Switch it under Settings → Rooms and devices.").format(name=d["name"]))
             return
         if d and d.get("meta", {}).get("choice"):
             # {"select": id} switches that one on and the others off; {"on": false}: all off
@@ -1628,16 +1691,23 @@ class Controller(QObject):
 
     # ---------- scenes of the panel ----------
     def _scene_devices(self, room: str) -> list[dict[str, Any]]:
-        """Lights, switches, plugs and blinds of a room that a scene can set (also those in a
+        """Lights, switches, plugs, blinds and heating of a room that a scene can set (also those in a
         light group; not hidden ones), in the order of the room."""
-        return self._model.ordered([d for d in self._model.all() if d["room"] == room
+        devs = self._model.ordered([d for d in self._model.all() if d["room"] == room
                                     and panel_scenes.in_scenes(d) and not d.get("hidden")])
+        return sorted(devs, key=lambda d: d["type"] == "thermostat")      # heating last
 
     def _scene_row(self, d: dict[str, Any], attrs: dict[str, Any] | None, included: bool) -> dict[str, Any]:
         attrs = attrs if attrs is not None else panel_scenes.capture(d)
+        if d["type"] == "thermostat":           # "Off" or "Heat, 21.5 °C" rather than the room temperature
+            mode = attrs.get("mode", "heat")
+            label = {"cool": tr("Cool"), "auto": tr("Auto")}.get(mode, tr("Heat"))
+            text = tr("Off") if mode == "off" else label if attrs.get("target_temp") is None else \
+                tr("{mode}, {temp} °C").format(mode=label, temp=fmt_temp(attrs["target_temp"]))
+        else:
+            text = state_text(panel_scenes.as_state(d, attrs))
         return {"id": d["id"], "name": short_name(d["name"], d["room"]), "icon": d["icon"],
-                "included": included, "attrs": attrs,
-                "stateText": state_text(panel_scenes.as_state(d, attrs))}
+                "included": included, "attrs": attrs, "stateText": text}
 
     @Slot(str, result="QVariantMap")
     def sceneDraft(self, scene_id: str) -> dict[str, Any]:
@@ -1692,6 +1762,7 @@ class Controller(QObject):
         self.store.rooms = self._model.layout.to_dict()
         self.store.save()
         self._sync_scene_tiles()
+        self._update_active_scenes()
         self._model._relayout()
         self.scenesChanged.emit()
         return ""
@@ -1713,6 +1784,7 @@ class Controller(QObject):
         if changed:
             self.store.save()
             self._sync_scene_tiles()
+            self._update_active_scenes()
             self.scenesChanged.emit()
 
     @Slot(result="QVariantMap")
@@ -1764,7 +1836,34 @@ class Controller(QObject):
         if not d:
             return {}
         return {**d, "shortName": short_name(d["name"], d["room"]), "stateText": state_text(d),
-                "batteryLow": battery_low(d), "batteryText": battery_text(d)}
+                "batteryLow": battery_low(d), "batteryText": battery_text(d), "hasLog": openings.loggable(d)}
+
+    @Slot(str, result="QVariantList")
+    def openingLog(self, dev_id: str) -> list[dict[str, Any]]:
+        """The opening log of a device for its detail view, by day, newest first:
+        [{day: "Today", rows: [{from: "08:14", to: "08:31", duration: "17 min", open: False}]}]."""
+        now = time.time()
+        locale = QLocale(i18n.locale_name())
+        today = datetime.now().date()
+        days: list[dict[str, Any]] = []
+        for opened, closed in self._openings.events(dev_id):
+            start = datetime.fromtimestamp(opened)
+            if start.date() == today:
+                day = tr("Today")
+            elif (today - start.date()).days == 1:
+                day = tr("Yesterday")
+            else:
+                day = locale.toString(start.date(), locale.dateFormat(QLocale.FormatType.LongFormat))
+            minutes = round(((closed or now) - opened) / 60)
+            duration = tr("{n} min").format(n=minutes) if minutes < 60 else \
+                tr("{h} h {m} min").format(h=minutes // 60, m=minutes % 60)
+            row = {"from": start.strftime("%H:%M"), "to": datetime.fromtimestamp(closed).strftime("%H:%M") if closed else "",
+                   "duration": duration, "open": closed is None}
+            if days and days[-1]["day"] == day:
+                days[-1]["rows"].append(row)
+            else:
+                days.append({"day": day, "rows": [row]})
+        return days
 
     @Slot(str)
     def selectCategory(self, cat: str) -> None:
@@ -1845,8 +1944,10 @@ class Controller(QObject):
     @Property("QVariantList", notify=scenesChanged)
     def scenes(self) -> list[dict[str, Any]]:
         """Scenes of the panel in the selected room (under "All" every one), by name:
-        [{id, name, room, count}] – count = devices the scene sets."""
-        out = [{"id": x["id"], "name": x["name"], "room": x["room"], "count": len(x["devices"])}
+        [{id, name, room, count, active}]: count = devices the scene sets, active = they are all
+        in its state now."""
+        out = [{"id": x["id"], "name": x["name"], "room": x["room"], "count": len(x["devices"]),
+                "active": x["id"] in self._active_scenes}
                for x in self.store.scenes if self._room in (ALL_ROOMS, x["room"])]
         collator = QCollator(QLocale(i18n.locale_name()))
         collator.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)

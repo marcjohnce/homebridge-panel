@@ -24,6 +24,8 @@ Rectangle {
     required property int alertLevel     // security: 2 alarm, 1 open / motion
     required property bool warning       // sensors: bad air quality or high CO₂
     required property bool batteryLow    // battery below 10 % or reported as low
+    required property string adjustKind  // hold and drag: "brightness", "position" or ""
+    required property int level          // brightness (0 when off) or blind position
 
     property bool showRoom: false
     property int columns: 4
@@ -45,7 +47,7 @@ Rectangle {
     topRightRadius: index === Math.min(columns, count) - 1 ? cornerRadius : 0
     bottomLeftRadius: index === lastRowStart ? cornerRadius : 0
     bottomRightRadius: (index === count - 1 || (index === lastRowStart - 1 && count % columns !== 0)) ? cornerRadius : 0
-    color: lit ? Theme.gold : alarm ? Theme.alarm : (mouse.pressed ? Theme.tilePress : Theme.tile)
+    color: adjusting ? Theme.tile : lit ? Theme.gold : alarm ? Theme.alarm : (mouse.pressed ? Theme.tilePress : Theme.tile)
     opacity: reachable ? 1 : 0.45
 
     activeFocusOnTab: true
@@ -80,11 +82,79 @@ Rectangle {
         onTriggered: root.flashing = false
     }
 
+    // Hold, then drag up or down: brightness or blind position, set when letting go. Holding
+    // without moving opens the detail view, as before.
+    property bool adjusting: false
+    property bool adjusted: false
+    property real adjustValue: 0
+    property real adjustStartY: 0
+    property real adjustStart: 0
+
     MouseArea {
         id: mouse
         anchors.fill: parent
         onClicked: root.activate()
-        onPressAndHold: if (root.hasDetail) root.openDetail(root.deviceId)
+        onPressAndHold: mouse => {
+            if (root.adjustKind === "") {
+                if (root.hasDetail)
+                    root.openDetail(root.deviceId);
+                return;
+            }
+            preventStealing = true;             // the grid must not scroll, no swipe to the next room
+            root.adjusting = true;
+            root.adjusted = false;
+            root.adjustStartY = mouse.y;
+            root.adjustStart = root.level;
+            root.adjustValue = root.level;
+        }
+        onPositionChanged: mouse => {
+            if (!root.adjusting)
+                return;
+            const dy = root.adjustStartY - mouse.y;
+            if (Math.abs(dy) > 6)
+                root.adjusted = true;
+            root.adjustValue = Math.round(Math.max(0, Math.min(100, root.adjustStart + dy / (root.height * 1.2) * 100)));
+        }
+        onReleased: {
+            if (!root.adjusting)
+                return;
+            preventStealing = false;
+            root.adjusting = false;
+            const v = root.adjustValue;
+            if (!root.adjusted) {
+                if (root.hasDetail)
+                    root.openDetail(root.deviceId);
+            } else if (root.adjustKind === "position") {
+                panel.setAttrs(root.deviceId, { position: v });
+            } else {
+                panel.setAttrs(root.deviceId, v > 0 ? { on: true, brightness: v } : { on: false });
+            }
+        }
+        onCanceled: {
+            preventStealing = false;
+            root.adjusting = false;
+        }
+    }
+
+    // the value while dragging: a level rising from the bottom and the percentage
+    Rectangle {
+        objectName: "adjust:" + root.deviceId
+        visible: root.adjusting
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        height: parent.height * root.adjustValue / 100
+        color: Qt.rgba(Theme.gold.r, Theme.gold.g, Theme.gold.b, 0.55)
+        bottomLeftRadius: root.bottomLeftRadius
+        bottomRightRadius: root.bottomRightRadius
+    }
+    Text {
+        visible: root.adjusting
+        anchors.centerIn: parent
+        text: root.adjustKind === "position" ? qsTr("%1 % open").arg(root.adjustValue) : root.adjustValue + " %"
+        color: Theme.ink
+        font.pixelSize: Theme.s(30)
+        font.weight: Font.Light
     }
 
     LineIcon {

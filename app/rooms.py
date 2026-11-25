@@ -59,6 +59,9 @@ class RoomLayout:
         # outdoor sensor or not, where it differs from config.yaml
         self.outdoor: dict[str, bool] = ({str(k): bool(v) for k, v in outdoor.items() if isinstance(v, bool)}
                                          if isinstance(outdoor, dict) else {})
+        measure = data.get("measure_only", [])
+        # plugs that measure their power and are never switched on the panel ("Only measure")
+        self.measure_only: set[str] = {str(m) for m in measure} if isinstance(measure, list) else set()
         seen = data.get("seen")
         # devices the panel has met (new ones get a lamp kind guessed from their name);
         # None: not noted yet – the devices of the first start count as known
@@ -73,6 +76,7 @@ class RoomLayout:
     def to_dict(self) -> dict[str, Any]:
         return {"order": list(self.order), "devices": dict(self.assign),
                 "names": dict(self.names), "kinds": dict(self.kinds), "hidden": sorted(self.hidden),
+                "measure_only": sorted(self.measure_only),
                 "quiet": dict(self.quiet),
                 "outdoor": dict(self.outdoor), "areas": dict(self.areas),
                 "device_order": {r: list(ids) for r, ids in self.device_order.items()},
@@ -226,6 +230,9 @@ class RoomLayout:
 
     def set_hidden(self, dev_id: str, hidden: bool) -> None:
         (self.hidden.add if hidden else self.hidden.discard)(dev_id)
+
+    def set_measure_only(self, dev_id: str, measure_only: bool) -> None:
+        (self.measure_only.add if measure_only else self.measure_only.discard)(dev_id)
 
     def set_quiet(self, dev_id: str, quiet: bool, default: bool = False) -> None:
         if quiet == default:

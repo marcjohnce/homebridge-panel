@@ -313,7 +313,7 @@ def scene_views(p: Panel, out: Path) -> None:
     reading = next(x["id"] for x in p.ctl.scenes if x["name"] == "Reading")
     save(annotate(p.grab(), [
         (1, [p.rect("category:scenes")], "Scenes", "left"),
-        (2, [p.rect(f"scene:{reading}")], "Scene: tap to run, hold to edit"),
+        (2, [p.rect(f"scene:{reading}")], "Active scene (gold): tap to run, hold to edit"),
         (3, [p.rect("newScene")], "New scene from the current state"),
     ], "Scenes – 1280 × 800"), out, "scenes")
     movie = next(x["id"] for x in p.ctl.scenes if x["name"] == "Movie night")
@@ -406,6 +406,21 @@ def gesture_views(p: Panel, out: Path) -> None:
         (4, [p.rect("roomTabs")], "The room tab follows", "top"),
     ], "Gestures on the home screen"), out, "gestures-home")
 
+    lamp = p.device_id("Living Room Ceiling Light")
+    p.ctl.setAttrs(lamp, {"on": True, "brightness": 35})
+    wait(400)
+    tile = p.item(f"tile:{lamp}")
+    tile.setProperty("adjusting", True)
+    tile.setProperty("adjustValue", 60)
+    wait(300)
+    img = p.grab()
+    r = p.rect(f"tile:{lamp}")
+    hold = gesture(img, (r.right() - 36, r.bottom() - r.height() * 0.1), (r.right() - 36, r.top() + r.height() * 0.1))
+    save(annotate(img, [
+        (1, [hold], "Hold, then drag up or down: brightness, set when letting go", "right"),
+    ], "Hold and drag on a tile"), out, "gestures-hold-drag")
+    tile.setProperty("adjusting", False)
+
     result = p.ctl.lightsOff()
     QMetaObject.invokeMethod(p.win.findChild(QObject, "toast"), "show", Q_ARG("QVariant", result["text"]),
                              Q_ARG("QVariant", "Undo"), Q_ARG("QVariant", None))
@@ -437,6 +452,23 @@ def gesture_views(p: Panel, out: Path) -> None:
         (1, [tap], "Double tap: runs the scene chosen for it; one tap wakes the panel", "bottom"),
     ], "Gesture on the screen saver"), out, "gestures-screensaver")
     p.win.setProperty("idle", False)
+    wait(300)
+
+
+def opening_views(p: Panel, out: Path) -> None:
+    """Opening log of a window, with a few openings of today and yesterday."""
+    import time as _time
+    window = p.device_id("Bedroom Window")
+    now = _time.time()
+    p.ctl._openings.entries[window] = [[now - 26 * 3600, now - 25.6 * 3600], [now - 7 * 3600, now - 6.7 * 3600],
+                                       [now - 3 * 3600, now - 2.9 * 3600], [now - 25 * 60, None]]
+    p.win.findChild(QObject, "toast").setProperty("shown", False)
+    p.win.setProperty("openDevice", window)
+    wait(600)
+    save(annotate(p.grab(), [
+        (1, [p.rect("openingDays")], "Openings by day: from, to, how long", "left"),
+    ], "Opening log"), out, "opening-log")
+    p.win.setProperty("openDevice", "")
     wait(300)
 
 
@@ -591,6 +623,7 @@ def main() -> int:
     scene_views(p, out)
     weather_views(p, out)
     gesture_views(p, out)
+    opening_views(p, out)
 
     # Settings, keypad and screen saver at the primary size
 
@@ -639,6 +672,17 @@ def main() -> int:
         (4, [p.rect("roomChoices")], "Room; “New room …” creates one", "left"),
         (5, [p.rect("deviceSave")], "Save", "bottom"),
     ], "Edit device"), out, "device-editor")
+    p.key(Qt.Key.Key_Escape)
+    wait(300)
+    washer = next(d for d in p.ctl.roomEditor.devices if d["name"] == "Washing Machine")
+    QMetaObject.invokeMethod(p.engine.rootObjects()[0].findChild(QObject, "deviceEditor"), "edit", Q_ARG("QVariant", washer))
+    wait(400)
+    flick = p.item("deviceEditorFlick")
+    flick.setProperty("contentY", max(0, flick.property("contentHeight") - flick.height()))
+    wait(300)
+    save(annotate(p.grab(), [
+        (1, [p.rect("measureOnlyRow")], "Only measure: shows the power, never switches", "left"),
+    ], "Edit device: plug that measures power"), out, "device-editor-measure-only")
     p.key(Qt.Key.Key_Escape)
     wait(300)
     root = p.engine.rootObjects()[0]

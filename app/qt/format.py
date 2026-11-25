@@ -342,6 +342,11 @@ def power_text(watts: float) -> str:
 
 def has_detail(d: dict[str, Any]) -> bool:
     caps = d.get("capabilities", [])
+    if d.get("measureOnly"):                    # a plug that only measures: its power and history
+        return True
+    meta = d.get("meta", {})
+    if (d["type"] == "security" and meta.get("security") in ("window", "door", "contact")) or d["type"] == "garage":
+        return True                             # the opening log (see app/openings.py)
     if d.get("meta", {}).get("choice") or d["type"] == "alarm":
         return True
     if d.get("meta", {}).get("history"):        # e.g. a plug with its power history

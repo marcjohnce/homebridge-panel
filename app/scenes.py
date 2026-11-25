@@ -16,20 +16,29 @@ from __future__ import annotations
 import secrets
 from typing import Any
 
-SCENE_TYPES = ("light", "switch", "plug", "blind")
+SCENE_TYPES = ("light", "switch", "plug", "blind", "thermostat")
+# how far a device may be off and still count as in the state of a scene (rounding, steps)
+TOLERANCE = {"brightness": 2, "color_temp": 5, "hue": 4, "saturation": 4, "position": 3, "tilt": 5,
+             "target_temp": 0.3}
 MAX_SCENE_NAME = 24
 
 
 def in_scenes(d: dict[str, Any]) -> bool:
-    """Lights, switches, plugs and blinds – not groups, motorized windows or doors, panel tiles."""
+    """Lights, switches, plugs, blinds and heating; not groups, motorized windows or doors,
+    panel tiles or plugs that only measure."""
     meta = d.get("meta", {})
     return (d.get("type") in SCENE_TYPES and not meta.get("group") and not meta.get("choice")
-            and not meta.get("opening") and not d.get("panelTile"))
+            and not meta.get("opening") and not d.get("panelTile") and not d.get("measureOnly"))
 
 
 def capture(d: dict[str, Any]) -> dict[str, Any]:
     """The state of a device as the commands that bring it back."""
     s, caps = d.get("state", {}), d.get("capabilities", [])
+    if d.get("type") == "thermostat":
+        mode = s.get("mode") or "heat"
+        if mode == "off" or s.get("target_temp") is None:
+            return {"mode": mode}
+        return {"mode": mode, "target_temp": float(s["target_temp"])}
     if d.get("type") == "blind":
         out: dict[str, Any] = {"position": int(s.get("target", s.get("position", 0)) or 0)}
         if "tilt" in caps and s.get("tilt") is not None:
@@ -47,6 +56,28 @@ def capture(d: dict[str, Any]) -> dict[str, Any]:
     elif "color_temp" in caps and s.get("color_temp") is not None:
         out["color_temp"] = int(s["color_temp"])
     return out
+
+
+def matches(d: dict[str, Any], attrs: dict[str, Any]) -> bool:
+    """The device is in the state these commands set (within a small tolerance)."""
+    if not d.get("reachable", True):
+        return False
+    s = d.get("state", {})
+    if d.get("type") == "blind" and "position" in attrs:
+        s = {**s, "position": s.get("target", s.get("position"))}       # moving there counts
+    for key, want in attrs.items():
+        have = s.get(key)
+        if key == "on":
+            if bool(have) != bool(want):
+                return False
+            if not want:
+                return True                     # off: brightness and colour do not matter
+        elif key in TOLERANCE:
+            if have is None or abs(float(have) - float(want)) > TOLERANCE[key]:
+                return False
+        elif have != want:
+            return False
+    return True
 
 
 def as_state(d: dict[str, Any], attrs: dict[str, Any]) -> dict[str, Any]:

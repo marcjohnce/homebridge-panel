@@ -25,6 +25,10 @@ Rectangle {
     // temperature chart from the Eve history of the device
     readonly property bool hasHistory: !!(dev.meta && dev.meta.history)
     property bool showHistory: false
+    // opening log of windows, doors and garage doors; contacts and garage doors show only that
+    readonly property bool hasLog: !!dev.hasLog
+    readonly property bool logOnly: hasLog && (dev.type === "security" || dev.type === "garage")
+    property bool showLog: false
 
     color: Theme.page
     focus: true
@@ -34,6 +38,7 @@ Rectangle {
     onDeviceIdChanged: {
         busy = false;
         showHistory = false;
+        showLog = false;
         dev = panel.device(deviceId);
     }
 
@@ -113,26 +118,44 @@ Rectangle {
         }
 
         Row {
-            visible: root.hasHistory
+            visible: root.hasHistory || (root.hasLog && !root.logOnly)
             spacing: Theme.s(28)
             UnderlineButton {
                 objectName: "detailNow"
                 text: qsTr("Now")
-                selected: !root.showHistory
-                onClicked: root.showHistory = false
+                selected: !root.showHistory && !root.showLog
+                onClicked: {
+                    root.showHistory = false;
+                    root.showLog = false;
+                }
             }
             UnderlineButton {
                 objectName: "detailHistory"
+                visible: root.hasHistory
                 text: qsTr("History")
                 selected: root.showHistory
-                onClicked: root.showHistory = true
+                onClicked: {
+                    root.showHistory = true;
+                    root.showLog = false;
+                }
+            }
+            UnderlineButton {
+                objectName: "detailLog"
+                visible: root.hasLog
+                text: qsTr("Openings")
+                selected: root.showLog
+                onClicked: {
+                    root.showLog = true;
+                    root.showHistory = false;
+                }
             }
         }
 
         Loader {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            sourceComponent: root.hasHistory && root.showHistory ? historyComponent
+            sourceComponent: root.logOnly || (root.hasLog && root.showLog) ? logComponent
+                           : root.hasHistory && root.showHistory ? historyComponent
                            : root.isAlarm ? alarmComponent : root.isValve ? valveComponent
                            : root.isTv ? tvComponent : root.isSpeaker ? speakerComponent
                            : root.isPurifier ? purifierComponent : root.isHumidifier ? humidifierComponent : root.isChoice ? choiceComponent
@@ -141,6 +164,12 @@ Rectangle {
         }
     }
 
+    Component {
+        id: logComponent
+        OpeningLogView {
+            deviceId: root.deviceId
+        }
+    }
     Component {
         id: historyComponent
         HistoryChart {

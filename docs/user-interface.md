@@ -117,8 +117,8 @@ the top, where the arrows set their order.
 
 ### Scenes
 
-A scene puts several lights, switches, plugs and blinds of a room into a state you saved, e.g.
-*Movie night*: ceiling light off, TV light at 20 %, blinds closed. *Scenes* has the same room
+A scene puts several lights, switches, plugs, blinds and heating of a room into a state you saved, e.g.
+*Movie night*: ceiling light off, TV light at 20 %, blinds closed, heating at 21.5 °C. *Scenes* has the same room
 tabs as *Lights*; under *All* every scene is listed with its room.
 
 ![Scenes](images/scenes.png)
@@ -126,8 +126,14 @@ tabs as *Lights*; under *All* every scene is listed with its room.
 | # | Element | What it does |
 |---|---|---|
 | 1 | Scenes | Menu entry |
-| 2 | Scene | Tap to run it (the tile lights up briefly); hold to edit it |
-| 3 | New scene | Opens the editor with every light, switch, plug and blind of the room as they are now |
+| 2 | Scene | Tap to run it; hold to edit it. The tile is gold while the scene is active |
+| 3 | New scene | Opens the editor with every light, switch, plug, blind and heating of the room as they are now |
+
+**Active scene:** a scene is active while every device it sets is in the state of the scene
+(brightness and white tone within a few percent, heating within 0.3 °C; a blind counts once it
+moves to its position). Its tile is gold then, also among the favorites, and turns grey again
+as soon as one of its devices is changed. Heating is saved with its mode and target temperature
+(*Heat, 21.5 °C*) or as *Off*.
 
 **Making a scene:** set the devices the way you want them under *Lights* (or later in the editor),
 choose the room under *Scenes* and tap *New scene*. Enter a name, leave out the devices the scene
@@ -152,7 +158,7 @@ all favorites, this mark stays on the panel and is not shared with other panels.
 
 ![Scene among the favorites](images/scene-favorite.png)
 
-Devices hidden in the settings and light groups are not listed (the lights of a group are). If a
+Devices hidden in the settings, light groups and plugs set to *Only measure* are not listed (the lights of a group are). If a
 device cannot be reached when the scene runs, a message names it; the others are switched anyway.
 Scenes are part of every [backup](#backups) and of the settings [shared with other panels](#sharing-the-settings-with-other-panels).
 
@@ -207,6 +213,14 @@ tap to switch it, *›* opens the detail view with the power and, for Eve plugs,
 | 1 | Security | Selected menu entry with the number of alerts (open windows and doors, alarms; motion only while the alarm system is armed) |
 | 2 | Open window | Red text, e.g. *Open for 25 min*; open windows and doors come first |
 | 3 | Glass break sensor | *No alarm* while quiet |
+
+**Opening log:** the detail view of a window, door or contact sensor, a garage door and a
+motorized window lists when it was opened and for how long, by day, for the last 30 days
+(*08:14 to 08:31, 17 min*; *Open since 09:02* while it is open). The panel notes this only while
+it runs, in `openings.json` next to `settings.json`. A motorized window shows it as a second
+page, *Openings*, next to its controls.
+
+![Opening log](images/opening-log.png)
 
 A **leak, glass break, smoke or CO alarm** turns the tile red, wakes the panel from the screen saver,
 switches to *Security* and shows a message. Open windows and doors only raise the count in the
@@ -279,7 +293,14 @@ where the finger goes down and where it moves.
 | 4 | Room tab | Scrolls along, so the chosen room is always visible |
 
 Scrolling the tiles up and down still works as before, and a swipe never switches the tile under
-the finger. Under *Favorites* there are no room tabs, so swiping does nothing there.
+the finger.
+
+**Hold and drag on a tile:** hold a dimmable light or a blind until a gold level appears on the
+tile, then drag up or down without lifting the finger: brightness or blind position follows the
+finger (*60 %*, *40 % open*) and is set when you let go. Dragging a light down to 0 % switches it
+off. Holding without moving opens the detail view as before.
+
+![Hold and drag on a light tile](images/gestures-hold-drag.png) Under *Favorites* there are no room tabs, so swiping does nothing there.
 
 After two fingers down, a message says how many lights went off. *Undo* switches them on again
 with their brightness, for six seconds.
@@ -563,7 +584,7 @@ The *Devices* tab lists the favorites first, then all devices grouped by room. T
 |---|---|---|
 | 1 | Display name | Opens the keyboard. Below it the name from Homebridge; *Original name* restores it (an empty name does the same) |
 | 2 | Favorite | Shows the device under [Favorites](#favorites), the start page; new favorites are added at the end |
-| 3 | Kind | Contact and motion sensors: window, door, contact, glass break or motion. Lights: bulb, ceiling lamp, pendant light, chandelier, spotlight, downlight (recessed), wall lamp, table lamp, desk lamp, floor lamp, globe lamp, fluorescent tube or LED strip (icon only). Switches and plugs: switch, plug, coffee machine, washing machine, dishwasher or fan – sets the icon; *Fan* shows the device under *Climate*; washing machine and dishwasher show *Running* while their plug measures power, otherwise *Ready* |
+| 3 | Kind | Contact and motion sensors: window, door, contact, glass break or motion. Lights: bulb, ceiling lamp, pendant light, chandelier, spotlight, downlight (recessed), wall lamp, table lamp, desk lamp, floor lamp, globe lamp, fluorescent tube or LED strip (icon only). Switches and plugs: switch, plug, coffee machine, washing machine, dishwasher, fan, 3D printer or computer – sets the icon; *Fan* shows the device under *Climate*; washing machine and dishwasher show *Running* while their plug measures power, otherwise *Ready* |
 | 4 | Room | The current room is highlighted. *New room …* creates a room with the keyboard. Further down: *Show under* moves the device to another menu entry (*Automatic*: by device type), and *Hide on the home screen* (see below). Temperature sensors also have *Outdoor sensor*: it then counts for the outdoor temperature in the sidebar instead of indoors (same as `outdoor: true` in `config.yaml`) |
 | 5 | Save | Saves name, favorite, kind, room and *Hide on the home screen* together; *Cancel* discards the changes |
 
@@ -572,6 +593,16 @@ original name – *Wandleuchte* or *Wall lamp* becomes a wall lamp, *Decke* / *C
 lamp, *Spot*, *Downlight* / *Einbau…*, *Pendel*, *Stehlampe*, *Schreibtisch*, *Streifen* and so on, in the panel's
 languages. It is set as if chosen here, so it can be changed like any other kind. Lights that are
 already there, and lights whose kind is set with `lamp:` in `config.yaml`, are not touched.
+New switches and plugs named like a 3D printer (*3D-Drucker*, *Prusa*, *Bambu*, *Ender*) or a
+computer (*PC*, *Rechner*, *Server*, *NAS*, *Laptop*) get that kind the same way.
+
+**Only measure:** plugs and switches that measure power have the option *Only measure*, e.g. for
+a fridge, a freezer or a server that must never be switched off by mistake. The panel then shows
+the power on the tile but never switches the device: a tap opens the detail view, which has no
+power button, the tile is never gold, two fingers down and scenes leave it alone. It stays in
+the [Energy](#energy) view.
+
+![Only measure](images/device-editor-measure-only.png)
 
 *Hide on the home screen* removes a device from the tiles – also
 under *All* and in the default room – and from the menu status, alarms and temperatures. It stays

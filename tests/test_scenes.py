@@ -1,4 +1,4 @@
-from app.scenes import as_state, capture, clean, in_scenes
+from app.scenes import as_state, capture, clean, in_scenes, matches
 
 
 def light(**state):
@@ -23,9 +23,25 @@ def test_capture_lights_switches_blinds():
 
 
 def test_in_scenes_and_clean():
-    assert in_scenes(light()) and not in_scenes({"type": "thermostat"})
+    assert in_scenes(light()) and in_scenes({"type": "thermostat"}) and not in_scenes({"type": "sensor"})
+    assert not in_scenes({"type": "plug", "measureOnly": True})
     assert not in_scenes({"type": "light", "meta": {"group": True}})
     assert not in_scenes({"type": "blind", "meta": {"opening": "window"}})
     assert clean([{"id": "s1", "name": "A", "room": "R", "devices": {"x": {"on": True}, "y": 3}}, "junk", {}]) == \
         [{"id": "s1", "name": "A", "room": "R", "devices": {"x": {"on": True}}}]
     assert clean(None) == []
+
+
+def test_thermostat_and_matches():
+    heat = {"type": "thermostat", "reachable": True, "meta": {},
+            "state": {"mode": "heat", "target_temp": 21.5, "current_temp": 19}}
+    assert capture(heat) == {"mode": "heat", "target_temp": 21.5}
+    assert capture({**heat, "state": {"mode": "off", "target_temp": 20}}) == {"mode": "off"}
+    assert matches(heat, {"mode": "heat", "target_temp": 21.4})
+    assert not matches(heat, {"mode": "heat", "target_temp": 20})
+    lamp = {**light(on=True, brightness=41), "reachable": True}
+    assert matches(lamp, {"on": True, "brightness": 40}) and not matches(lamp, {"on": False})
+    assert matches({**light(on=False, brightness=80), "reachable": True}, {"on": False})
+    assert not matches({**lamp, "reachable": False}, {"on": True, "brightness": 40})
+    blind = {"type": "blind", "reachable": True, "meta": {}, "state": {"position": 10, "target": 60}}
+    assert matches(blind, {"position": 60})            # moving there

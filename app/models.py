@@ -64,7 +64,7 @@ QUIET_KINDS = {"presence"}
 # What a switch or plug powers; chosen on the panel or with appliance: in config.yaml.
 # The kind sets the icon; "fan" puts the device under "Climate", washer and dishwasher
 # show "Running" while their plug reports power use.
-APPLIANCE_KINDS = ("switch", "plug", "coffee", "washer", "dishwasher", "fan")
+APPLIANCE_KINDS = ("switch", "plug", "coffee", "washer", "dishwasher", "fan", "printer3d", "computer")
 APPLIANCE_ICONS = {k: k for k in APPLIANCE_KINDS}
 # Lamp kinds of lights; only the icon changes (lamp: in config.yaml)
 LAMP_KINDS = ("bulb", "ceiling", "pendant", "chandelier", "spot", "downlight", "wall", "table", "desk", "floorlamp", "globe",
@@ -91,6 +91,27 @@ LAMP_WORDS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("globe", ("kugel", "globe", "globo", "sphère", "boule", "esfera")),
     ("ceiling", ("decke", "ceiling", "plafond", "plafonnier", "soffitto", "plafoniera", "techo", "plafón", "teto")),
 )
+
+
+# Kind of a new switch or plug guessed from its name, as for lights; the more specific first
+APPLIANCE_WORDS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("printer3d", ("3d-drucker", "3d drucker", "3d printer", "3d-printer", "imprimante 3d", "stampante 3d",
+                   "impresora 3d", "impressora 3d", "prusa", "bambu", "creality", "ender")),
+    ("computer", ("computer", "rechner", "pc", "server", "laptop", "notebook", "ordinateur", "computador",
+                  "ordenador", "nas")),
+)
+
+
+def guess_appliance(name: str) -> str | None:
+    """What a new switch or plug powers, from its name ("3D-Drucker" → "printer3d"); None if
+    nothing fits. Short words count only as a whole word ("PC", "Ender"), not inside others
+    ("Kalender")."""
+    low = name.casefold()
+    words = set(low.replace("-", " ").split())
+    for kind, keys in APPLIANCE_WORDS:
+        if any((k in words) if len(k) <= 5 else (k in low) for k in keys):
+            return kind
+    return None
 
 
 def guess_lamp(name: str) -> str | None:
