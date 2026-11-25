@@ -27,14 +27,16 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 
 - **Lights**: on/off, brightness bar, color wheel, white tone
 - **Smart plugs / switches**: on/off, "in use" indicator; kinds plug, switch, coffee machine, washing
-  machine, dishwasher, fan
+  machine, dishwasher, fan, 3D printer, computer; plugs that measure power can be set to "only measure"
+  (never switched by the panel, e.g. a fridge or a server)
 - **Heating**: thermostats and heater-coolers with a dial (drag or −/+), modes Off/Heat/Auto
 - **Fans**: on/off, speed
 - **Blinds**: open, close, stop, position by dragging, slat angle; smooth position updates while moving
 - **Sensors**: temperature, humidity, air pressure (Eve), light level, air quality, CO₂, fine dust (PM2.5/PM10)
   and VOC; bad air or high CO₂ shown in red; sensors of one device
   combined into one tile; outdoor sensors shown as outdoor temperature
-- **History**: charts of temperature, humidity, air pressure and the power draw of plugs over the last 24 hours, 7 or 30 days for devices with an Eve history
+- **History**: charts of temperature, humidity, air pressure and the power draw of plugs over the last 24 hours, 7 or 30 days for devices with an Eve history;
+  an opening log of windows, doors and garage doors for the last 30 days
 - **Power measuring plugs** (Eve characteristics): power on the tile, power now and total consumption in kWh
   (plugins built on fakegato-history or homebridge-lib), read over HAP
 - **Security**: window, door, glass break, leak, motion, presence, smoke and CO sensors; open windows and alarms
@@ -45,8 +47,8 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 - **Menu** Favorites, Lights, Scenes, Climate, Weather, Energy (devices that measure their power, total power in the menu), Security; room tabs per menu entry with "All" last; a dot
   marks rooms with lights on (Lights) or an open window or alarm (Security)
 - **Gestures**: swipe left/right to change rooms or, in the detail view, devices; swipe in from the left
-  edge to go back; two fingers down switch the lights of the room off (with Undo); a double tap on the
-  screen saver runs a chosen scene
+  edge to go back; two fingers down switch the lights of the room off (with Undo); hold and drag on a tile to dim a light
+  or move a blind; a double tap on the screen saver runs a chosen scene
 - **MQTT**: virtual devices show values of MQTT topics (e.g. boiler pressure in bar), broker set up in the settings
 - **Light groups**: several lights of a room as one tile
 - **Alarm system**: arm (Home, Away, Night) and disarm a HomeKit security system, optionally with a PIN;
@@ -64,8 +66,8 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
   switches to the next one
 - **Rooms** managed on the panel: add, rename, reorder and delete rooms, sort and move devices,
   change display names; optionally hide the "General" room
-- **Scenes** per room, made on the panel from how the lights, switches, plugs and blinds are now;
-  devices can be left out; tap runs a scene, hold edits it; scenes can be added to the favorites
+- **Scenes** per room, made on the panel from how the lights, switches, plugs, blinds and heating are now;
+  devices can be left out; tap runs a scene, hold edits it; an active scene is highlighted; scenes can be added to the favorites
 - **Languages**: English, German, French, Italian, Spanish, Portuguese – selectable in the settings
 - **Light / dark / dark blue / automatic** appearance and a **screen saver** with a large clock
 - **Settings page** for appearance, screen saver and the Homebridge connection (address, port, PIN)
@@ -222,7 +224,7 @@ column to the catalog.
 | `hap` | additional bridges (child bridges); the main bridge comes from the settings |
 | `homebridge_ui` | alternatively access via the Homebridge web UI (username/password) |
 | `demo` | simulated devices |
-| `devices` | per device (ID or name): `room`, `name`, `icon`, `order`, `hidden`, `outdoor` (sensors), `security` (`window`, `door`, `contact`, `glassbreak`, `motion`, `presence` for contact/motion/occupancy sensors), `appliance` (`switch`, `plug`, `coffee`, `washer`, `dishwasher`, `fan` for switches/plugs), `lamp` (`bulb`, `ceiling`, `pendant`, `chandelier`, `spot`, `downlight`, `wall`, `table`, `desk`, `floorlamp`, `globe`, `tube`, `strip` for lights), `valve` (`generic`, `irrigation`, `shower`, `faucet`), `area` (`light`, `climate`, `security`); values set on the panel take precedence |
+| `devices` | per device (ID or name): `room`, `name`, `icon`, `order`, `hidden`, `outdoor` (sensors), `security` (`window`, `door`, `contact`, `glassbreak`, `motion`, `presence` for contact/motion/occupancy sensors), `appliance` (`switch`, `plug`, `coffee`, `washer`, `dishwasher`, `fan`, `printer3d`, `computer` for switches/plugs), `lamp` (`bulb`, `ceiling`, `pendant`, `chandelier`, `spot`, `downlight`, `wall`, `table`, `desk`, `floorlamp`, `globe`, `tube`, `strip` for lights), `valve` (`generic`, `irrigation`, `shower`, `faucet`), `area` (`light`, `climate`, `security`); values set on the panel take precedence |
 | `blacklist` | list of texts: devices whose original name contains one of them are ignored completely (not shown anywhere, also not in the settings); case doesn't matter |
 
 **Icons** (`icon:`): `light`, `ceiling`, `strip`, `plug`, `switch`, `thermostat`, `radiator`,
@@ -238,6 +240,7 @@ app/
   settings.py          settings schema, validation, storage, effect on the configuration
   rooms.py             rooms edited on the panel: order and device assignment
   scenes.py            scenes made on the panel: capturing device states
+  openings.py          opening log of windows, doors and garage doors (openings.json)
   weather.py           weather from Open-Meteo: forecast, place search
   i18n.py              language selection, number and date formats
   i18n_catalog.py      translations (German, French, Italian, Spanish; Portuguese in i18n_catalog_pt.py)

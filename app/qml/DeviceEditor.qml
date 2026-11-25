@@ -16,6 +16,7 @@ Popup {
     property bool draftFavorite
     property bool draftOutdoor
     property bool draftQuiet
+    property bool draftMeasureOnly
     // window, door, contact, motion and presence sensors can be kept out of security alerts (not alarms)
     // (devices without a kind, e.g. garage doors and motorized windows, always can)
     readonly property bool canQuiet: !!device.canQuiet && (!(draftKind || device.kind)
@@ -32,6 +33,7 @@ Popup {
         draftFavorite = !!d.favorite;
         draftOutdoor = !!d.outdoor;
         draftQuiet = !!d.quiet;
+        draftMeasureOnly = !!d.measureOnly;
         draftArea = d.area || "";
         error = "";
         open();
@@ -42,7 +44,8 @@ Popup {
     function saveNow() {
         const err = panel.roomEditor.saveDevice(device.id, {
             name: draftName, kind: draftKind, room: draftRoom, area: draftArea,
-            hidden: draftHidden, favorite: draftFavorite, outdoor: draftOutdoor, quiet: canQuiet ? draftQuiet : false
+            hidden: draftHidden, favorite: draftFavorite, outdoor: draftOutdoor, quiet: canQuiet ? draftQuiet : false,
+            measureOnly: draftMeasureOnly
         });
         if (err !== "")
             error = err;
@@ -86,6 +89,7 @@ Popup {
         spacing: Theme.s(12)
 
         Flickable {
+            objectName: "deviceEditorFlick"
             Layout.fillWidth: true
             Layout.fillHeight: true
             implicitHeight: form.implicitHeight
@@ -271,6 +275,16 @@ Popup {
                     checked: !root.draftQuiet
                     toggleName: "alertsToggle"
                     onToggled: root.draftQuiet = !root.draftQuiet
+                }
+                ToggleRow {
+                    objectName: "measureOnlyRow"
+                    visible: !!root.device.canMeasureOnly
+                    width: parent.width
+                    label: qsTr("Only measure")
+                    help: qsTr("The panel shows the power but never switches it, e.g. a fridge or a server")
+                    checked: root.draftMeasureOnly
+                    toggleName: "measureOnlyToggle"
+                    onToggled: root.draftMeasureOnly = !root.draftMeasureOnly
                 }
                 ToggleRow {
                     width: parent.width

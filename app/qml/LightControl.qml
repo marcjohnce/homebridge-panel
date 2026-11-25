@@ -138,6 +138,7 @@ ColumnLayout {
 
     CircleButton {
         objectName: "powerButton"
+        visible: !root.dev.measureOnly         // a plug that only measures is not switched here
         Layout.alignment: Qt.AlignHCenter
         implicitWidth: Theme.s(68)
         implicitHeight: Theme.s(68)

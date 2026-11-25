@@ -34,6 +34,7 @@ GridView {
         required property int index
         readonly property bool adding: modelData.id === ""
         property bool running: false
+        readonly property bool lit: running || (!adding && !!modelData.active)
         readonly property int lastRowStart: Math.floor((grid.count - 1) / grid.columns) * grid.columns
 
         objectName: adding ? "newScene" : "scene:" + modelData.id
@@ -43,7 +44,7 @@ GridView {
         topRightRadius: index === Math.min(grid.columns, grid.count) - 1 ? 14 : 0
         bottomLeftRadius: index === lastRowStart ? 14 : 0
         bottomRightRadius: (index === grid.count - 1 || (index === lastRowStart - 1 && grid.count % grid.columns !== 0)) ? 14 : 0
-        color: running ? Theme.gold : (mouse.pressed ? Theme.tilePress : Theme.tile)
+        color: lit ? Theme.gold : (mouse.pressed ? Theme.tilePress : Theme.tile)
         activeFocusOnTab: true
         Accessible.role: Accessible.Button
         Accessible.name: adding ? qsTr("New scene") : qsTr("Run scene %1").arg(modelData.name)
@@ -74,7 +75,7 @@ GridView {
             height: Theme.s(34)
             lineWidth: 1.15
             name: tile.adding ? "plus" : "spark"
-            color: tile.running ? Theme.goldInk : Theme.muted
+            color: tile.lit ? Theme.goldInk : Theme.muted
         }
         Column {
             anchors.left: parent.left
@@ -89,7 +90,7 @@ GridView {
                 text: tile.modelData.room
                 elide: Text.ElideRight
                 font.pixelSize: Theme.s(13)
-                color: tile.running ? Theme.goldInk : Theme.muted
+                color: tile.lit ? Theme.goldInk : Theme.muted
             }
             Text {
                 width: parent.width
@@ -99,7 +100,7 @@ GridView {
                 wrapMode: Text.Wrap
                 font.pixelSize: Theme.s(17)
                 font.weight: Font.Medium
-                color: tile.running ? Theme.goldInk : Theme.ink
+                color: tile.lit ? Theme.goldInk : Theme.ink
             }
             Text {
                 width: parent.width
@@ -107,7 +108,7 @@ GridView {
                     : tile.modelData.count === 1 ? qsTr("1 device") : qsTr("%1 devices").arg(tile.modelData.count)
                 elide: Text.ElideRight
                 font.pixelSize: Theme.s(14)
-                color: tile.running ? Theme.goldInk : Theme.muted
+                color: tile.lit ? Theme.goldInk : Theme.muted
             }
         }
         Rectangle {
@@ -115,7 +116,7 @@ GridView {
             anchors.margins: 3
             radius: 10
             color: "transparent"
-            border.color: tile.running ? Theme.goldInk : Theme.gold
+            border.color: tile.lit ? Theme.goldInk : Theme.gold
             border.width: 2
             visible: tile.activeFocus
         }

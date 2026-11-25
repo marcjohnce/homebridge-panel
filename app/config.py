@@ -83,7 +83,7 @@ class DeviceOverride(BaseModel):
     valve: Literal["generic", "irrigation", "shower", "faucet"] | None = Field(
         None, description="Kind of a valve (icon; generic valves appear under Security)")
     # "tv" is still accepted from older configurations and treated as a plain switch
-    appliance: Literal["switch", "plug", "tv", "coffee", "washer", "dishwasher", "fan"] | None = Field(
+    appliance: Literal["switch", "plug", "tv", "coffee", "washer", "dishwasher", "fan", "printer3d", "computer"] | None = Field(
         None, description="What a switch or plug powers (icon, washer/dishwasher state, fan under Climate)")
     lamp: Literal["bulb", "ceiling", "pendant", "chandelier", "spot", "downlight", "wall", "table", "desk", "floorlamp",
                   "globe", "tube", "strip"] | None = Field(

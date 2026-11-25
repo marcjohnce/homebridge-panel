@@ -1732,7 +1732,7 @@ def test_panel_scenes_capture_save_run(qapp, tmp_path):
     rows = draft["devices"]
     assert len(rows) >= 2 and all(r["included"] for r in rows)
     types = {ctl.devices.get(r["id"])["type"] for r in rows}
-    assert types <= {"light", "switch", "plug", "blind"}
+    assert types <= {"light", "switch", "plug", "blind", "thermostat"}
     first, second = rows[0], rows[1]
 
     assert ctl.saveScene("", "  ", room, {}) != ""             # a name is needed
@@ -2280,3 +2280,123 @@ def test_weather_places_view_and_screen_saver(qapp, tmp_path):
     win.close()
     engine.deleteLater()
     pump_until(lambda: False, timeout=0.3)
+
+
+def test_measure_only_openings_active_scenes(qapp, tmp_path):
+    """"Only measure" plugs: never switched by the panel, a tap opens the detail view, not in
+    scenes. Windows and doors keep an opening log. A scene is active (gold, also as favorite)
+    while all its devices are in its state; heating can be part of a scene."""
+    ctl = make_controller(tmp_path)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 29)
+    washer, heating = "demo:washer", "demo:heating-living"
+    opened = []
+    ctl.detailRequested.connect(opened.append)
+    toasts = []
+    ctl.toast.connect(lambda *a: toasts.append(a[0]))
+
+    row = next(r for r in ctl.roomEditor.devices if r["id"] == washer)
+    assert row["canMeasureOnly"] and not row["measureOnly"]
+    coffee = next(r for r in ctl.roomEditor.devices if r["id"] == "demo:coffee")
+    assert not coffee["canMeasureOnly"]                     # measures nothing
+    ctl.roomEditor.saveDevice(washer, {**row, "measureOnly": True})
+    assert ctl.devices.get(washer)["measureOnly"]
+    was_on = ctl.devices.get(washer)["state"].get("on")
+    ctl.toggle(washer)
+    assert opened == [washer]
+    ctl.setAttrs(washer, {"on": not was_on})
+    assert toasts and "only measures" in toasts[-1]
+    pump_until(lambda: False, timeout=0.3)
+    assert ctl.devices.get(washer)["state"].get("on") == was_on
+    ctl.selectCategory("energy")
+    ctl.selectRoom("")
+    assert washer in ctl.devices._rows
+    roles = {v: k for k, v in ctl.devices._ids.items()}
+    i = ctl.devices.index(ctl.devices._rows.index(washer))
+    assert ctl.devices.data(i, roles["isOn"]) is False and ctl.devices.data(i, roles["adjustKind"]) == ""
+    assert washer not in [d["id"] for d in ctl.sceneDraft("")["devices"]]
+
+    # opening log: the bedroom window is open in the demo
+    assert ctl.device("demo:bedroom-window")["hasLog"]
+    days = ctl.openingLog("demo:bedroom-window")
+    assert days[0]["day"] == "Today" and days[0]["rows"][0]["open"]
+    assert (tmp_path / "openings.json").exists()
+
+    # scenes: heating text, active scene
+    ctl.selectCategory("scenes")
+    ctl.selectRoom("General")
+    draft = ctl.sceneDraft("")["devices"]
+    heat_row = next(d for d in draft if d["id"] == heating)
+    assert heat_row["stateText"].startswith(("Heat, ", "Auto, ", "Off"))
+    lamp = "demo:living-ceiling"
+    ctl.setAttrs(lamp, {"on": True, "brightness": 50})
+    assert pump_until(lambda: ctl.devices.get(lamp)["state"].get("brightness") == 50)
+    assert ctl.saveScene("", "Evening", "General", {lamp: {"on": True, "brightness": 50},
+                                                    heating: {"mode": "heat", "target_temp": 22.5}}, True) == ""
+    sid = ctl.store.scenes[0]["id"]
+    assert not ctl.scenes[0]["active"]
+    ctl.runScene(sid)
+    assert pump_until(lambda: ctl.scenes[0]["active"])
+    assert ctl.devices.get(heating)["state"]["target_temp"] == 22.5
+    assert ctl.devices.get("scene:" + sid)["state"]["on"] is True          # the favorite tile is gold
+    ctl.setAttrs(lamp, {"on": False})
+    assert pump_until(lambda: not ctl.scenes[0]["active"])
+    assert ctl.devices.get("scene:" + sid)["state"]["on"] is False
+    ctl.shutdown()
+
+
+def test_hold_and_drag_on_tile(qapp, tmp_path):
+    """Hold a tile, then drag up or down: brightness of a light, position of a blind."""
+    from PySide6.QtCore import QPoint, Qt
+    from PySide6.QtQml import QQmlApplicationEngine
+    from PySide6.QtQuick import QQuickWindow
+    from PySide6.QtTest import QTest
+    from shiboken6 import Shiboken
+    from app.qt.main import QML_DIR
+
+    ctl = make_controller(tmp_path)
+    engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty("panel", ctl)
+    engine.rootContext().setContextProperty("initialWidth", 1024)
+    engine.rootContext().setContextProperty("initialHeight", 600)
+    engine.load(QML_DIR / "Main.qml")
+    win = Shiboken.wrapInstance(Shiboken.getCppPointer(engine.rootObjects()[0])[0], QQuickWindow)
+    ctl.start()
+    assert pump_until(lambda: len(ctl.devices.all()) == 29)
+
+    def find(name, item=None):
+        for child in (item or win.contentItem()).childItems():
+            if child.objectName() == name and child.isVisible():
+                return child
+            if (hit := find(name, child)) is not None:
+                return hit
+        return None
+
+    def hold_drag(dev, dy):
+        tile = find("tile:" + dev)
+        c = tile.mapToScene(tile.boundingRect().center()).toPoint()
+        QTest.mousePress(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, c)
+        pump_until(lambda: find("adjust:" + dev) is not None, timeout=2)
+        assert find("adjust:" + dev) is not None
+        for i in range(1, 11):
+            QTest.mouseMove(win, c + QPoint(0, dy * i // 10), 15)
+        QTest.mouseRelease(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, c + QPoint(0, dy), 15)
+
+    lamp = "demo:living-ceiling"
+    ctl.setAttrs(lamp, {"on": True, "brightness": 20})
+    assert pump_until(lambda: ctl.devices.get(lamp)["state"].get("brightness") == 20)
+    ctl.selectCategory("light")
+    ctl.selectRoom("")
+    assert pump_until(lambda: find("tile:" + lamp) is not None)
+    hold_drag(lamp, -80)                                       # up: brighter
+    assert pump_until(lambda: ctl.devices.get(lamp)["state"].get("brightness", 0) > 40)
+    assert win.property("openDevice") == ""
+    hold_drag(lamp, 400)                                       # all the way down: off
+    assert pump_until(lambda: ctl.devices.get(lamp)["state"].get("on") is False)
+
+    blinds = "demo:bedroom-blinds"
+    assert pump_until(lambda: find("tile:" + blinds) is not None)
+    before = ctl.devices.get(blinds)["state"].get("position", 0)
+    hold_drag(blinds, 400 if before > 0 else -400)
+    assert pump_until(lambda: ctl.devices.get(blinds)["state"].get("target", before) != before)
+    ctl.shutdown()
