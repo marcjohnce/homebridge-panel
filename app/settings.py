@@ -53,6 +53,7 @@ SECTIONS = [
     Section("weather", "Weather", instant=True),
     Section("homebridge", "Homebridge", instant=False),
     Section("mqtt", "MQTT", instant=False),
+    Section("web", "Web setup", instant=True),
     Section("system", "System", instant=True),
 ]
 
@@ -109,6 +110,15 @@ FIELDS = [
     Field("mqtt_password", "mqtt", "Password", "password", ""),
     Field("mqtt_test", "mqtt", "Test MQTT connection", "action", None,
           help="Tries the entered values without saving them", button="Test"),
+    # web setup (app/web.py): off by default; a browser connects with a code shown on the panel
+    Field("web_enabled", "web", "Allow web setup", "toggle", False,
+          help="Set up the panel in a browser on a computer or phone in the home network"),
+    Field("web_port", "web", "Port", "number", 8080, min=1024, max=65535),
+    Field("web_pair", "web", "Connect a browser", "action", None,
+          help="Shows the address and a code to enter in the browser", button="Show code"),
+    Field("web_signout", "web", "Sign out all browsers", "action", None,
+          help="Browsers connected to the web setup need a new code", button="Sign out",
+          confirm="Sign out every browser connected to the web setup?"),
     # Software update: state and button come from the controller (Controller.updateInfo)
     Field("update", "system", "Software update", "update", None),
     Field("backups_page", "system", "Backups", "page", None,

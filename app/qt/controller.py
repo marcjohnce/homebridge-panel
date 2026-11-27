@@ -35,6 +35,7 @@ from ..settings import ACTIONS, SettingsStore, apply_to_config, validate
 from ..models import AREAS, KIND_ICONS, KIND_KEYS, QUIET_KINDS, guess_appliance, guess_lamp
 from ..wifi import Wifi, qr_image
 from .weather_bridge import WeatherBridge
+from .web_bridge import WebBridge
 from .. import openings
 from ..sound import TouchSound
 from . import format as fmt
@@ -955,6 +956,7 @@ class Controller(QObject):
     restarting = Signal(str)
     languageChanged = Signal()
     refreshingChanged = Signal()
+    webPairRequested = Signal()       # "Connect a browser": show the address and code
     _refreshed = Signal()             # from the asyncio thread: the refresh asked for is done
 
     # Command used to reboot the device; overridable for tests
@@ -1003,6 +1005,8 @@ class Controller(QObject):
         self._refreshing = False
         self._refreshed.connect(self._end_refresh)
         self._sound = TouchSound()
+        self._web = WebBridge(self, Path(store.path).with_name("web_tokens.json"))
+        self._web.pairing.on_paired = self._web.paired.emit
         self._theme_timer = QTimer(self, interval=30_000, timeout=self._update_theme)
         self._theme_timer.start()
         self._display = display_power or DisplayPower()
@@ -1106,6 +1110,7 @@ class Controller(QObject):
     def start(self) -> None:
         self.runner.submit(self._restart(self.effective_config()))
         self._weather.refresh()
+        self._web.apply()
         if self._updater.supported:
             QTimer.singleShot(60_000, self, self.checkUpdate)
 
@@ -1183,6 +1188,7 @@ class Controller(QObject):
                 "busy": state in ("checking", "installing", "unsupported")}
 
     def shutdown(self) -> None:
+        self._web.stop()
         if self._room_editor._moves_pending:     # moved rows not saved yet
             self._room_editor.save_moves()
         self._room_editor._save_timer.stop()
@@ -1235,6 +1241,10 @@ class Controller(QObject):
         elif key == "reboot":
             self.restarting.emit(tr("Restarting the Raspberry Pi …"))
             self.runner.submit(self._reboot())
+        elif key == "web_pair":
+            self.webPairRequested.emit()
+        elif key == "web_signout":
+            self._web.sign_out_all()
 
     def _restart_app(self) -> None:
         """Replaces the running process with a fresh start of the app."""
@@ -1288,6 +1298,8 @@ class Controller(QObject):
             self._refresh_rooms()
         if any(k.startswith("mqtt_") for k in keys) and not any(k.startswith("hap_") for k in keys):
             self.restart_backends()
+        if keys & {"web_enabled", "web_port"}:
+            self._web.apply()
 
     # ---------- messages from the background thread ----------
     def _on_message(self, msg: dict[str, Any]) -> None:
@@ -1476,6 +1488,10 @@ class Controller(QObject):
             return
         self._refreshing = False
         self.refreshingChanged.emit()
+
+    @Property(QObject, constant=True)
+    def web(self) -> WebBridge:
+        return self._web
 
     @Property(bool, notify=refreshingChanged)
     def refreshing(self) -> bool:
@@ -1769,9 +1785,13 @@ class Controller(QObject):
         """What the scene editor shows: {id, name, room, devices: [{id, name, icon, included,
         attrs, stateText}]}. A new scene ("" in the current room) holds every device of the room
         as it is now; a saved one its stored states, the room's other devices left out."""
+        return self.scene_draft(scene_id)
+
+    def scene_draft(self, scene_id: str, room: str | None = None) -> dict[str, Any]:
+        """sceneDraft; a new scene in this room (default: the room shown)."""
         sc = next((x for x in self.store.scenes if x["id"] == scene_id), None)
         if sc is None:
-            room = self._room
+            room = self._room if room is None else room
             return {"id": "", "name": "", "room": room, "favorite": False, "idle": False,
                     "devices": [self._scene_row(d, None, True) for d in self._scene_devices(room)]}
         rows = [self._scene_row(d, sc["devices"].get(d["id"]), d["id"] in sc["devices"])
