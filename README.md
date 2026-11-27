@@ -69,6 +69,8 @@ Touch app for the Raspberry Pi (Linux) to control lights, smart plugs and heatin
 - **Scenes** per room, made on the panel from how the lights, switches, plugs, blinds and heating are now;
   devices can be left out; tap runs a scene, hold edits it; an active scene is highlighted; scenes can be added to the favorites
 - **Languages**: English, German, French, Italian, Spanish, Portuguese – selectable in the settings
+- **Web setup**: set up the panel in a browser on a computer or phone (settings, rooms, devices, virtual devices,
+  groups, scenes, weather places, backups); off by default, a browser connects once with a code from the panel
 - **Touch sounds**: an optional short click on every touch through the audio output (HDMI, jack or a speaker)
 - **Light / dark / dark blue / purple / automatic** appearance and a **screen saver** with a large clock
 - **Settings page** for appearance, screen saver and the Homebridge connection (address, port, PIN)
@@ -243,6 +245,8 @@ app/
   scenes.py            scenes made on the panel: capturing device states
   openings.py          opening log of windows, doors and garage doors (openings.json)
   sound.py             touch sounds: a click played with aplay
+  web.py               web setup: HTTP server, pairing codes and browser tokens
+  web/index.html       the web setup page
   weather.py           weather from Open-Meteo: forecast, place search
   i18n.py              language selection, number and date formats
   i18n_catalog.py      translations (German, French, Italian, Spanish; Portuguese in i18n_catalog_pt.py)

@@ -231,6 +231,10 @@ ApplicationWindow {
         function onWifiRequested() {
             wifiCode.show();
         }
+        function onWebPairRequested() {
+            window.settingsOpen = true;
+            webPair.show();
+        }
         function onRestarting(message) {
             restartOverlay.message = message;
         }
@@ -244,6 +248,11 @@ ApplicationWindow {
     WifiCodeDialog {
         id: wifiCode
         objectName: "wifiDialog"
+    }
+
+    WebPairDialog {
+        id: webPair
+        objectName: "webPairDialog"
     }
 
     // spinner while a page is built or something is saved (Busy.run)

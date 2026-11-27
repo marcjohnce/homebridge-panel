@@ -981,6 +981,23 @@ def main() -> int:
     ], "Batteries"), out, "batteries")
     p.close()
 
+    # Web setup: "Connect a browser" shows the address and a code
+    import socket
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        web_port = sock.getsockname()[1]
+    p = Panel(DETAIL_SIZE)
+    p.ctl.settings.save({"web_enabled": True, "web_port": web_port})
+    p.win.setProperty("settingsOpen", True)
+    p.ctl.run_action("web_pair")
+    wait(500)
+    save(annotate(p.grab(), [
+        (1, [p.rect("webQr")], "QR code: opens the page with the code filled in", "left"),
+        (2, [p.rect("webUrl")], "Address of the web setup", "right"),
+        (3, [p.rect("webCode")], "Code, valid for 5 minutes", "right"),
+    ], "Connect a browser"), out, "web-pair-panel")
+    p.close()
+
     # Another language
     p = Panel(DETAIL_SIZE, lang="de")
     save(annotate(p.grab(), [], "Home screen in German"), out, "home-de")

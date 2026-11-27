@@ -792,6 +792,51 @@ Rebooting needs permission. `deploy/install.sh` installs a rule that allows the 
 reboot, also without a desktop session. If it is missing, the panel shows
 *Restart not allowed* – run the install script again.
 
+### Web setup
+
+Instead of typing on the touch screen, the panel can be set up in a browser on a computer or a
+phone in the same network. Off by default.
+
+1. On the panel, switch on *Settings → Web setup → Allow web setup* (*Port*: 8080 unless
+   something else uses it).
+2. Tap *Connect a browser*. The panel shows its address, a QR code and a six-digit code.
+3. Open the address in the browser and enter the code, or scan the QR code with the phone: it
+   opens the page with the code filled in.
+
+![Connect a browser](images/web-pair-panel.png)
+
+The code is valid for five minutes and works once; after five wrong tries a new one is needed.
+The browser then stays connected (a cookie) until it signs out or *Sign out all browsers* on the
+panel signs every browser out. The panel keeps only a fingerprint of each browser's key, in
+`web_tokens.json` next to `settings.json`; it is not part of backups or of the settings shared
+with other panels.
+
+![Web setup: settings](images/web-settings.png)
+
+The page has the same parts as the settings on the panel, and changes take effect on the panel
+at once:
+
+| Part | What it does |
+|---|---|
+| Settings | Every section of the settings page, each with its own *Save*. Passwords and the alarm PIN are never shown; leave the field empty to keep them. Only *Web setup* itself and the buttons (update, restart) stay on the panel |
+| Rooms | Add, rename, delete and sort rooms |
+| Devices | Per device: name, room, kind, *Show under*, favorite, hide, outdoor sensor, security alerts, *Only measure*, *Main meter* |
+| Virtual devices and groups | Virtual devices (MQTT) with topic, unit and meter reading; light groups and switch groups with their members |
+| Scenes | New scenes per room and changes to saved ones: which devices, on or off, brightness, blind position, target temperature; *Use current state* takes over how a device is now |
+| Weather | Places: search by name or coordinates, rename, sort, default place |
+| Backups | Back up now, restore (the panel restarts), delete |
+
+![Web setup: devices](images/web-devices.png)
+
+On a phone the menu becomes a row of tabs at the top; the page follows the light or dark
+setting of the browser.
+
+![Web setup on a phone](images/web-phone.png)
+
+The page is plain HTTP for the home network: do not forward its port from the internet. Only a
+browser connected with a code can read or change anything, and requests from other web sites
+are refused.
+
 ### Backups
 
 *Settings → System → Backups* saves everything set up on the panel: rooms and their order,

@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart Home Panel</title>
+<style>
+@font-face{font-family:Jost;src:url(/fonts/Jost-Light.ttf);font-weight:300}
+@font-face{font-family:Jost;src:url(/fonts/Jost-Regular.ttf);font-weight:400}
+@font-face{font-family:Jost;src:url(/fonts/Jost-Medium.ttf);font-weight:500}
+:root{--page:#E6E7EA;--tile:#F6F6F7;--ink:#3A3B3E;--muted:#6E7075;--line:#D3D5D9;--gold:#B4945F;--goldInk:#2A251D;--err:#B04A3E;--ok:#4F8A6A;--field:#FFFFFF}
+@media (prefers-color-scheme:dark){:root{--page:#1C1D1F;--tile:#26272A;--ink:#E8E4DC;--muted:#9A9CA1;--line:#36373B;--gold:#C9A86E;--goldInk:#1F1B15;--err:#E07A6D;--ok:#6FB08C;--field:#1C1D1F}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font:400 16px/1.45 Jost,system-ui,sans-serif}
+header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 24px 8px;max-width:1180px;margin:0 auto}
+header h1{margin:0;font-weight:300;font-size:28px}
+header .sub{color:var(--muted);font-size:15px}
+.wrap{display:flex;flex-wrap:wrap;gap:24px;max-width:1180px;margin:0 auto;padding:12px 24px 48px}
+nav{flex:1 1 200px;max-width:240px;display:flex;flex-direction:column;gap:2px}
+nav button{all:unset;cursor:pointer;padding:10px 14px;border-radius:10px;font-size:17px;font-weight:300}
+nav button[aria-current=page]{background:color-mix(in srgb,var(--gold) 18%,transparent);font-weight:400}
+nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+main{flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:16px}
+@media (max-width:760px){nav{max-width:none;flex-direction:row;overflow-x:auto;flex-basis:100%}nav button{white-space:nowrap}}
+.card{background:var(--tile);border-radius:14px;padding:20px 22px;display:flex;flex-direction:column;gap:14px}
+.card h2{margin:0;font-weight:400;font-size:21px}
+.card h3{margin:6px 0 0;font-weight:400;font-size:17px;color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:10px 0;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:0}
+.row .grow{flex:1 1 220px;min-width:0}
+.help{color:var(--muted);font-size:14px}
+.err{color:var(--err);font-size:14px}
+.okmsg{color:var(--ok);font-size:14px}
+label.field{display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--muted);flex:1 1 220px;min-width:0}
+label.check{display:flex;align-items:center;gap:10px;font-size:16px;color:var(--ink);min-height:44px;cursor:pointer}
+input[type=text],input[type=password],input[type=number],select{font:inherit;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px;width:100%}
+input[type=checkbox]{width:22px;height:22px;accent-color:var(--gold)}
+input[type=range]{width:100%;accent-color:var(--gold)}
+.btns{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+button.b{font:inherit;cursor:pointer;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:22px;padding:9px 18px;min-height:44px}
+button.b.primary{background:var(--gold);color:var(--goldInk);border-color:var(--gold)}
+button.b.small{min-height:36px;padding:5px 12px;font-size:14px}
+button.b:disabled{opacity:.5;cursor:default}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px 16px}
+.pair{max-width:440px;margin:60px auto;padding:0 24px}
+.card>label.field{flex:none}
+p.err{margin:0}
+.banner{background:var(--err);color:#fff;padding:10px 16px;border-radius:10px}
+.muted{color:var(--muted)}
+.list{display:flex;flex-direction:column}
+.chips{display:flex;flex-wrap:wrap;gap:6px 14px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+"use strict";
+let S = null, T = {}, tab = "settings", edit = null, notice = "", offline = false;
+const app = document.getElementById("app");
+
+// element helper: children are nodes or text (never parsed as HTML)
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === undefined || v === null || v === false) continue;
+    if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (k === "value") el.value = v;
+    else if (k === "checked") el.checked = !!v;
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of kids.flat()) if (c !== null && c !== undefined && c !== false) el.append(c.nodeType ? c : String(c));
+  return el;
+}
+const btn = (text, onclick, cls) => h("button", { type: "button", class: "b " + (cls || ""), onclick }, text);
+const opt = (value, label, sel) => h("option", { value, selected: String(value) === String(sel) || undefined }, label);
+function check(label, checked, onchange) {
+  return h("label", { class: "check" }, h("input", { type: "checkbox", checked, onchange: e => onchange(e.target.checked) }), label);
+}
+function text(label, value, oninput, attrs) {
+  return h("label", { class: "field" }, label, h("input", Object.assign({ type: "text", value: value ?? "", oninput: e => oninput(e.target.value) }, attrs || {})));
+}
+function roomSelect(value, onchange) {
+  return h("label", { class: "field" }, T.room, h("select", { onchange: e => onchange(e.target.value) }, S.rooms.map(r => opt(r.name, r.name, value))));
+}
+
+async function api(path, body) {
+  try {
+    const r = await fetch(path, body === undefined ? {} : {
+      method: "POST", headers: { "Content-Type": "application/json", "X-Panel": "1" }, body: JSON.stringify(body)
+    });
+    offline = false;
+    const data = await r.json();
+    if (data.lang) document.documentElement.lang = data.lang;
+    if (r.status === 401 && data.error === "pair") { S = null; if (data.t) T = data.t; pairPage(data.name); return null; }
+    if (data.sections) { S = data; T = data.t; }
+    return data;
+  } catch (e) {
+    offline = true; render(); return null;
+  }
+}
+async function post(path, body) {
+  const d = await api(path, body);
+  if (!d) return null;
+  notice = d.error || (d.errors && Object.keys(d.errors).length) ? "" : T.saved;
+  return d;
+}
+
+// ---------- connecting the browser ----------
+function pairPage(name) {
+  document.title = T.title || "Smart Home Panel";
+  let msg = "";
+  const input = h("input", { type: "text", inputmode: "numeric", autocomplete: "one-time-code", maxlength: 7, id: "code" });
+  const out = h("p", { class: "err", role: "alert" });
+  async function go() {
+    const r = await fetch("/api/pair", { method: "POST", headers: { "Content-Type": "application/json", "X-Panel": "1" },
+      body: JSON.stringify({ code: input.value.replace(/\D/g, "") }) }).catch(() => null);
+    if (r && r.ok) { history.replaceState(null, "", "/"); load(); }
+    else out.textContent = T.wrongCode;
+  }
+  app.replaceChildren(h("div", { class: "pair" },
+    h("div", { class: "card" },
+      h("h2", {}, T.pairTitle), name ? h("div", { class: "muted" }, name) : null,
+      h("p", { class: "help" }, T.pairHelp),
+      h("label", { class: "field", for: "code" }, T.code, input),
+      h("div", { class: "btns" }, btn(T.connect, go, "primary")), out)));
+  input.addEventListener("keydown", e => { if (e.key === "Enter") go(); });
+  const m = location.hash.match(/code=(\d{6})/);
+  if (m) { input.value = m[1]; go(); } else input.focus();
+}
+
+// ---------- pages ----------
+const TABS = () => [["settings", T.settings], ["rooms", T.rooms], ["devices", T.devices], ["virtual", T.virtualGroups],
+                    ["scenes", T.scenes], ["weather", T.weather], ["backups", T.backups]];
+
+function render() {
+  if (!S) return;
+  document.title = T.title + " – " + S.name;
+  const page = { settings: settingsPage, rooms: roomsPage, devices: devicesPage, virtual: virtualPage,
+                 scenes: scenesPage, weather: weatherPage, backups: backupsPage }[tab]();
+  app.replaceChildren(
+    h("header", {}, h("div", {}, h("h1", {}, T.title), h("div", { class: "sub" }, S.name)),
+      btn(T.signOut, async () => { await post("/api/logout", {}); load(); }, "small")),
+    h("div", { class: "wrap" },
+      h("nav", { "aria-label": T.title }, TABS().map(([id, label]) =>
+        h("button", { type: "button", "aria-current": tab === id ? "page" : undefined, onclick: () => { tab = id; edit = null; notice = ""; render(); } }, label))),
+      h("main", {}, offline ? h("div", { class: "banner", role: "alert" }, T.offline) : null,
+        notice ? h("div", { class: "okmsg", role: "status" }, notice) : null, page)));
+}
+
+function settingsPage() {
+  return S.sections.map(sec => {
+    const changes = {}, errs = h("div");
+    const rows = sec.fields.map(f => {
+      const set = v => { changes[f.key] = v; };
+      let input;
+      if (f.kind === "choice")
+        input = h("select", { onchange: e => set(f.options.find(o => String(o.value) === e.target.value).value) },
+          f.options.map(o => opt(o.value, o.label, f.value)));
+      else if (f.kind === "toggle")
+        input = h("input", { type: "checkbox", checked: f.value, onchange: e => set(e.target.checked) });
+      else if (f.kind === "number")
+        input = h("input", { type: "number", value: f.value, min: f.min, max: f.max, oninput: e => set(e.target.value) });
+      else if (f.kind === "password" || f.kind === "code")
+        input = h("input", { type: "password", autocomplete: "new-password", placeholder: f.isSet ? "•••• (" + T.unchanged + ")" : "", oninput: e => set(e.target.value) });
+      else
+        input = h("input", { type: "text", value: f.value, oninput: e => set(e.target.value) });
+      input.id = "f_" + f.key;
+      return h("div", { class: "row" },
+        h("div", { class: "grow" }, h("label", { for: input.id }, f.label), f.help ? h("div", { class: "help" }, f.help) : null,
+          h("div", { class: "err", id: "e_" + f.key })),
+        h("div", { style: f.kind === "toggle" ? "" : "flex:1 1 260px" }, input));
+    });
+    async function save() {
+      const d = await post("/api/settings", { changes });
+      if (!d) return;
+      if (d.errors && Object.keys(d.errors).length) {
+        for (const [k, v] of Object.entries(d.errors)) { const e = document.getElementById("e_" + k); if (e) e.textContent = v; }
+        return;
+      }
+      render();
+    }
+    return h("section", { class: "card" }, h("h2", {}, sec.title), h("div", { class: "list" }, rows), errs,
+      h("div", { class: "btns" }, btn(T.save, save, "primary")));
+  });
+}
+
+function roomsPage() {
+  let name = "";
+  const err = h("div", { class: "err", role: "alert" });
+  const run = async body => { const d = await post("/api/room", body); if (d && d.error) { err.textContent = d.error; return; } render(); };
+  return h("section", { class: "card" }, h("h2", {}, T.rooms), err,
+    h("div", { class: "list" }, S.rooms.map((r, i) => h("div", { class: "row" },
+      h("div", { class: "grow" }, r.name, " ", h("span", { class: "muted" }, "(" + r.count + ")")),
+      h("div", { class: "btns" },
+        btn("↑", () => run({ op: "move", name: r.name, delta: -1 }), "small"),
+        btn("↓", () => run({ op: "move", name: r.name, delta: 1 }), "small"),
+        btn(T.rename, () => { const n = prompt(T.rename, r.name); if (n) run({ op: "rename", name: r.name, new: n }); }, "small"),
+        btn(T.delete, () => { if (confirm(T.deleteRoom)) run({ op: "delete", name: r.name }); }, "small"))))),
+    h("div", { class: "btns" }, text(T.newRoomName, "", v => name = v), btn(T.addRoom, () => name && run({ op: "add", name }), "primary")));
+}
+
+function devicesPage() {
+  const byRoom = {};
+  for (const d of S.devices) (byRoom[d.room] = byRoom[d.room] || []).push(d);
+  return S.rooms.filter(r => byRoom[r.name]).map(r => h("section", { class: "card" }, h("h2", {}, r.name),
+    h("div", { class: "list" }, byRoom[r.name].map(d => edit === d.id ? deviceEditor(d) : h("div", { class: "row" },
+      h("div", { class: "grow" }, d.name, d.reachable ? null : h("span", { class: "muted" }, " · " + T.notReachable),
+        h("div", { class: "help" }, [d.kind && (d.kinds.find(k => k.value === d.kind) || {}).label, d.favorite && T.favorite,
+          d.hidden && T.hidden, d.measureOnly && !d.mainMeter && T.measureOnly, d.mainMeter && T.mainMeter].filter(Boolean).join(", "))),
+      btn(T.edit, () => { edit = d.id; render(); }, "small"))))));
+}
+function deviceEditor(d) {
+  const v = { name: d.name, room: d.room, kind: d.kind, area: d.area, hidden: d.hidden, favorite: d.favorite,
+              outdoor: d.outdoor, quiet: d.quiet, measureOnly: d.measureOnly, mainMeter: d.mainMeter };
+  const err = h("div", { class: "err", role: "alert" });
+  async function save() {
+    const r = await post("/api/device", { id: d.id, values: v });
+    if (r && r.error) { err.textContent = r.error; return; }
+    edit = null; render();
+  }
+  return h("div", { class: "row" }, h("div", { class: "grid", style: "flex:1 1 100%" },
+      text(T.name, v.name, x => v.name = x, { placeholder: d.baseName }),
+      roomSelect(v.room, x => v.room = x),
+      d.kinds.length ? h("label", { class: "field" }, T.kind, h("select", { onchange: e => v.kind = e.target.value }, d.kinds.map(k => opt(k.value, k.label, v.kind)))) : null,
+      h("label", { class: "field" }, T.showUnder, h("select", { onchange: e => v.area = e.target.value }, d.areas.map(a => opt(a.value, a.label, v.area))))),
+    h("div", { class: "chips", style: "flex:1 1 100%" },
+      check(T.favorite, v.favorite, x => v.favorite = x),
+      check(T.hidden, v.hidden, x => v.hidden = x),
+      d.canOutdoor ? check(T.outdoor, v.outdoor, x => v.outdoor = x) : null,
+      d.canQuiet ? check(T.alerts, !v.quiet, x => v.quiet = !x) : null,
+      d.canMeasureOnly ? check(T.measureOnly, v.measureOnly, x => v.measureOnly = x) : null,
+      d.canMainMeter ? check(T.mainMeter, v.mainMeter, x => v.mainMeter = x) : null),
+    err, h("div", { class: "btns" }, btn(T.save, save, "primary"), btn(T.cancel, () => { edit = null; render(); })));
+}
+
+function virtualPage() {
+  const rooms0 = (S.rooms.find(r => r.isDefault) || S.rooms[0] || { name: "" }).name;
+  const editor = (kind, item) => {
+    const err = h("div", { class: "err", role: "alert" });
+    const send = async body => { const r = await post(kind === "virtual" ? "/api/virtual" : "/api/group", body); if (r && r.error) { err.textContent = r.error; return; } edit = null; render(); };
+    if (kind === "virtual") {
+      const v = item ? { id: item.id, name: item.name, unit: item.unit, topic: item.topic, jsonKey: item.json_key, decimals: item.decimals,
+        icon: item.icon, energyTopic: item.energy_topic || "", energyKey: item.energy_key || "", room: item.room, favorite: item.favorite, mainMeter: item.mainMeter }
+        : { name: "", unit: "", topic: "", jsonKey: "", decimals: 1, icon: "gauge", energyTopic: "", energyKey: "", room: rooms0, favorite: false, mainMeter: false };
+      return h("div", { class: "row" }, h("div", { class: "grid", style: "flex:1 1 100%" },
+          text(T.name, v.name, x => v.name = x), text(T.unit, v.unit, x => v.unit = x), text(T.topic, v.topic, x => v.topic = x),
+          text(T.jsonKey, v.jsonKey, x => v.jsonKey = x),
+          h("label", { class: "field" }, T.decimals, h("select", { onchange: e => v.decimals = +e.target.value }, [0, 1, 2, 3].map(n => opt(n, n, v.decimals)))),
+          text(T.energyTopic, v.energyTopic, x => v.energyTopic = x), text(T.energyKey, v.energyKey, x => v.energyKey = x),
+          roomSelect(v.room, x => v.room = x)),
+        h("div", { class: "chips" }, check(T.favorite, v.favorite, x => v.favorite = x), check(T.mainMeter, v.mainMeter, x => v.mainMeter = x)),
+        err, h("div", { class: "btns" }, btn(T.save, () => send({ op: "save", values: v }), "primary"), btn(T.cancel, () => { edit = null; render(); }),
+          item ? btn(T.delete, () => confirm(T.deleteAsk) && send({ op: "delete", id: item.id })) : null));
+    }
+    const sw = kind === "switch", pool = sw ? S.switches : S.lights;
+    const v = item ? { id: item.id, name: item.name, room: item.room, members: [...item.members], hide: item.hide !== false,
+                       allowOff: item.allow_off !== false, area: item.area || "" }
+                   : { name: "", room: rooms0, members: [], hide: true, allowOff: true, area: "" };
+    return h("div", { class: "row" }, h("div", { class: "grid", style: "flex:1 1 100%" }, text(T.name, v.name, x => v.name = x), roomSelect(v.room, x => v.room = x)),
+      h("div", { style: "flex:1 1 100%" }, h("div", { class: "help" }, T.members),
+        h("div", { class: "chips" }, pool.map(m => check(m.name + " (" + m.room + ")", v.members.includes(m.id),
+          x => { v.members = x ? [...v.members, m.id] : v.members.filter(i => i !== m.id); })))),
+      h("div", { class: "chips" }, check(T.hideMembers, v.hide, x => v.hide = x), sw ? check(T.allowOff, v.allowOff, x => v.allowOff = x) : null),
+      err, h("div", { class: "btns" }, btn(T.save, () => send({ op: "save", kind, values: v }), "primary"), btn(T.cancel, () => { edit = null; render(); }),
+        item ? btn(T.delete, () => confirm(T.deleteAsk) && send({ op: "delete", kind, id: item.id })) : null));
+  };
+  const block = (kind, title, items, info) => h("section", { class: "card" }, h("h2", {}, title),
+    h("div", { class: "list" }, items.map(it => edit === kind + it.id ? editor(kind, it) : h("div", { class: "row" },
+      h("div", { class: "grow" }, it.name, h("div", { class: "help" }, info(it))), btn(T.edit, () => { edit = kind + it.id; render(); }, "small"))),
+      edit === kind + ":new" ? editor(kind, null) : null),
+    edit === kind + ":new" ? null : h("div", { class: "btns" }, btn(T.add, () => { edit = kind + ":new"; render(); })));
+  return [block("virtual", T.virtual, S.virtual, v => [v.topic, v.unit, v.room].filter(Boolean).join(", ")),
+          block("light", T.lightGroup, S.groups, g => g.room + ", " + g.members.length),
+          block("switch", T.switchGroup, S.switchGroups, g => g.room + ", " + g.members.length)];
+}
+
+function scenesPage() {
+  if (edit && edit.scene) return sceneEditor(edit.scene);
+  let room = (S.rooms[0] || { name: "" }).name;
+  const open = async (id, r) => { const d = await api("/api/scene", { op: "draft", id, room: r }); if (d && d.draft) { edit = { scene: d.draft }; render(); } };
+  return h("section", { class: "card" }, h("h2", {}, T.scenes),
+    h("div", { class: "list" }, S.scenes.map(sc => h("div", { class: "row" },
+      h("div", { class: "grow" }, sc.name, h("div", { class: "help" }, sc.room + ", " + sc.count)),
+      btn(T.edit, () => open(sc.id, sc.room), "small")))),
+    h("div", { class: "btns" }, roomSelect(room, x => room = x), btn(T.newScene, () => open("", room), "primary")));
+}
+function sceneEditor(sc) {
+  const err = h("div", { class: "err", role: "alert" });
+  const rows = sc.devices.map(d => ({ ...d, attrs: { ...d.attrs } }));
+  async function save() {
+    const devices = {};
+    for (const r of rows) if (r.included) devices[r.id] = r.attrs;
+    const d = await post("/api/scene", { op: "save", id: sc.id, name: sc.name, room: sc.room, devices, favorite: sc.favorite, idle: sc.idle });
+    if (d && d.error) { err.textContent = d.error; return; }
+    edit = null; render();
+  }
+  const control = r => {
+    const a = r.attrs, out = [];
+    if ("on" in a) out.push(check(T.on, a.on, x => a.on = x));
+    if ("brightness" in a) out.push(h("label", { class: "field" }, T.brightness + " %", h("input", { type: "range", min: 1, max: 100, value: a.brightness, oninput: e => a.brightness = +e.target.value })));
+    if ("position" in a) out.push(h("label", { class: "field" }, T.position + " %", h("input", { type: "range", min: 0, max: 100, value: a.position, oninput: e => a.position = +e.target.value })));
+    if ("target_temp" in a) out.push(h("label", { class: "field" }, T.target + " °C", h("input", { type: "number", step: 0.5, min: 5, max: 30, value: a.target_temp, oninput: e => a.target_temp = +e.target.value })));
+    return out;
+  };
+  const body = h("div", { class: "list" });
+  const draw = () => body.replaceChildren(...rows.map(r => h("div", { class: "row" },
+    h("div", { class: "grow" }, check(r.name, r.included, x => { r.included = x; draw(); }), h("div", { class: "help" }, r.stateText)),
+    r.included ? h("div", { class: "grid", style: "flex:1 1 280px" }, control(r)) : null,
+    btn(T.takeNow, async () => { const d = await api("/api/scene", { op: "capture", device: r.id }); if (d && d.capture && d.capture.attrs) { r.attrs = d.capture.attrs; r.stateText = d.capture.stateText; r.included = true; draw(); } }, "small"))));
+  draw();
+  return h("section", { class: "card" }, h("h2", {}, sc.id ? sc.name : T.newScene),
+    h("div", { class: "grid" }, text(T.name, sc.name, x => sc.name = x), h("label", { class: "field" }, T.room, h("div", { style: "padding:10px 0;color:var(--ink)" }, sc.room))),
+    h("div", { class: "chips" }, check(T.favorite, sc.favorite, x => sc.favorite = x), check(T.idleScene, sc.idle, x => sc.idle = x)),
+    body, err,
+    h("div", { class: "btns" }, btn(T.save, save, "primary"), btn(T.cancel, () => { edit = null; render(); }),
+      sc.id ? btn(T.delete, async () => { if (confirm(T.deleteAsk)) { await post("/api/scene", { op: "delete", id: sc.id }); edit = null; render(); } }) : null));
+}
+
+function weatherPage() {
+  const err = h("div", { class: "err", role: "alert" });
+  const found = h("div", { class: "list" });
+  const run = async body => { const d = await post("/api/weather", body); if (d && d.error) { err.textContent = d.error; return; } render(); };
+  let q = "";
+  async function search() {
+    if (/^\s*-?\d+([.,]\d+)?\s*[,;\s]\s*-?\d+([.,]\d+)?\s*$/.test(q)) return run({ op: "coords", text: q });
+    const d = await api("/api/weather/search", { text: q });
+    if (!d) return;
+    err.textContent = d.error || "";
+    found.replaceChildren(...(d.places || []).map(p => h("div", { class: "row" },
+      h("div", { class: "grow" }, p.name, h("div", { class: "help" }, p.region || "")),
+      btn(T.add, () => run({ op: "add", name: p.name, lat: p.lat, lon: p.lon }), "small"))));
+  }
+  return h("section", { class: "card" }, h("h2", {}, T.places),
+    h("div", { class: "list" }, S.places.map(p => h("div", { class: "row" },
+      h("div", { class: "grow" }, p.name, p.default ? h("span", { class: "muted" }, " · " + T.default) : null, h("div", { class: "help" }, p.coords)),
+      h("div", { class: "btns" },
+        btn("↑", () => run({ op: "move", id: p.id, delta: -1 }), "small"), btn("↓", () => run({ op: "move", id: p.id, delta: 1 }), "small"),
+        p.default ? null : btn(T.makeDefault, () => run({ op: "default", id: p.id }), "small"),
+        btn(T.rename, () => { const n = prompt(T.rename, p.name); if (n) run({ op: "rename", id: p.id, name: n }); }, "small"),
+        btn(T.delete, () => confirm(T.deleteAsk) && run({ op: "delete", id: p.id }), "small"))))),
+    h("div", { class: "btns" }, text(T.placeHint, "", v => q = v), btn(T.search, search, "primary")), err, found);
+}
+
+function backupsPage() {
+  const err = h("div", { class: "err", role: "alert" });
+  const run = async body => { const d = await post("/api/backup", body); if (d && d.error) { err.textContent = d.error; return; } render(); };
+  return h("section", { class: "card" }, h("h2", {}, T.backups),
+    h("div", { class: "btns" }, btn(T.createBackup, () => run({ op: "create" }), "primary")), err,
+    h("div", { class: "list" }, S.backups.map(b => h("div", { class: "row" },
+      h("div", { class: "grow" }, (b.created || b.name).replace("T", " ").slice(0, 16), h("div", { class: "help" }, b.text)),
+      h("div", { class: "btns" },
+        btn(T.restore, () => confirm(T.restoreAsk) && run({ op: "restore", name: b.name }), "small"),
+        btn(T.delete, () => confirm(T.deleteAsk) && run({ op: "delete", name: b.name }), "small"))))));
+}
+
+async function load() {
+  const d = await api("/api/state");
+  if (d && d.sections) render();
+}
+load();
+</script>
+</body>
+</html>
